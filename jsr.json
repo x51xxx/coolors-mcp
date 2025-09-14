@@ -1,0 +1,7 @@
+{
+  "exports": "./src/CoolorsMCP.ts",
+  "include": ["src/CoolorsMCP.ts", "src/bin/coolors-mcp.ts"],
+  "license": "MIT",
+  "name": "@punkpeye/coolors-mcp",
+  "version": "1.0.0"
+}
