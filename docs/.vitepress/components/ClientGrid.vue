@@ -86,7 +86,9 @@ html:not(.dark) :deep(.client-button:hover) {
   background: var(--vp-c-brand-2);
   color: white;
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(66, 184, 131, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 8px 20px rgba(66, 184, 131, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.15);
   filter: brightness(1.1);
 }
 
@@ -100,7 +102,9 @@ html:not(.dark) :deep(.client-button:hover) {
   background: var(--vp-c-brand-2);
   color: white;
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(66, 184, 131, 0.6), 0 4px 8px rgba(66, 184, 131, 0.3);
+  box-shadow:
+    0 8px 20px rgba(66, 184, 131, 0.6),
+    0 4px 8px rgba(66, 184, 131, 0.3);
   filter: brightness(1.1);
 }
 
@@ -120,6 +124,8 @@ html:not(.dark) :deep(.client-button:hover) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

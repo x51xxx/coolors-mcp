@@ -5,43 +5,46 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted } from "vue";
 
 onMounted(() => {
   // Add intersection observer for scroll animations
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible')
-      }
-    })
-  }, { threshold: 0.1 })
-  
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+        }
+      });
+    },
+    { threshold: 0.1 },
+  );
+
   // Observe all cards
-  const cards = document.querySelectorAll('.funding-card, .contribute-card')
-  cards.forEach(card => observer.observe(card))
-  
+  const cards = document.querySelectorAll(".funding-card, .contribute-card");
+  cards.forEach((card) => observer.observe(card));
+
   // Add hover effects to cards
-  cards.forEach(card => {
-    card.addEventListener('mouseenter', (e) => {
-      const rect = card.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      
-      card.style.setProperty('--card-mouse-x', `${x}px`)
-      card.style.setProperty('--card-mouse-y', `${y}px`)
-    })
-    
-    card.addEventListener('mousemove', (e) => {
-      const rect = card.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      
-      card.style.setProperty('--card-mouse-x', `${x}px`)
-      card.style.setProperty('--card-mouse-y', `${y}px`)
-    })
-  })
-})
+  cards.forEach((card) => {
+    card.addEventListener("mouseenter", (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      card.style.setProperty("--card-mouse-x", `${x}px`);
+      card.style.setProperty("--card-mouse-y", `${y}px`);
+    });
+
+    card.addEventListener("mousemove", (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      card.style.setProperty("--card-mouse-x", `${x}px`);
+      card.style.setProperty("--card-mouse-y", `${y}px`);
+    });
+  });
+});
 </script>
 
 <style>
@@ -67,7 +70,7 @@ onMounted(() => {
 }
 
 .funding-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -123,7 +126,7 @@ onMounted(() => {
 .support-button--primary:hover {
   background: var(--vp-c-brand-dark);
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(66, 184, 131, 0.3),
     0 0 20px rgba(218, 119, 86, 0.4),
     0 0 30px rgba(71, 150, 227, 0.3),
@@ -132,15 +135,16 @@ onMounted(() => {
 }
 
 @keyframes glow {
-  0%, 100% { 
-    box-shadow: 
+  0%,
+  100% {
+    box-shadow:
       0 4px 12px rgba(66, 184, 131, 0.3),
       0 0 20px rgba(218, 119, 86, 0.4),
       0 0 30px rgba(71, 150, 227, 0.3),
       0 0 40px rgba(255, 140, 0, 0.2);
   }
-  50% { 
-    box-shadow: 
+  50% {
+    box-shadow:
       0 4px 16px rgba(66, 184, 131, 0.4),
       0 0 25px rgba(218, 119, 86, 0.5),
       0 0 35px rgba(71, 150, 227, 0.4),
@@ -188,7 +192,7 @@ onMounted(() => {
 }
 
 .contribute-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -248,7 +252,7 @@ onMounted(() => {
 }
 
 .progress-fill::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -264,12 +268,18 @@ onMounted(() => {
 }
 
 @keyframes progress {
-  from { width: 0; }
+  from {
+    width: 0;
+  }
 }
 
 @keyframes shimmer-progress {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* Light mode adjustments */
@@ -301,7 +311,7 @@ html:not(.dark) .contribute-card:hover {
 
 html:not(.dark) .support-button-secondary:hover {
   border-color: rgba(66, 139, 202, 0.6);
-  box-shadow: 
+  box-shadow:
     0 0 30px rgba(66, 139, 202, 0.1),
     inset 0 0 20px rgba(66, 139, 202, 0.03);
 }
@@ -311,12 +321,26 @@ html:not(.dark) .progress-fill {
 }
 
 /* Stagger animations */
-.funding-card:nth-child(1) { transition-delay: 0.1s; }
-.funding-card:nth-child(2) { transition-delay: 0.2s; }
-.funding-card:nth-child(3) { transition-delay: 0.3s; }
+.funding-card:nth-child(1) {
+  transition-delay: 0.1s;
+}
+.funding-card:nth-child(2) {
+  transition-delay: 0.2s;
+}
+.funding-card:nth-child(3) {
+  transition-delay: 0.3s;
+}
 
-.contribute-card:nth-child(1) { transition-delay: 0.1s; }
-.contribute-card:nth-child(2) { transition-delay: 0.2s; }
-.contribute-card:nth-child(3) { transition-delay: 0.3s; }
-.contribute-card:nth-child(4) { transition-delay: 0.4s; }
+.contribute-card:nth-child(1) {
+  transition-delay: 0.1s;
+}
+.contribute-card:nth-child(2) {
+  transition-delay: 0.2s;
+}
+.contribute-card:nth-child(3) {
+  transition-delay: 0.3s;
+}
+.contribute-card:nth-child(4) {
+  transition-delay: 0.4s;
+}
 </style>

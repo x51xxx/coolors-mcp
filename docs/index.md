@@ -134,24 +134,28 @@ Once installed, you can use natural language to work with colors:
 </div>
 
 ### Color Operations
+
 - Convert between hex, RGB, HSL, LAB, and HCT formats
 - Calculate perceptual distance using Delta E 2000
 - Generate color palettes (monochromatic, analogous, complementary, etc.)
 - Create smooth gradients with multiple interpolation methods
 
 ### Material Design
+
 - Generate complete Material Design 3 themes
 - Create tonal palettes with standard Material tones
 - Harmonize multiple colors to work together
 - Fix universally disliked colors (dark yellow-greens)
 
 ### CSS Theme Matching
+
 - Find closest theme variables for any color
 - Automatically refactor CSS with theme variables
 - Batch process multiple colors at once
 - Confidence scoring for replacements
 
 ### Image Processing
+
 - Extract dominant colors using Celebi quantization
 - Generate themes from image colors
 - Score colors for UI suitability

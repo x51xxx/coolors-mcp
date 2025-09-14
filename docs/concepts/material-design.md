@@ -15,30 +15,35 @@ Dynamic color is the heart of Material Design 3, enabling personalized experienc
 Material Design 3 defines semantic color roles that map to UI elements consistently:
 
 ### Primary Colors
+
 - **primary**: Main brand or theme color (tone 40 in light, 80 in dark)
 - **onPrimary**: Text/icons on primary color (tone 100 in light, 20 in dark)
 - **primaryContainer**: Light container variant (tone 90 in light, 30 in dark)
 - **onPrimaryContainer**: Text on primary container (tone 10 in light, 90 in dark)
 
 ### Secondary Colors
+
 - **secondary**: Supporting brand color
 - **onSecondary**: Text/icons on secondary
 - **secondaryContainer**: Light container variant
 - **onSecondaryContainer**: Text on secondary container
 
 ### Tertiary Colors
+
 - **tertiary**: Accent for special emphasis
 - **onTertiary**: Text/icons on tertiary
 - **tertiaryContainer**: Light container variant
 - **onTertiaryContainer**: Text on tertiary container
 
 ### Surface Colors
+
 - **surface**: Main background color (tone 99 in light, 10 in dark)
 - **onSurface**: Primary text color (tone 10 in light, 90 in dark)
 - **surfaceVariant**: Secondary background (tone 95 in light, 30 in dark)
 - **onSurfaceVariant**: Secondary text (tone 30 in light, 80 in dark)
 
 ### Additional Roles
+
 - **error**: Error states (hue ~25, chroma 84)
 - **outline**: Borders and dividers
 - **shadow**: Shadow colors
@@ -57,13 +62,13 @@ Material Design 3 uses 13 standard tones for each color palette:
 
 ### Tone Usage Guidelines
 
-| Tone Range | Light Theme Usage | Dark Theme Usage |
-|------------|------------------|------------------|
-| 0-10 | On-colors, high emphasis text | Surfaces, containers |
-| 20-40 | Primary actions, emphasis | On-colors, text |
-| 50 | Neutral midpoint | Neutral midpoint |
-| 60-80 | Containers, surfaces | Primary actions |
-| 90-100 | Backgrounds, surfaces | On-colors, text |
+| Tone Range | Light Theme Usage             | Dark Theme Usage     |
+| ---------- | ----------------------------- | -------------------- |
+| 0-10       | On-colors, high emphasis text | Surfaces, containers |
+| 20-40      | Primary actions, emphasis     | On-colors, text      |
+| 50         | Neutral midpoint              | Neutral midpoint     |
+| 60-80      | Containers, surfaces          | Primary actions      |
+| 90-100     | Backgrounds, surfaces         | On-colors, text      |
 
 ## Key Colors
 
@@ -80,31 +85,37 @@ From a single source color, Material Design generates five key colors:
 Material Design 3 offers multiple scheme variants for different moods:
 
 ### Tonal Spot (Default)
+
 - Balanced use of primary color
 - Secondary and tertiary are complementary
 - Most versatile for general use
 
 ### Fidelity
+
 - Preserves source color's exact appearance
 - Adjusts tones to maintain chroma
 - Best for brand-critical applications
 
 ### Vibrant
+
 - Higher chroma across all colors
 - More colorful, energetic appearance
 - Good for creative, playful apps
 
 ### Expressive
+
 - Unexpected color combinations
 - Creative hue rotations
 - For bold, artistic interfaces
 
 ### Neutral
+
 - Minimal color, maximum elegance
 - Reduced chroma values
 - Professional, understated look
 
 ### Monochrome
+
 - Single hue, varying tones
 - Ultimate minimalism
 - Focus on content over color
@@ -114,16 +125,19 @@ Material Design 3 offers multiple scheme variants for different moods:
 Material Design 3 supports three contrast levels:
 
 ### Default (0.0)
+
 - WCAG AA compliant
 - 4.5:1 for normal text
 - 3:1 for large text
 
 ### Medium (+0.5)
+
 - Enhanced readability
 - ~6:1 for normal text
 - Better for outdoor/bright conditions
 
 ### High (+1.0)
+
 - WCAG AAA compliant
 - 7:1 for normal text
 - Maximum accessibility
@@ -173,12 +187,14 @@ Material Design 3 supports three contrast levels:
 Material Design uses harmonization to ensure colors work together:
 
 ### Harmonization Algorithm
+
 1. Analyze hue relationships
 2. Adjust hues toward harmony angles (0°, 60°, 120°, 180°, 240°, 300°)
 3. Maintain original chroma and tone
 4. Blend based on harmonization strength
 
 ### Example
+
 ```javascript
 {
   "name": "harmonize_colors",
@@ -194,11 +210,12 @@ Material Design uses harmonization to ensure colors work together:
 Material Design 3 uses design tokens for consistent application:
 
 ### Token Structure
+
 ```css
 /* Color tokens */
---md-sys-color-primary: #6366F1;
---md-sys-color-on-primary: #FFFFFF;
---md-sys-color-primary-container: #E0E2FF;
+--md-sys-color-primary: #6366f1;
+--md-sys-color-on-primary: #ffffff;
+--md-sys-color-primary-container: #e0e2ff;
 --md-sys-color-on-primary-container: #000747;
 
 /* Elevation tokens */
@@ -236,6 +253,7 @@ The complete process for generating a Material theme:
 ## Best Practices
 
 ### Do's
+
 - ✅ Use semantic color roles consistently
 - ✅ Test with all three contrast levels
 - ✅ Validate color combinations for accessibility
@@ -243,6 +261,7 @@ The complete process for generating a Material theme:
 - ✅ Use harmonization for multiple brand colors
 
 ### Don'ts
+
 - ❌ Override tone assignments arbitrarily
 - ❌ Use colors outside the tonal palettes
 - ❌ Ignore contrast requirements
@@ -252,6 +271,7 @@ The complete process for generating a Material theme:
 ## Integration Examples
 
 ### React/CSS
+
 ```css
 :root {
   --md-sys-color-primary: rgb(99, 102, 241);
@@ -265,33 +285,39 @@ The complete process for generating a Material theme:
 ```
 
 ### Tailwind CSS
+
 ```javascript
 // tailwind.config.js
 module.exports = {
   theme: {
     extend: {
       colors: {
-        'md-primary': 'var(--md-sys-color-primary)',
-        'md-surface': 'var(--md-sys-color-surface)',
-      }
-    }
-  }
-}
+        "md-primary": "var(--md-sys-color-primary)",
+        "md-surface": "var(--md-sys-color-surface)",
+      },
+    },
+  },
+};
 ```
 
 ## Advanced Features
 
 ### Dislike Prevention
+
 Material Design automatically detects and adjusts universally disliked colors (dark yellow-greens that resemble biological waste) by shifting their hue and increasing tone.
 
 ### Content-Based Schemes
+
 Generate schemes that adapt to content:
+
 - Album artwork → Music player theme
 - Product images → E-commerce theme
 - User photos → Gallery theme
 
 ### Cross-Platform Consistency
+
 The same source color produces identical themes across:
+
 - Android (Material You)
 - Web (Material Web)
 - Flutter

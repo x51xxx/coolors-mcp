@@ -37,7 +37,7 @@ Intuitive color model for human understanding.
 }
 ```
 
-## LAB (CIE L*a*b*)
+## LAB (CIE L*a*b\*)
 
 Perceptually uniform color space based on human vision.
 
@@ -104,33 +104,38 @@ HSL ↔ RGB ↔ HEX
 const hex = "#6366F1";
 
 // To RGB
-"rgb(99, 102, 241)"
+("rgb(99, 102, 241)");
 
 // To HSL
-"hsl(239, 84%, 67%)"
+("hsl(239, 84%, 67%)");
 
 // To LAB
-"lab(47.9, 35.2, -65.7)"
+("lab(47.9, 35.2, -65.7)");
 
 // To HCT
-"hct(265.8, 87.2, 47.9)"
+("hct(265.8, 87.2, 47.9)");
 ```
 
 ## Choosing the Right Color Space
 
 ### For Color Picking
+
 Use **HSL** - intuitive for users to understand and manipulate.
 
 ### For Color Matching
+
 Use **LAB** or **HCT** - perceptually uniform for accurate comparisons.
 
 ### For UI Themes
+
 Use **HCT** - designed for interface design with predictable contrast.
 
 ### For Web/Digital
+
 Use **RGB/Hex** - native format for browsers and displays.
 
 ### For Print
+
 Use **LAB** - device-independent and accurate for print reproduction.
 
 ## Perceptual Distance Metrics
@@ -138,42 +143,53 @@ Use **LAB** - device-independent and accurate for print reproduction.
 Different color spaces affect distance calculations:
 
 ### RGB Distance (Euclidean)
+
 Simple but perceptually inaccurate:
+
 ```
 distance = √((r₂-r₁)² + (g₂-g₁)² + (b₂-b₁)²)
 ```
 
 ### Delta E (LAB-based)
+
 Industry standard for color difference:
+
 - **Delta E 76**: Original formula
 - **Delta E 94**: Improved for textiles
 - **Delta E 2000**: Most accurate, accounts for human perception
 
 ### HCT Distance
+
 Weighted for UI applications:
+
 ```
 distance = √((h₂-h₁)² + (c₂-c₁)² + 2×(t₂-t₁)²)
 ```
+
 Tone is weighted 2x because lightness differences are more noticeable in UI.
 
 ## Color Space Limitations
 
 ### RGB Limitations
+
 - Not perceptually uniform
 - Difficult for humans to predict color changes
 - Poor for color difference calculations
 
 ### HSL Limitations
+
 - Saturation and lightness are not perceptually uniform
 - Colors with same L value may appear different brightness
 - Not suitable for accessibility calculations
 
 ### LAB Limitations
+
 - Can represent impossible colors
 - Less intuitive for designers
 - Blue region has known inaccuracies
 
 ### HCT Advantages
+
 - Specifically designed for UI/UX
 - Predictable contrast ratios
 - Perceptually uniform
@@ -182,7 +198,9 @@ Tone is weighted 2x because lightness differences are more noticeable in UI.
 ## Practical Applications
 
 ### Theme Generation
+
 HCT enables predictable theme generation:
+
 ```javascript
 // Generate accessible color variations
 const baseHCT = { h: 265, c: 50, t: 50 };
@@ -195,13 +213,17 @@ const dark = { ...baseHCT, t: 20 };
 ```
 
 ### Color Harmonies
+
 Different spaces excel at different harmonies:
+
 - **HSL**: Best for analogous colors (rotate hue)
 - **HCT**: Best for tonal variations (adjust tone)
 - **LAB**: Best for perceptual interpolation
 
 ### Gradient Generation
+
 Color space affects gradient smoothness:
+
 - **RGB**: Can produce muddy colors in middle
 - **HSL**: Can produce unnatural brightness shifts
 - **LAB/HCT**: Smooth perceptual transitions

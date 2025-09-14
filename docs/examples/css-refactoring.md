@@ -10,7 +10,7 @@ Replace a single hardcoded color with a theme variable:
 
 ```javascript
 // Find matching theme variable
-"What theme variable matches #6366f1?"
+"What theme variable matches #6366f1?";
 
 // With theme CSS
 const theme = `
@@ -323,8 +323,8 @@ const theme = `
   { color: "#6366f1", match: "--primary", confidence: 100 },
   { color: "#ec4899", match: "--accent", confidence: 100 },
   { color: "#10b981", match: "--success", confidence: 100 },
-  { color: "#f59e0b", match: "--warning", confidence: 100 }
-]
+  { color: "#f59e0b", match: "--warning", confidence: 100 },
+];
 ```
 
 ## Migration Strategies
@@ -350,15 +350,15 @@ Migrate large codebases incrementally:
 
 ```javascript
 // 1. Start with utility classes
-refactorFile('styles/utilities.css', theme);
+refactorFile("styles/utilities.css", theme);
 
 // 2. Then base components
-refactorFile('styles/buttons.css', theme);
-refactorFile('styles/forms.css', theme);
+refactorFile("styles/buttons.css", theme);
+refactorFile("styles/forms.css", theme);
 
 // 3. Finally, complex components
-refactorFile('styles/navigation.css', theme);
-refactorFile('styles/modals.css', theme);
+refactorFile("styles/navigation.css", theme);
+refactorFile("styles/modals.css", theme);
 ```
 
 ### Creating Missing Variables
@@ -369,7 +369,7 @@ When colors don't match existing theme:
 // Identify unmatched colors
 const unmatched = [
   { color: "#7c3aed", usage: ["buttons", "links"] },
-  { color: "#0ea5e9", usage: ["alerts", "badges"] }
+  { color: "#0ea5e9", usage: ["alerts", "badges"] },
 ];
 
 // Generate appropriate variables
@@ -408,13 +408,13 @@ The refactoring tool understands context:
 
 Understanding match confidence:
 
-| Confidence | Meaning | Action |
-|------------|---------|--------|
-| 100% | Exact match | Auto-replace |
-| 95-99% | Very close (ΔE < 2) | Auto-replace with comment |
-| 85-94% | Close (ΔE < 5) | Suggest replacement |
-| 70-84% | Similar (ΔE < 10) | Manual review |
-| <70% | Different | Keep original |
+| Confidence | Meaning             | Action                    |
+| ---------- | ------------------- | ------------------------- |
+| 100%       | Exact match         | Auto-replace              |
+| 95-99%     | Very close (ΔE < 2) | Auto-replace with comment |
+| 85-94%     | Close (ΔE < 5)      | Suggest replacement       |
+| 70-84%     | Similar (ΔE < 10)   | Manual review             |
+| <70%       | Different           | Keep original             |
 
 ### Handling Edge Cases
 
@@ -632,21 +632,21 @@ Understanding match confidence:
 
 ```javascript
 // refactor-project.js
-const { refactorCSS, generateReport } = require('coolors-mcp');
-const fs = require('fs');
-const path = require('path');
+const { refactorCSS, generateReport } = require("coolors-mcp");
+const fs = require("fs");
+const path = require("path");
 
 async function refactorProject(srcDir, themeFile) {
-  const theme = fs.readFileSync(themeFile, 'utf-8');
+  const theme = fs.readFileSync(themeFile, "utf-8");
   const cssFiles = findCSSFiles(srcDir);
   const results = [];
 
   for (const file of cssFiles) {
-    const original = fs.readFileSync(file, 'utf-8');
+    const original = fs.readFileSync(file, "utf-8");
     const refactored = await refactorCSS(original, theme, {
       minConfidence: 85,
       preserveOriginal: true,
-      generateReport: true
+      generateReport: true,
     });
 
     // Backup original
@@ -658,7 +658,7 @@ async function refactorProject(srcDir, themeFile) {
     results.push({
       file,
       changes: refactored.changes.length,
-      confidence: refactored.averageConfidence
+      confidence: refactored.averageConfidence,
     });
   }
 
@@ -752,12 +752,12 @@ Always verify visual appearance after refactoring:
 // Visual regression test
 const screenshots = {
   before: captureScreenshots(originalCSS),
-  after: captureScreenshots(refactoredCSS)
+  after: captureScreenshots(refactoredCSS),
 };
 
 const differences = compareScreenshots(screenshots);
 if (differences.length > 0) {
-  console.warn('Visual differences detected:', differences);
+  console.warn("Visual differences detected:", differences);
 }
 ```
 
@@ -774,9 +774,9 @@ Include documentation with your theme variables:
   --color-on-primary: #ffffff;
 
   /* Surface colors - ordered by elevation */
-  --color-surface-0: #ffffff;  /* Base level */
-  --color-surface-1: #fafafa;  /* Slightly elevated */
-  --color-surface-2: #f5f5f5;  /* More elevated */
+  --color-surface-0: #ffffff; /* Base level */
+  --color-surface-1: #fafafa; /* Slightly elevated */
+  --color-surface-2: #f5f5f5; /* More elevated */
 }
 ```
 
@@ -788,6 +788,7 @@ Include documentation with your theme variables:
 
 **Problem**: Most matches have <70% confidence
 **Solution**:
+
 - Check if theme has enough color variations
 - Consider adding intermediate shades
 - Use more specific theme variables
@@ -796,6 +797,7 @@ Include documentation with your theme variables:
 
 **Problem**: Border colors matching to text variables
 **Solution**:
+
 - Use clearer variable naming conventions
 - Provide context parameter when matching
 - Create role-specific variables
@@ -804,6 +806,7 @@ Include documentation with your theme variables:
 
 **Problem**: Slow refactoring for large CSS files
 **Solution**:
+
 - Split CSS into smaller modules
 - Process files in parallel
 - Cache theme parsing results
@@ -812,6 +815,7 @@ Include documentation with your theme variables:
 
 **Problem**: Complex gradients not refactoring correctly
 **Solution**:
+
 - Define gradient variables directly
 - Use CSS custom properties for gradient stops
 - Consider keeping complex gradients as-is

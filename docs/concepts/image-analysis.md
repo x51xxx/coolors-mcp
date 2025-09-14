@@ -5,6 +5,7 @@ Coolors MCP provides advanced image color extraction using Google's Material Col
 ## Overview
 
 Image color extraction involves:
+
 1. **Quantization** - Reducing colors to a representative set
 2. **Scoring** - Evaluating colors for UI suitability
 3. **Selection** - Choosing optimal source colors
@@ -17,7 +18,9 @@ Image color extraction involves:
 Quantization is a lossy compression process that selects a limited number of colors that best represent the original image.
 
 #### Celebi Algorithm
+
 Coolors MCP uses the Celebi quantizer, which combines:
+
 - **Wu's algorithm**: Fast color quantization
 - **WSMeans**: Weighted spatial color clustering
 
@@ -27,6 +30,7 @@ const colors = quantize(pixels, 128);
 ```
 
 #### How It Works
+
 1. **Spatial clustering**: Groups similar colors that appear near each other
 2. **Color frequency**: Weights colors by how often they appear
 3. **Perceptual grouping**: Merges perceptually similar colors
@@ -40,24 +44,29 @@ Not all colors are suitable for UI themes. The scoring algorithm evaluates color
 
 **Chroma Score**
 Colors closer to the target chroma of 48 receive higher scores:
+
 ```javascript
 chromaScore = 1 - Math.abs(chroma - 48) / 48;
 ```
 
 **Population Score**
 More frequent colors score higher:
+
 ```javascript
 populationScore = pixelCount / totalPixels;
 ```
 
 **Color Diversity**
 Promotes visually distinct colors:
+
 - Higher scores for well-represented hues (30° neighborhood)
 - Penalizes colors too similar to already selected ones
 - Ensures good distribution across color wheel
 
 #### Filtering Criteria
+
 Colors are filtered out if they:
+
 - Have very low chroma (<15) - too close to grayscale
 - Are extremely rare (<0.01% of pixels)
 - Fall in the "dislike zone" (dark yellow-greens)
@@ -78,20 +87,26 @@ The system selects multiple source colors for theme options:
 ## Image Sources
 
 ### Wallpapers
+
 User device wallpapers provide personalized color schemes:
+
 - Analyzed on device for privacy
 - Updates dynamically when wallpaper changes
 - Creates cohesive system-wide theming
 
 ### App Content
+
 Content-based colors adapt to current context:
+
 - **Album art** → Music player theme
 - **Product images** → E-commerce theme
 - **Video thumbnails** → Media player theme
 - **Logos** → Brand-consistent theme
 
 ### User Photos
+
 Personal photos for custom themes:
+
 - Profile pictures for personal spaces
 - Gallery images for creative apps
 - Artwork for design applications
@@ -147,12 +162,15 @@ Personal photos for custom themes:
 The system automatically detects and adjusts universally disliked colors:
 
 #### The "Bile Zone"
+
 Dark yellow-greens (reminiscent of biological waste) are universally disliked:
+
 - **Hue range**: 50-120° (yellow-green)
 - **Chroma**: 20-50
 - **Tone**: 20-50
 
 #### Automatic Fixing
+
 ```javascript
 if (isDisliked(color)) {
   // Shift hue away from dislike zone
@@ -169,11 +187,11 @@ For complex images, analyze different regions:
 ```javascript
 // Analyze specific image regions
 const regions = [
-  { x: 0, y: 0, width: 100, height: 100 },    // Top-left
-  { x: 100, y: 100, width: 200, height: 200 } // Center
+  { x: 0, y: 0, width: 100, height: 100 }, // Top-left
+  { x: 100, y: 100, width: 200, height: 200 }, // Center
 ];
 
-regions.forEach(region => {
+regions.forEach((region) => {
   const colors = extractFromRegion(image, region);
   // Process regional colors
 });
@@ -186,7 +204,7 @@ For video or animated content:
 ```javascript
 // Extract colors from multiple frames
 const frames = [0, 30, 60, 90, 120];
-const frameColors = frames.map(f => extractFrame(video, f));
+const frameColors = frames.map((f) => extractFrame(video, f));
 
 // Find consistent colors across frames
 const stableColors = findStableColors(frameColors);
@@ -196,12 +214,12 @@ const stableColors = findStableColors(frameColors);
 
 ### UI Suitability Factors
 
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| Chroma | 40% | Preference for moderate chroma (~48) |
-| Population | 30% | How much of image uses this color |
-| Diversity | 20% | Distinctness from other colors |
-| Accessibility | 10% | Potential for good contrast |
+| Factor        | Weight | Description                          |
+| ------------- | ------ | ------------------------------------ |
+| Chroma        | 40%    | Preference for moderate chroma (~48) |
+| Population    | 30%    | How much of image uses this color    |
+| Diversity     | 20%    | Distinctness from other colors       |
+| Accessibility | 10%    | Potential for good contrast          |
 
 ### Scoring Algorithm
 
@@ -226,12 +244,14 @@ function scoreColor(color, population, existingColors) {
 ### Image Preparation
 
 #### Optimal Images
+
 - **Resolution**: 200-500px wide (resize larger images)
 - **Format**: RGB/RGBA
 - **Quality**: Avoid heavily compressed images
 - **Content**: Clear subject with distinct colors
 
 #### Pre-processing
+
 ```javascript
 // Resize for performance
 const resized = resizeImage(original, 300);
@@ -246,6 +266,7 @@ const colors = extractColors(enhanced);
 ### Performance Optimization
 
 #### Sampling Strategies
+
 ```javascript
 // Fast: Sample every 5th pixel
 const fastColors = quantize(pixels, 128, { sampling: 5 });
@@ -258,6 +279,7 @@ const sampling = pixels.length > 100000 ? 5 : 1;
 ```
 
 #### Caching
+
 ```javascript
 // Cache extracted colors
 const cache = new Map();
@@ -274,28 +296,34 @@ cache.set(hash, colors);
 ## Use Cases
 
 ### Dynamic Theming
+
 Apps that adapt to content:
+
 - Music players matching album art
 - News readers matching article images
 - Photo galleries with ambient themes
 
 ### Brand Extraction
+
 Deriving brand colors from logos:
+
 ```javascript
-const logo = loadImage('logo.png');
+const logo = loadImage("logo.png");
 const brandColors = extractColors(logo, {
   maxColors: 3,
-  minChroma: 30  // Ensure vibrant colors
+  minChroma: 30, // Ensure vibrant colors
 });
 ```
 
 ### Palette Generation
+
 Creating artist palettes from artwork:
+
 ```javascript
-const artwork = loadImage('painting.jpg');
+const artwork = loadImage("painting.jpg");
 const palette = extractColors(artwork, {
   maxColors: 12,
-  includeNeutrals: true
+  includeNeutrals: true,
 });
 ```
 
@@ -312,7 +340,7 @@ async function themeFromUpload(file) {
 
   const response = await coolorsMCP.extractColors({
     imageData: pixels,
-    maxColors: 5
+    maxColors: 5,
   });
 
   return response.colors[0]; // Use top color
@@ -330,9 +358,7 @@ function ImageThemeProvider({ imageUrl, children }) {
   }, [imageUrl]);
 
   return (
-    <ThemeContext.Provider value={theme}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
   );
 }
 ```
@@ -340,7 +366,7 @@ function ImageThemeProvider({ imageUrl, children }) {
 ### Node.js Server
 
 ```javascript
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 async function extractFromBuffer(buffer) {
   // Resize and convert to raw pixels
@@ -353,7 +379,7 @@ async function extractFromBuffer(buffer) {
   const colors = await coolorsMCP.extractColors({
     imageData: Array.from(data),
     width: info.width,
-    height: info.height
+    height: info.height,
   });
 
   return colors;
@@ -363,11 +389,13 @@ async function extractFromBuffer(buffer) {
 ## Limitations
 
 ### Technical Constraints
+
 - Maximum image size: ~5MB recommended
 - Color count: 128 colors maximum per extraction
 - Processing time: ~100-500ms for typical images
 
 ### Accuracy Considerations
+
 - Compressed images may lose color fidelity
 - Very dark/light images provide limited options
 - Monochrome images need fallback strategies
@@ -377,14 +405,17 @@ async function extractFromBuffer(buffer) {
 ### Common Issues
 
 #### No Suitable Colors Found
+
 **Cause**: Image too monochrome or low contrast
 **Solution**: Adjust scoring thresholds or provide fallback
 
 #### Inconsistent Results
+
 **Cause**: Image compression or resizing artifacts
 **Solution**: Use higher quality source images
 
 #### Performance Problems
+
 **Cause**: Processing large images
 **Solution**: Resize before extraction
 

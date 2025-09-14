@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <div
     class="funding-hero"
     @mouseenter="handleMouseEnter"
     @mousemove="handleMouseMove"
@@ -10,44 +10,48 @@
       <div class="hero-glow"></div>
       <div class="hero-particles"></div>
     </div>
-    
+
     <div class="hero-content">
       <h1 class="hero-title">
         <span class="title-main">Support Development</span>
         <span class="title-sub">of Coolors MCP</span>
       </h1>
-      
+
       <p class="hero-description">
         Every contribution helps maintain, improve and expand this project
       </p>
-      
+
       <div class="hero-actions">
-        <a 
-          href="https://github.com/sponsors/x51xxx" 
+        <a
+          href="https://github.com/sponsors/x51xxx"
           target="_blank"
           rel="noopener"
           class="action-button action-primary"
         >
           <svg class="button-icon" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            <path
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+            />
           </svg>
           Sponsor on GitHub
         </a>
 
-        <a 
-          href="https://github.com/x51xxx/coolors-mcp" 
+        <a
+          href="https://github.com/x51xxx/coolors-mcp"
           target="_blank"
           rel="noopener"
           class="action-button action-primary"
         >
           <svg class="button-icon" viewBox="0 0 22 22" fill="currentColor">
-            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+            <path
+              d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+            />
           </svg>
           Star on GitHub
         </a>
-        
-        <a 
-          href="https://ko-fi.com/jamubc" 
+
+        <a
+          href="https://ko-fi.com/jamubc"
           target="_blank"
           rel="noopener"
           class="action-button action-secondary"
@@ -61,55 +65,55 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from "vue";
 
-const heroRef = ref(null)
+const heroRef = ref(null);
 
 const handleMouseEnter = (e) => {
-  if (!heroRef.value) return
-  
-  const rect = heroRef.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  
-  heroRef.value.style.setProperty('--mouse-x', `${x}px`)
-  heroRef.value.style.setProperty('--mouse-y', `${y}px`)
-  heroRef.value.classList.add('mouse-over')
-}
+  if (!heroRef.value) return;
+
+  const rect = heroRef.value.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  heroRef.value.style.setProperty("--mouse-x", `${x}px`);
+  heroRef.value.style.setProperty("--mouse-y", `${y}px`);
+  heroRef.value.classList.add("mouse-over");
+};
 
 const handleMouseMove = (e) => {
-  if (!heroRef.value) return
-  
-  const rect = heroRef.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  
-  heroRef.value.style.setProperty('--mouse-x', `${x}px`)
-  heroRef.value.style.setProperty('--mouse-y', `${y}px`)
-}
+  if (!heroRef.value) return;
+
+  const rect = heroRef.value.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  heroRef.value.style.setProperty("--mouse-x", `${x}px`);
+  heroRef.value.style.setProperty("--mouse-y", `${y}px`);
+};
 
 const handleMouseLeave = () => {
-  if (!heroRef.value) return
-  heroRef.value.classList.remove('mouse-over')
-}
+  if (!heroRef.value) return;
+  heroRef.value.classList.remove("mouse-over");
+};
 
 // Create floating particles
 onMounted(() => {
-  if (!heroRef.value) return
-  
-  const particlesContainer = heroRef.value.querySelector('.hero-particles')
-  const particleCount = 20
-  
+  if (!heroRef.value) return;
+
+  const particlesContainer = heroRef.value.querySelector(".hero-particles");
+  const particleCount = 20;
+
   for (let i = 0; i < particleCount; i++) {
-    const particle = document.createElement('div')
-    particle.className = 'particle'
-    particle.style.setProperty('--delay', `${Math.random() * 10}s`)
-    particle.style.setProperty('--duration', `${15 + Math.random() * 20}s`)
-    particle.style.left = `${Math.random() * 100}%`
-    particle.style.animationDelay = `${Math.random() * 10}s`
-    particlesContainer.appendChild(particle)
+    const particle = document.createElement("div");
+    particle.className = "particle";
+    particle.style.setProperty("--delay", `${Math.random() * 10}s`);
+    particle.style.setProperty("--duration", `${15 + Math.random() * 20}s`);
+    particle.style.left = `${Math.random() * 100}%`;
+    particle.style.animationDelay = `${Math.random() * 10}s`;
+    particlesContainer.appendChild(particle);
   }
-})
+});
 </script>
 
 <style scoped>
@@ -208,7 +212,12 @@ onMounted(() => {
   display: block;
   font-size: 48px;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--vp-c-brand) 0%, #ff6b35 50%, #ff8c00 100%);
+  background: linear-gradient(
+    135deg,
+    var(--vp-c-brand) 0%,
+    #ff6b35 50%,
+    #ff8c00 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -217,9 +226,15 @@ onMounted(() => {
 }
 
 @keyframes shimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .title-sub {
@@ -267,7 +282,7 @@ onMounted(() => {
 
 .action-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(66, 184, 131, 0.3),
     0 0 40px rgba(255, 140, 0, 0.2);
 }
@@ -281,7 +296,7 @@ onMounted(() => {
 .action-secondary:hover {
   border-color: rgba(255, 140, 0, 0.6);
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 0 30px rgba(255, 140, 0, 0.15),
     inset 0 0 20px rgba(255, 140, 0, 0.05);
 }
@@ -308,7 +323,7 @@ html:not(.dark) .particle {
 
 html:not(.dark) .action-secondary:hover {
   border-color: rgba(66, 139, 202, 0.6);
-  box-shadow: 
+  box-shadow:
     0 0 30px rgba(66, 139, 202, 0.1),
     inset 0 0 20px rgba(66, 139, 202, 0.03);
 }
@@ -318,24 +333,24 @@ html:not(.dark) .action-secondary:hover {
   .funding-hero {
     padding: 60px 20px;
   }
-  
+
   .title-main {
     font-size: 36px;
   }
-  
+
   .title-sub {
     font-size: 20px;
   }
-  
+
   .hero-description {
     font-size: 16px;
   }
-  
+
   .hero-actions {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .action-button {
     width: 100%;
     max-width: 300px;

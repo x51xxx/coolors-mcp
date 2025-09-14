@@ -4,8 +4,15 @@
     <div v-if="type === 'github-sponsors'" class="sponsor-banner">
       <div class="sponsor-content">
         <span class="sponsor-icon">💖</span>
-        <span class="sponsor-text">Support this project on GitHub Sponsors</span>
-        <a :href="githubSponsorsUrl" target="_blank" rel="noopener" class="sponsor-button">
+        <span class="sponsor-text"
+          >Support this project on GitHub Sponsors</span
+        >
+        <a
+          :href="githubSponsorsUrl"
+          target="_blank"
+          rel="noopener"
+          class="sponsor-button"
+        >
           Sponsor
         </a>
       </div>
@@ -17,100 +24,106 @@
         <!-- Carbon will inject content here -->
       </div>
     </div>
-    
 
     <!-- Dismissible close button -->
-    <button v-if="dismissible" @click="dismissAd" class="ad-close" aria-label="Close ad">
+    <button
+      v-if="dismissible"
+      @click="dismissAd"
+      class="ad-close"
+      aria-label="Close ad"
+    >
       ×
     </button>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from "vue";
 
 const props = defineProps({
   type: {
     type: String,
-    default: 'github-sponsors', // 'github-sponsors', 'carbon'
-    validator: (value) => ['github-sponsors', 'carbon'].includes(value)
+    default: "github-sponsors", // 'github-sponsors', 'carbon'
+    validator: (value) => ["github-sponsors", "carbon"].includes(value),
   },
   position: {
     type: String,
-    default: 'top', // 'top', 'bottom', 'sidebar', 'inline'
-    validator: (value) => ['top', 'bottom', 'sidebar', 'inline'].includes(value)
+    default: "top", // 'top', 'bottom', 'sidebar', 'inline'
+    validator: (value) =>
+      ["top", "bottom", "sidebar", "inline"].includes(value),
   },
   githubSponsorsUrl: {
     type: String,
-    default: 'https://github.com/sponsors/jamubc'
+    default: "https://github.com/sponsors/jamubc",
   },
   dismissible: {
     type: Boolean,
-    default: true
+    default: true,
   },
   showOnPaths: {
     type: Array,
-    default: () => [] // Empty array means show on all paths
+    default: () => [], // Empty array means show on all paths
   },
   hideOnPaths: {
     type: Array,
-    default: () => ['/'] // Hide on home page by default
+    default: () => ["/"], // Hide on home page by default
   },
-})
+});
 
-const isDismissed = ref(false)
-const storageKey = `ad-dismissed-${props.type}-${props.position}`
+const isDismissed = ref(false);
+const storageKey = `ad-dismissed-${props.type}-${props.position}`;
 
-const bannerClass = computed(() => `ad-banner--${props.position}`)
+const bannerClass = computed(() => `ad-banner--${props.position}`);
 
 const shouldShowAd = computed(() => {
-  if (isDismissed.value) return false
-  
+  if (isDismissed.value) return false;
+
   // Check if we're in browser environment
-  if (typeof window === 'undefined') return false
-  
-  const currentPath = window.location.pathname
-  
+  if (typeof window === "undefined") return false;
+
+  const currentPath = window.location.pathname;
+
   // If showOnPaths is specified, only show on those paths
   if (props.showOnPaths.length > 0) {
-    return props.showOnPaths.some(path => currentPath.includes(path))
+    return props.showOnPaths.some((path) => currentPath.includes(path));
   }
-  
+
   // If hideOnPaths is specified, hide on those paths
   if (props.hideOnPaths.length > 0) {
-    return !props.hideOnPaths.some(path => currentPath.includes(path))
+    return !props.hideOnPaths.some((path) => currentPath.includes(path));
   }
-  
-  return true
-})
+
+  return true;
+});
 
 const dismissAd = () => {
-  isDismissed.value = true
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(storageKey, 'true')
+  isDismissed.value = true;
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(storageKey, "true");
   }
-}
+};
 
 onMounted(() => {
   // Check if ad was previously dismissed
-  if (typeof localStorage !== 'undefined') {
-    const dismissed = localStorage.getItem(storageKey)
-    if (dismissed === 'true') {
-      isDismissed.value = true
+  if (typeof localStorage !== "undefined") {
+    const dismissed = localStorage.getItem(storageKey);
+    if (dismissed === "true") {
+      isDismissed.value = true;
     }
   }
-  
+
   // Load Carbon Ads script if needed
-  if (props.type === 'carbon' && !document.getElementById('carbon-script')) {
-    const script = document.createElement('script')
-    script.id = 'carbon-script'
-    script.async = true
-    script.type = 'text/javascript'
-    script.src = '//cdn.carbonads.com/carbon.js?serve=YOUR_CARBON_ID&placement=YOUR_PLACEMENT'
-    script.setAttribute('id', '_carbonads_js')
-    document.head.appendChild(script)
+  if (props.type === "carbon" && !document.getElementById("carbon-script")) {
+    const script = document.createElement("script");
+    script.id = "carbon-script";
+    script.async = true;
+    script.type = "text/javascript";
+    script.src =
+      "//cdn.carbonads.com/carbon.js?serve=YOUR_CARBON_ID&placement=YOUR_PLACEMENT";
+    script.setAttribute("id", "_carbonads_js");
+    document.head.appendChild(script);
   }
-})
+});
 </script>
 
 <style scoped>
@@ -164,7 +177,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, rgba(66, 184, 131, 0.1) 0%, rgba(53, 73, 94, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(66, 184, 131, 0.1) 0%,
+    rgba(53, 73, 94, 0.1) 100%
+  );
 }
 
 .sponsor-content {
@@ -294,13 +311,13 @@ onMounted(() => {
     max-width: none;
     margin: 16px;
   }
-  
+
   .sponsor-content {
     flex-direction: column;
     gap: 8px;
     text-align: center;
   }
-  
+
   .sponsor-text {
     font-size: 13px;
   }
@@ -312,6 +329,10 @@ html.dark .ad-banner--top {
 }
 
 html.dark .sponsor-banner {
-  background: linear-gradient(135deg, rgba(66, 184, 131, 0.15) 0%, rgba(53, 73, 94, 0.15) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(66, 184, 131, 0.15) 0%,
+    rgba(53, 73, 94, 0.15) 100%
+  );
 }
 </style>

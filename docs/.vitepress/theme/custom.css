@@ -2,8 +2,11 @@
 
 /* Base colors and fonts */
 :root {
-  --vp-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --vp-font-family-mono: 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --vp-font-family-base:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --vp-font-family-mono:
+    "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* Dark theme refinements */
@@ -142,7 +145,6 @@ html.dark {
   color: var(--vp-c-text-2);
 }
 
-
 /* Tables - wiki style */
 .vp-doc table {
   margin: 20px 0;
@@ -226,7 +228,6 @@ html.dark .VPNavBarTitle .logo {
   border-left: 4px solid var(--vp-c-brand);
 }
 
-
 /* Modern hero section */
 .VPHero {
   padding: 80px 24px;
@@ -280,7 +281,7 @@ html.dark .VPNavBarTitle .logo {
 
 /* Floating star on hover */
 .VPButton.alt::before {
-  content: '⭐';
+  content: "⭐";
   position: absolute;
   font-size: 18px;
   top: 50%;
@@ -294,7 +295,7 @@ html.dark .VPNavBarTitle .logo {
 
 /* Multiple burst particles */
 .VPButton.alt::after {
-  content: '✨ ⭐ ✨ ⭐ ✨';
+  content: "✨ ⭐ ✨ ⭐ ✨";
   position: absolute;
   font-size: 12px;
   top: 50%;
@@ -355,11 +356,13 @@ html.dark .VPNavBarTitle .logo {
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, -50%) translateY(-100px) scale(1.5) rotate(180deg);
+    transform: translate(-50%, -50%) translateY(-100px) scale(1.5)
+      rotate(180deg);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) translateY(-100px) scale(2.5) rotate(360deg);
+    transform: translate(-50%, -50%) translateY(-100px) scale(2.5)
+      rotate(360deg);
   }
 }
 
@@ -421,7 +424,7 @@ html.dark .VPFeature {
 /* Light mode hover */
 .VPFeature:hover {
   border-color: var(--vp-c-brand-light);
-  box-shadow: 
+  box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.1),
     0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -430,7 +433,7 @@ html.dark .VPFeature {
 html.dark .VPFeature:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(66, 184, 131, 0.5);
-  box-shadow: 
+  box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(66, 184, 131, 0.3),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
@@ -438,7 +441,7 @@ html.dark .VPFeature:hover {
 
 /* Gradient overlay for depth */
 .VPFeature::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -511,10 +514,11 @@ html.dark .VPFeature:hover {
 
 /* Pulse effect when actively exploring */
 @keyframes explorePulse {
-  0%, 100% { 
+  0%,
+  100% {
     transform: translateY(-3px) scale(1);
   }
-  50% { 
+  50% {
     transform: translateY(-6px) scale(1.05);
   }
 }
@@ -525,8 +529,13 @@ html.dark .VPFeature:hover {
 
 /* Animated dots while exploring */
 @keyframes dotDance {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-4px) scale(1.5); }
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.5);
+  }
 }
 
 .VPHome:has(.VPFeature:hover) .explore-hint .dot:nth-child(1) {
@@ -560,7 +569,7 @@ html.dark .VPFeature:hover {
 
 /* Add diff symbols as pseudo-elements (hidden by default) */
 .diff-line::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 4px;
   font-family: var(--vp-font-family-mono);
@@ -571,7 +580,7 @@ html.dark .VPFeature:hover {
 
 /* Line numbers - typed out on hover */
 .diff-line::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 100%;
   margin-right: 12px;
@@ -586,19 +595,19 @@ html.dark .VPFeature:hover {
 }
 
 .diff-delete::after {
-  content: '6739';
+  content: "6739";
 }
 
 .diff-add::after {
-  content: '6740';
+  content: "6740";
 }
 
 .diff-delete::before {
-  content: '-';
+  content: "-";
 }
 
 .diff-add::before {
-  content: '+';
+  content: "+";
 }
 
 /* Hover state - transform to diff view */
@@ -614,7 +623,9 @@ html.dark .VPFeature:hover {
 .VPFeature:first-child:hover .diff-line::after {
   opacity: 0.6;
   max-width: 50px;
-  transition: opacity 0.3s ease 0.3s, max-width 0.4s ease 0.3s;
+  transition:
+    opacity 0.3s ease 0.3s,
+    max-width 0.4s ease 0.3s;
 }
 
 /* Ensure space for line numbers only on File Analysis card */
@@ -694,6 +705,3 @@ html.dark .VPFeature:first-child:hover .diff-add::before {
 .VPSidebar::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Webkit */
 }
-
-
-

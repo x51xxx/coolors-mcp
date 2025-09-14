@@ -2,21 +2,21 @@
   <div class="code-block-container">
     <span class="language-indicator">{{ language }}</span>
     <div class="code-lines">
-      <div 
-        v-for="(line, index) in lines" 
+      <div
+        v-for="(line, index) in lines"
         :key="index"
         class="code-line"
         @mouseenter="hoveredLine = index"
         @mouseleave="hoveredLine = null"
       >
         <span class="line-number">{{ index + 1 }}</span>
-        <button 
+        <button
           v-show="hoveredLine === index"
           @click="copyLine(line, index)"
           class="copy-line-button"
           :title="`Copy line ${index + 1}`"
         >
-          {{ copiedLine === index ? '✓' : '📋' }}
+          {{ copiedLine === index ? "✓" : "📋" }}
         </button>
         <span class="line-content" v-html="line || '\u00A0'"></span>
       </div>
@@ -25,73 +25,80 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from "vue";
 // Lazy-load Prism on client to avoid SSR/import issues
-let Prism = null
+let Prism = null;
 
 const props = defineProps({
   code: {
     type: String,
-    default: '// No code provided'
+    default: "// No code provided",
   },
   language: {
     type: String,
-    default: 'javascript'
-  }
-})
+    default: "javascript",
+  },
+});
 
-const hoveredLine = ref(null)
-const copiedLine = ref(null)
+const hoveredLine = ref(null);
+const copiedLine = ref(null);
 
-const highlightedCode = ref('')
+const highlightedCode = ref("");
 
 const lines = computed(() => {
-  return highlightedCode.value.split('\n')
-})
+  return highlightedCode.value.split("\n");
+});
 
 const ensurePrism = async () => {
-  if (typeof window === 'undefined') return
+  if (typeof window === "undefined") return;
   if (!Prism) {
-    const mod = await import('prismjs')
+    const mod = await import("prismjs");
     // Load languages and theme
     await Promise.all([
-      import('prismjs/components/prism-bash'),
-      import('prismjs/components/prism-python'),
-      import('prismjs/components/prism-typescript'),
-      import('prismjs/components/prism-javascript'),
-      import('prismjs/components/prism-json'),
-      import('prismjs/components/prism-yaml'),
-      import('prismjs/themes/prism-tomorrow.css')
-    ])
-    Prism = (mod && 'default' in mod) ? mod.default : mod
+      import("prismjs/components/prism-bash"),
+      import("prismjs/components/prism-python"),
+      import("prismjs/components/prism-typescript"),
+      import("prismjs/components/prism-javascript"),
+      import("prismjs/components/prism-json"),
+      import("prismjs/components/prism-yaml"),
+      import("prismjs/themes/prism-tomorrow.css"),
+    ]);
+    Prism = mod && "default" in mod ? mod.default : mod;
   }
-}
+};
 
 const highlightCode = async () => {
-  await ensurePrism()
+  await ensurePrism();
   if (!Prism) {
-    highlightedCode.value = props.code
-    return
+    highlightedCode.value = props.code;
+    return;
   }
-  const grammar = Prism.languages[props.language] || Prism.languages.plaintext
-  highlightedCode.value = Prism.highlight(props.code, grammar, props.language)
-}
+  const grammar = Prism.languages[props.language] || Prism.languages.plaintext;
+  highlightedCode.value = Prism.highlight(props.code, grammar, props.language);
+};
 
-onMounted(() => { highlightCode() })
-watch(() => [props.code, props.language], () => { highlightCode() })
+onMounted(() => {
+  highlightCode();
+});
+watch(
+  () => [props.code, props.language],
+  () => {
+    highlightCode();
+  },
+);
 
 const copyLine = async (line, index) => {
   try {
-    const plainLine = props.code.split('\n')[index]
-    await navigator.clipboard.writeText(plainLine)
-    copiedLine.value = index
+    const plainLine = props.code.split("\n")[index];
+    await navigator.clipboard.writeText(plainLine);
+    copiedLine.value = index;
     setTimeout(() => {
-      copiedLine.value = null
-    }, 1500)
+      copiedLine.value = null;
+    }, 1500);
   } catch (err) {
-    console.error('Failed to copy line:', err)
+    console.error("Failed to copy line:", err);
   }
-}
+};
 </script>
 
 <style scoped>
@@ -100,7 +107,7 @@ const copyLine = async (line, index) => {
   border-radius: 6px;
   overflow: hidden;
   margin: 16px 0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   position: relative;
 }
 

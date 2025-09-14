@@ -8,24 +8,24 @@ Find the closest matching theme variable for a given color.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `color` | string | ✅ | Color to match (hex, rgb, hsl) |
-| `themeCSS` | string | ✅ | CSS containing theme variables |
-| `context` | string | ❌ | Usage context: text, background, border, shadow, accent, decorative |
-| `minConfidence` | number | ❌ | Minimum confidence threshold (0-100, default: 70) |
+| Parameter       | Type   | Required | Description                                                         |
+| --------------- | ------ | -------- | ------------------------------------------------------------------- |
+| `color`         | string | ✅       | Color to match (hex, rgb, hsl)                                      |
+| `themeCSS`      | string | ✅       | CSS containing theme variables                                      |
+| `context`       | string | ❌       | Usage context: text, background, border, shadow, accent, decorative |
+| `minConfidence` | number | ❌       | Minimum confidence threshold (0-100, default: 70)                   |
 
 ### Returns
 
 ```typescript
 {
-  match: string;        // CSS variable name
-  confidence: number;   // Confidence score (0-100)
+  match: string; // CSS variable name
+  confidence: number; // Confidence score (0-100)
   originalColor: string; // Input color
-  themeColor: string;   // Matched theme color
-  distance: number;     // Perceptual distance
+  themeColor: string; // Matched theme color
+  distance: number; // Perceptual distance
   semantic: {
-    role: string;       // Detected semantic role
+    role: string; // Detected semantic role
     compatible: boolean; // Context compatibility
   }
 }
@@ -117,13 +117,13 @@ Automatically replace hardcoded colors with theme variables in CSS.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `css` | string | ✅ | CSS content to refactor |
-| `themeCSS` | string | ✅ | CSS containing theme variables |
-| `minConfidence` | number | ❌ | Minimum confidence for replacements (default: 70) |
-| `preserveOriginal` | boolean | ❌ | Keep original values as comments (default: true) |
-| `generateReport` | boolean | ❌ | Generate detailed refactoring report (default: false) |
+| Parameter          | Type    | Required | Description                                           |
+| ------------------ | ------- | -------- | ----------------------------------------------------- |
+| `css`              | string  | ✅       | CSS content to refactor                               |
+| `themeCSS`         | string  | ✅       | CSS containing theme variables                        |
+| `minConfidence`    | number  | ❌       | Minimum confidence for replacements (default: 70)     |
+| `preserveOriginal` | boolean | ❌       | Keep original values as comments (default: true)      |
+| `generateReport`   | boolean | ❌       | Generate detailed refactoring report (default: false) |
 
 ### Returns
 
@@ -236,26 +236,26 @@ Match multiple colors to theme variables in a single operation.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `colors` | string[] | ✅ | Array of colors to match (max 50) |
-| `themeCSS` | string | ✅ | CSS containing theme variables |
-| `context` | string | ❌ | Usage context for all colors |
+| Parameter  | Type     | Required | Description                       |
+| ---------- | -------- | -------- | --------------------------------- |
+| `colors`   | string[] | ✅       | Array of colors to match (max 50) |
+| `themeCSS` | string   | ✅       | CSS containing theme variables    |
+| `context`  | string   | ❌       | Usage context for all colors      |
 
 ### Returns
 
 ```typescript
 {
   matches: Array<{
-    color: string;        // Input color
+    color: string; // Input color
     match: string | null; // Matched variable or null
-    confidence: number;   // Match confidence
-    distance: number;     // Perceptual distance
+    confidence: number; // Match confidence
+    distance: number; // Perceptual distance
   }>;
   summary: {
-    total: number;        // Total colors processed
-    matched: number;      // Successfully matched
-    unmatched: number;    // No suitable match
+    total: number; // Total colors processed
+    matched: number; // Successfully matched
+    unmatched: number; // No suitable match
     averageConfidence: number;
   }
 }
@@ -335,11 +335,11 @@ Generate CSS custom properties for a complete theme from a source color.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `sourceColor` | string | ✅ | Source color for theme generation |
-| `prefix` | string | ❌ | Prefix for CSS variables (default: "color") |
-| `includeTones` | number[] | ❌ | Tone values to include (default: Material Design tones) |
+| Parameter      | Type     | Required | Description                                             |
+| -------------- | -------- | -------- | ------------------------------------------------------- |
+| `sourceColor`  | string   | ✅       | Source color for theme generation                       |
+| `prefix`       | string   | ❌       | Prefix for CSS variables (default: "color")             |
+| `includeTones` | number[] | ❌       | Tone values to include (default: Material Design tones) |
 
 ### Returns
 
@@ -440,11 +440,11 @@ Use clear, semantic names:
 
 ### Confidence Thresholds
 
-| Use Case | Recommended | Rationale |
-|----------|-------------|-----------|
-| Production | 85-100% | Avoid false matches |
-| Development | 70-85% | Balance accuracy/coverage |
-| Exploration | 50-70% | Find possibilities |
+| Use Case    | Recommended | Rationale                 |
+| ----------- | ----------- | ------------------------- |
+| Production  | 85-100%     | Avoid false matches       |
+| Development | 70-85%      | Balance accuracy/coverage |
+| Exploration | 50-70%      | Find possibilities        |
 
 ### Performance Tips
 
@@ -466,7 +466,7 @@ if (result.confidence < minConfidence) {
 try {
   const refactored = await refactorCSS(css, theme);
 } catch (error) {
-  console.error('Invalid CSS:', error);
+  console.error("Invalid CSS:", error);
 }
 ```
 
@@ -498,7 +498,7 @@ if (!result) {
 const colors = extractThemeColors(themeCSS);
 const unique = new Set(colors.values());
 if (unique.size < colors.size) {
-  console.warn('Duplicate colors in theme');
+  console.warn("Duplicate colors in theme");
 }
 ```
 
@@ -524,6 +524,7 @@ const refactored = refactorWithTheme(css, theme);
 
 **Problem**: All matches have low confidence
 **Solution**:
+
 - Check theme has enough color variations
 - Lower minConfidence threshold
 - Add more theme variables
@@ -532,6 +533,7 @@ const refactored = refactorWithTheme(css, theme);
 
 **Problem**: Colors match wrong semantic role
 **Solution**:
+
 - Use clearer variable naming
 - Provide context parameter
 - Adjust semantic weight in matching
@@ -540,6 +542,7 @@ const refactored = refactorWithTheme(css, theme);
 
 **Problem**: Slow with large CSS files
 **Solution**:
+
 - Split CSS into smaller chunks
 - Use batch operations
 - Cache parsed theme variables

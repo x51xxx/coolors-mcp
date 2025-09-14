@@ -17,16 +17,19 @@ distance = √((r₂-r₁)² + (g₂-g₁)² + (b₂-b₁)²)
 ```
 
 **Pros:**
+
 - Fast to compute
 - Simple to understand
 - Good for rough comparisons
 
 **Cons:**
+
 - Not perceptually uniform
 - Poor for subtle color differences
 - Doesn't match human vision
 
 **When to use:**
+
 - Quick filtering
 - Performance-critical applications
 - When accuracy isn't crucial
@@ -40,11 +43,13 @@ The original perceptual color difference formula using LAB color space:
 ```
 
 **Characteristics:**
+
 - First attempt at perceptual uniformity
 - Simple LAB distance calculation
 - Threshold: ΔE < 2.3 is barely perceptible
 
 **When to use:**
+
 - Basic perceptual matching
 - Legacy systems
 - When computation speed matters
@@ -58,11 +63,13 @@ Improved formula with weighting factors for different color attributes:
 ```
 
 **Improvements:**
+
 - Separate weights for lightness, chroma, hue
 - Better for textiles and graphics
 - More accurate than CIE76
 
 **When to use:**
+
 - Textile industry
 - Graphic arts
 - Better accuracy than CIE76
@@ -77,12 +84,14 @@ The most accurate standard for color difference, addressing perceptual non-unifo
 ```
 
 **Features:**
+
 - Rotation term for blue region
 - Lightness, chroma, hue corrections
 - Most accurate for human perception
 - Industry standard
 
 **When to use:**
+
 - Color matching applications
 - Quality control
 - When accuracy is paramount
@@ -98,11 +107,13 @@ distance = √((Δh × wₕ)² + (Δc × wᴄ)² + (Δt × wᴛ)²)
 ```
 
 **Advantages:**
+
 - Optimized for UI colors
 - Tone component predicts contrast
 - Better for Material Design
 
 **When to use:**
+
 - UI/UX design
 - Material Design systems
 - Theme matching
@@ -112,14 +123,14 @@ distance = √((Δh × wₕ)² + (Δc × wᴄ)² + (Δt × wᴛ)²)
 
 Different ΔE values represent different levels of color difference:
 
-| ΔE Value | Perception | Use Case |
-|----------|------------|----------|
-| 0-1 | Not perceptible | Exact matches |
-| 1-2 | Barely perceptible | Very close matches |
-| 2-3.5 | Perceptible by experts | Close matches |
-| 3.5-5 | Noticeable difference | Acceptable matches |
-| 5-10 | Clear difference | Related colors |
-| >10 | Different colors | Distinct colors |
+| ΔE Value | Perception             | Use Case           |
+| -------- | ---------------------- | ------------------ |
+| 0-1      | Not perceptible        | Exact matches      |
+| 1-2      | Barely perceptible     | Very close matches |
+| 2-3.5    | Perceptible by experts | Close matches      |
+| 3.5-5    | Noticeable difference  | Acceptable matches |
+| 5-10     | Clear difference       | Related colors     |
+| >10      | Different colors       | Distinct colors    |
 
 ## Metric Comparison
 
@@ -211,14 +222,14 @@ Is performance critical?
 
 ### Use Case Guidelines
 
-| Use Case | Recommended Metric | Reason |
-|----------|-------------------|---------|
-| CSS color matching | Delta E 2000 | Accuracy |
-| Real-time filtering | Euclidean | Speed |
-| Theme generation | HCT | UI optimization |
-| Print color matching | Delta E 2000 | Industry standard |
-| Palette creation | HCT | Perceptual uniformity |
-| Image quantization | Delta E 76 | Balance |
+| Use Case             | Recommended Metric | Reason                |
+| -------------------- | ------------------ | --------------------- |
+| CSS color matching   | Delta E 2000       | Accuracy              |
+| Real-time filtering  | Euclidean          | Speed                 |
+| Theme generation     | HCT                | UI optimization       |
+| Print color matching | Delta E 2000       | Industry standard     |
+| Palette creation     | HCT                | Perceptual uniformity |
+| Image quantization   | Delta E 76         | Balance               |
 
 ## Implementation Examples
 
@@ -226,14 +237,14 @@ Is performance critical?
 
 ```javascript
 function findSimilarColors(targetColor, palette, threshold = 5) {
-  return palette.filter(color => {
-    const distance = colorDistance(targetColor, color, 'deltaE2000');
+  return palette.filter((color) => {
+    const distance = colorDistance(targetColor, color, "deltaE2000");
     return distance < threshold;
   });
 }
 
 // Usage
-const similar = findSimilarColors('#6366f1', myPalette, 10);
+const similar = findSimilarColors("#6366f1", myPalette, 10);
 // Returns colors within ΔE 10 of target
 ```
 
@@ -243,11 +254,11 @@ const similar = findSimilarColors('#6366f1', myPalette, 10);
 function clusterColors(colors, maxDistance = 5) {
   const clusters = [];
 
-  colors.forEach(color => {
+  colors.forEach((color) => {
     let added = false;
 
     for (const cluster of clusters) {
-      const distance = colorDistance(color, cluster.center, 'deltaE2000');
+      const distance = colorDistance(color, cluster.center, "deltaE2000");
       if (distance < maxDistance) {
         cluster.colors.push(color);
         added = true;
@@ -258,7 +269,7 @@ function clusterColors(colors, maxDistance = 5) {
     if (!added) {
       clusters.push({
         center: color,
-        colors: [color]
+        colors: [color],
       });
     }
   });
@@ -281,7 +292,7 @@ function interpolatePerceptual(color1, color2, steps) {
     const lab = {
       l: lab1.l + (lab2.l - lab1.l) * t,
       a: lab1.a + (lab2.a - lab1.a) * t,
-      b: lab1.b + (lab2.b - lab1.b) * t
+      b: lab1.b + (lab2.b - lab1.b) * t,
     };
     colors.push(labToRgb(lab));
   }
@@ -313,16 +324,16 @@ Distance perception changes based on viewing conditions:
 
 ```javascript
 function contextualDistance(color1, color2, context) {
-  switch(context) {
-    case 'small-text':
+  switch (context) {
+    case "small-text":
       // Need larger differences for readability
       return colorDistance(color1, color2) * 1.5;
 
-    case 'large-area':
+    case "large-area":
       // Subtle differences more noticeable
       return colorDistance(color1, color2) * 0.8;
 
-    case 'dark-mode':
+    case "dark-mode":
       // Adjust for dark backgrounds
       return adjustedDarkModeDistance(color1, color2);
 
@@ -343,8 +354,8 @@ function multiFactorDistance(color1, color2) {
   const semantic = getSemanticDistance(color1, color2);
 
   return {
-    overall: (perceptual * 0.6 + contrast * 0.3 + semantic * 0.1),
-    components: { perceptual, contrast, semantic }
+    overall: perceptual * 0.6 + contrast * 0.3 + semantic * 0.1,
+    components: { perceptual, contrast, semantic },
   };
 }
 ```
@@ -352,18 +363,22 @@ function multiFactorDistance(color1, color2) {
 ## Common Pitfalls
 
 ### RGB Distance Misuse
+
 ❌ Don't use RGB distance for perceptual matching
 ✅ Use Delta E or HCT distance instead
 
 ### Ignoring Context
+
 ❌ Don't use the same threshold for all use cases
 ✅ Adjust thresholds based on application
 
 ### Over-Engineering
+
 ❌ Don't always use the most complex metric
 ✅ Choose based on actual requirements
 
 ### Wrong Color Space
+
 ❌ Don't interpolate in RGB for gradients
 ✅ Use LAB or HCT for smooth transitions
 

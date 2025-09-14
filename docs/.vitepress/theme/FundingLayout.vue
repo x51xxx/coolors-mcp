@@ -1,22 +1,29 @@
 <template>
   <div class="funding-layout">
     <transition name="fade">
-      <button 
+      <button
         v-if="showReturnButton"
         @click="goBack"
         class="return-button"
         title="Return to previous page"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5M5 12L12 19M5 12L12 5"/>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" />
         </svg>
         <span>Return</span>
       </button>
     </transition>
-    
+
     <FundingHero />
-    
-    <div 
+
+    <div
       class="funding-content"
       @mouseenter="handleMouseEnter"
       @mousemove="handleMouseMove"
@@ -25,75 +32,75 @@
     >
       <Content />
     </div>
-    
+
     <FundingEffects />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { Content, useRouter } from 'vitepress'
-import FundingHero from './components/FundingHero.vue'
-import FundingEffects from './components/FundingEffects.vue'
+import { ref, onMounted, onUnmounted } from "vue";
+import { Content, useRouter } from "vitepress";
+import FundingHero from "./components/FundingHero.vue";
+import FundingEffects from "./components/FundingEffects.vue";
 
-const contentRef = ref(null)
-const showReturnButton = ref(false)
-const router = useRouter()
+const contentRef = ref(null);
+const showReturnButton = ref(false);
+const router = useRouter();
 
 const goBack = () => {
   if (window.history.length > 1) {
-    window.history.back()
+    window.history.back();
   } else {
-    router.go('/coolors-mcp/')
+    router.go("/coolors-mcp/");
   }
-}
+};
 
 // Show return button after scroll
 onMounted(() => {
   const handleScroll = () => {
-    showReturnButton.value = window.scrollY > 100
-  }
-  
-  window.addEventListener('scroll', handleScroll)
-  
+    showReturnButton.value = window.scrollY > 100;
+  };
+
+  window.addEventListener("scroll", handleScroll);
+
   // Add page transition class
-  document.body.classList.add('page-transition-active')
+  document.body.classList.add("page-transition-active");
   setTimeout(() => {
-    document.body.classList.remove('page-transition-active')
-  }, 600)
-  
+    document.body.classList.remove("page-transition-active");
+  }, 600);
+
   onUnmounted(() => {
-    window.removeEventListener('scroll', handleScroll)
-  })
-})
+    window.removeEventListener("scroll", handleScroll);
+  });
+});
 
 const handleMouseEnter = (e) => {
-  if (!contentRef.value) return
-  
-  const rect = contentRef.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  
-  contentRef.value.style.setProperty('--content-mouse-x', `${x}px`)
-  contentRef.value.style.setProperty('--content-mouse-y', `${y}px`)
-  contentRef.value.classList.add('mouse-over')
-}
+  if (!contentRef.value) return;
+
+  const rect = contentRef.value.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  contentRef.value.style.setProperty("--content-mouse-x", `${x}px`);
+  contentRef.value.style.setProperty("--content-mouse-y", `${y}px`);
+  contentRef.value.classList.add("mouse-over");
+};
 
 const handleMouseMove = (e) => {
-  if (!contentRef.value) return
-  
-  const rect = contentRef.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  
-  contentRef.value.style.setProperty('--content-mouse-x', `${x}px`)
-  contentRef.value.style.setProperty('--content-mouse-y', `${y}px`)
-}
+  if (!contentRef.value) return;
+
+  const rect = contentRef.value.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  contentRef.value.style.setProperty("--content-mouse-x", `${x}px`);
+  contentRef.value.style.setProperty("--content-mouse-y", `${y}px`);
+};
 
 const handleMouseLeave = () => {
-  if (!contentRef.value) return
-  contentRef.value.classList.remove('mouse-over')
-}
+  if (!contentRef.value) return;
+  contentRef.value.classList.remove("mouse-over");
+};
 </script>
 
 <style scoped>
@@ -169,7 +176,7 @@ const handleMouseLeave = () => {
 }
 
 .funding-content::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100px;
@@ -217,7 +224,11 @@ html:not(.dark) .funding-content::before {
   margin: 64px 0 32px;
   padding: 0 24px;
   text-align: center;
-  background: linear-gradient(135deg, var(--vp-c-text-1) 0%, var(--vp-c-brand) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--vp-c-text-1) 0%,
+    var(--vp-c-brand) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

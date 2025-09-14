@@ -8,36 +8,36 @@ Check the contrast ratio between two colors and verify WCAG compliance.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `foreground` | string | ✅ | Foreground/text color (hex, rgb, hsl) |
-| `background` | string | ✅ | Background color (hex, rgb, hsl) |
-| `fontSize` | number | ❌ | Font size in pixels (for determining large text) |
-| `fontWeight` | number | ❌ | Font weight (for determining bold text) |
+| Parameter    | Type   | Required | Description                                      |
+| ------------ | ------ | -------- | ------------------------------------------------ |
+| `foreground` | string | ✅       | Foreground/text color (hex, rgb, hsl)            |
+| `background` | string | ✅       | Background color (hex, rgb, hsl)                 |
+| `fontSize`   | number | ❌       | Font size in pixels (for determining large text) |
+| `fontWeight` | number | ❌       | Font weight (for determining bold text)          |
 
 ### Returns
 
 ```typescript
 {
-  ratio: number;          // Contrast ratio (1-21)
-  ratioString: string;    // Formatted as "X.XX:1"
+  ratio: number; // Contrast ratio (1-21)
+  ratioString: string; // Formatted as "X.XX:1"
   passes: {
     AA: {
-      normal: boolean;    // Passes AA for normal text (4.5:1)
-      large: boolean;     // Passes AA for large text (3:1)
-      nonText: boolean;   // Passes AA for UI elements (3:1)
-    };
-    AAA: {
-      normal: boolean;    // Passes AAA for normal text (7:1)
-      large: boolean;     // Passes AAA for large text (4.5:1)
+      normal: boolean; // Passes AA for normal text (4.5:1)
+      large: boolean; // Passes AA for large text (3:1)
+      nonText: boolean; // Passes AA for UI elements (3:1)
     }
-  };
+    AAA: {
+      normal: boolean; // Passes AAA for normal text (7:1)
+      large: boolean; // Passes AAA for large text (4.5:1)
+    }
+  }
   recommendation: string; // Human-readable recommendation
   luminance: {
-    foreground: number;   // Relative luminance (0-1)
-    background: number;   // Relative luminance (0-1)
-  };
-  isLargeText: boolean;  // Whether text qualifies as large
+    foreground: number; // Relative luminance (0-1)
+    background: number; // Relative luminance (0-1)
+  }
+  isLargeText: boolean; // Whether text qualifies as large
 }
 ```
 
@@ -113,9 +113,9 @@ Check the contrast ratio between two colors and verify WCAG compliance.
 ```javascript
 // Test color pairs
 const pairs = [
-  { fg: "#1f2937", bg: "#ffffff" },  // Dark gray on white
-  { fg: "#6366f1", bg: "#f3f4f6" },  // Blue on light gray
-  { fg: "#ffffff", bg: "#dc2626" }   // White on red
+  { fg: "#1f2937", bg: "#ffffff" }, // Dark gray on white
+  { fg: "#6366f1", bg: "#f3f4f6" }, // Blue on light gray
+  { fg: "#ffffff", bg: "#dc2626" }, // White on red
 ];
 
 for (const pair of pairs) {
@@ -127,6 +127,7 @@ for (const pair of pairs) {
 ### Large Text Definition
 
 Text is considered "large" when:
+
 - Font size ≥ 18pt (24px)
 - Font size ≥ 14pt (18.67px) AND bold (weight ≥ 700)
 
@@ -143,12 +144,12 @@ Automatically adjust a color to meet contrast requirements.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `foreground` | string | ✅ | Color to adjust |
-| `background` | string | ✅ | Background color |
-| `targetRatio` | number | ✅ | Minimum contrast ratio needed |
-| `preferLighter` | boolean | ❌ | Prefer lightening over darkening |
+| Parameter       | Type    | Required | Description                      |
+| --------------- | ------- | -------- | -------------------------------- |
+| `foreground`    | string  | ✅       | Color to adjust                  |
+| `background`    | string  | ✅       | Background color                 |
+| `targetRatio`   | number  | ✅       | Minimum contrast ratio needed    |
+| `preferLighter` | boolean | ❌       | Prefer lightening over darkening |
 
 ### Returns
 
@@ -157,14 +158,14 @@ Automatically adjust a color to meet contrast requirements.
   original: {
     color: string;
     ratio: number;
-  };
+  }
   adjusted: {
     color: string;
     ratio: number;
-  };
+  }
   adjustmentMade: boolean;
-  adjustmentType: 'lightened' | 'darkened' | 'none';
-  toneChange: number;     // HCT tone difference
+  adjustmentType: "lightened" | "darkened" | "none";
+  toneChange: number; // HCT tone difference
 }
 ```
 
@@ -241,12 +242,12 @@ Generate accessible color pairs for different UI contexts.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `baseColor` | string | ✅ | Starting color |
-| `count` | number | ❌ | Number of pairs to generate (default: 5) |
-| `contrastLevels` | string[] | ❌ | Required levels: AA, AAA (default: ['AA']) |
-| `contexts` | string[] | ❌ | UI contexts: text, button, border (default: all) |
+| Parameter        | Type     | Required | Description                                      |
+| ---------------- | -------- | -------- | ------------------------------------------------ |
+| `baseColor`      | string   | ✅       | Starting color                                   |
+| `count`          | number   | ❌       | Number of pairs to generate (default: 5)         |
+| `contrastLevels` | string[] | ❌       | Required levels: AA, AAA (default: ['AA'])       |
+| `contexts`       | string[] | ❌       | UI contexts: text, button, border (default: all) |
 
 ### Returns
 
@@ -328,11 +329,11 @@ Check all color combinations in a palette for accessibility.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `palette` | object | ✅ | Color palette with role names and values |
-| `level` | string | ❌ | WCAG level to test: AA, AAA (default: AA) |
-| `includeReport` | boolean | ❌ | Generate detailed report (default: true) |
+| Parameter       | Type    | Required | Description                               |
+| --------------- | ------- | -------- | ----------------------------------------- |
+| `palette`       | object  | ✅       | Color palette with role names and values  |
+| `level`         | string  | ❌       | WCAG level to test: AA, AAA (default: AA) |
+| `includeReport` | boolean | ❌       | Generate detailed report (default: true)  |
 
 ### Returns
 
@@ -432,19 +433,21 @@ Check all color combinations in a palette for accessibility.
 ### Contrast Requirements
 
 #### Text Content
-| Context | AA Minimum | AAA Minimum |
-|---------|------------|-------------|
-| Normal text | 4.5:1 | 7:1 |
-| Large text | 3:1 | 4.5:1 |
+
+| Context         | AA Minimum     | AAA Minimum    |
+| --------------- | -------------- | -------------- |
+| Normal text     | 4.5:1          | 7:1            |
+| Large text      | 3:1            | 4.5:1          |
 | Incidental text | No requirement | No requirement |
-| Logotypes | No requirement | No requirement |
+| Logotypes       | No requirement | No requirement |
 
 #### Non-Text Content
-| Context | AA Minimum | Notes |
-|---------|------------|-------|
-| UI components | 3:1 | Active components |
-| Graphics | 3:1 | Essential graphics |
-| Decorative | No requirement | Purely decorative |
+
+| Context       | AA Minimum     | Notes              |
+| ------------- | -------------- | ------------------ |
+| UI components | 3:1            | Active components  |
+| Graphics      | 3:1            | Essential graphics |
+| Decorative    | No requirement | Purely decorative  |
 
 ### Testing Strategy
 
@@ -454,7 +457,7 @@ async function testAccessibility(theme) {
   // 1. Check individual pairs
   const criticalPairs = [
     { fg: theme.text, bg: theme.background },
-    { fg: theme.primary, bg: theme.surface }
+    { fg: theme.primary, bg: theme.surface },
   ];
 
   for (const pair of criticalPairs) {
@@ -467,7 +470,7 @@ async function testAccessibility(theme) {
   // 2. Validate entire palette
   const validation = await validatePalette(theme);
   if (!validation.valid) {
-    console.error('Palette has accessibility issues:', validation.issues);
+    console.error("Palette has accessibility issues:", validation.issues);
   }
 
   // 3. Generate report
@@ -486,14 +489,14 @@ async function fixAccessibility(theme) {
   fixed.text = await ensureContrast({
     foreground: theme.text,
     background: theme.background,
-    targetRatio: 4.5
+    targetRatio: 4.5,
   });
 
   // Ensure buttons are accessible
   fixed.buttonText = await ensureContrast({
     foreground: theme.buttonText,
     background: theme.buttonBg,
-    targetRatio: 4.5
+    targetRatio: 4.5,
   });
 
   return fixed;
@@ -512,17 +515,17 @@ function validateDarkMode(darkTheme) {
     {
       fg: darkTheme.text,
       bg: darkTheme.background,
-      min: 4.5
+      min: 4.5,
     },
     // But not too harsh (avoid pure white on black)
     {
       fg: darkTheme.text,
       bg: darkTheme.background,
-      max: 18  // Avoid excessive contrast
-    }
+      max: 18, // Avoid excessive contrast
+    },
   ];
 
-  return checks.every(check => {
+  return checks.every((check) => {
     const ratio = getContrast(check.fg, check.bg);
     return ratio >= (check.min || 0) && ratio <= (check.max || 21);
   });
@@ -546,10 +549,10 @@ function generateContrastLevels(baseTheme) {
 
     // Maximum - For accessibility needs
     maximum: {
-      text: '#000000',
-      background: '#ffffff',
-      primary: '#0000ff'
-    }
+      text: "#000000",
+      background: "#ffffff",
+      primary: "#0000ff",
+    },
   };
 }
 ```
@@ -570,12 +573,12 @@ function validateFormColors(formTheme) {
     focusRing: { min: 3.0, against: formTheme.inputBg },
 
     // Placeholder text (relaxed requirement)
-    placeholder: { min: 3.0, against: formTheme.inputBg }
+    placeholder: { min: 3.0, against: formTheme.inputBg },
   };
 
   return Object.entries(requirements).map(([element, req]) => ({
     element,
-    passes: checkContrast(formTheme[element], req.against).ratio >= req.min
+    passes: checkContrast(formTheme[element], req.against).ratio >= req.min,
   }));
 }
 ```
@@ -586,6 +589,7 @@ function validateFormColors(formTheme) {
 
 **Problem**: Colors don't meet minimum contrast
 **Solution**:
+
 - Use `ensure_contrast` to auto-adjust
 - Increase tone difference between colors
 - Consider different color roles
@@ -594,6 +598,7 @@ function validateFormColors(formTheme) {
 
 **Problem**: Maximum contrast (21:1) is too harsh
 **Solution**:
+
 - Use off-white (#fafafa) instead of pure white
 - Use very dark gray (#0a0a0a) instead of pure black
 - Aim for 12-15:1 for comfortable reading
@@ -602,6 +607,7 @@ function validateFormColors(formTheme) {
 
 **Problem**: Adjusted colors lose brand identity
 **Solution**:
+
 - Adjust the background instead of foreground
 - Use borders or icons to supplement color
 - Provide high-contrast mode as option

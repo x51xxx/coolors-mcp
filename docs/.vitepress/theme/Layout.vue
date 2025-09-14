@@ -5,15 +5,13 @@
       <span v-if="!isHomePage" class="replacement-title">Documentation</span>
     </template>
     <template #nav-bar-content-before>
-      <div class="nav-warning">
-        🏷️ <span>1.0.0</span>
-      </div>
+      <div class="nav-warning">🏷️ <span>1.0.0</span></div>
     </template>
     <template #sidebar-nav-after>
       <!-- Sidebar ad placement - most non-intrusive -->
-      <AdBanner 
+      <AdBanner
         v-if="!isHomePage"
-        type="carbon" 
+        type="carbon"
         position="sidebar"
         :dismissible="true"
         :hide-on-paths="['/', '/getting-started']"
@@ -27,21 +25,23 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute, useData } from 'vitepress'
-import DefaultTheme from 'vitepress/theme'
-import AdBanner from './components/AdBanner.vue'
-import SupportSection from './components/SupportSection.vue'
-import FundingHero from './components/FundingHero.vue'
-import FundingEffects from './components/FundingEffects.vue'
-import FundingLayout from './FundingLayout.vue'
+import { computed } from "vue";
+import { useRoute, useData } from "vitepress";
+import DefaultTheme from "vitepress/theme";
+import AdBanner from "./components/AdBanner.vue";
+import SupportSection from "./components/SupportSection.vue";
+import FundingHero from "./components/FundingHero.vue";
+import FundingEffects from "./components/FundingEffects.vue";
+import FundingLayout from "./FundingLayout.vue";
 
-const { Layout } = DefaultTheme
-const route = useRoute()
-const { frontmatter } = useData()
+const { Layout } = DefaultTheme;
+const route = useRoute();
+const { frontmatter } = useData();
 
-const isHomePage = computed(() => route.path === '/' || route.path === '/coolors-mcp/')
-const isFundingPage = computed(() => route.path.includes('/funding'))
+const isHomePage = computed(
+  () => route.path === "/" || route.path === "/coolors-mcp/",
+);
+const isFundingPage = computed(() => route.path.includes("/funding"));
 </script>
 
 <style>

@@ -7,12 +7,15 @@ Get up and running with Coolors MCP in minutes. This guide covers installation, 
 ### 1. Install Coolors MCP
 
 #### For Claude Code
+
 ```bash
 claude mcp add coolors -- npx -y @trishchuk/coolors-mcp
 ```
 
 #### For Claude Desktop
+
 Add to your configuration:
+
 ```json
 {
   "mcpServers": {
@@ -27,6 +30,7 @@ Add to your configuration:
 ### 2. Verify Installation
 
 Check that Coolors MCP is available:
+
 ```
 /mcp
 ```
@@ -36,6 +40,7 @@ You should see `coolors` in the list of available servers.
 ### 3. Your First Color Operation
 
 Try a simple color conversion:
+
 ```
 Convert #6366f1 to HSL format
 ```
@@ -50,19 +55,19 @@ Convert between any supported format:
 
 ```javascript
 // Hex to RGB
-"Convert #6366f1 to RGB"
+"Convert #6366f1 to RGB";
 // Result: rgb(99, 102, 241)
 
 // RGB to HSL
-"Convert rgb(99, 102, 241) to HSL"
+"Convert rgb(99, 102, 241) to HSL";
 // Result: hsl(239, 84%, 67%)
 
 // HSL to LAB
-"Convert hsl(239, 84%, 67%) to LAB"
+"Convert hsl(239, 84%, 67%) to LAB";
 // Result: lab(47.9, 35.2, -65.7)
 
 // Any color to HCT
-"Convert #6366f1 to HCT"
+"Convert #6366f1 to HCT";
 // Result: hct(265.8, 87.2, 47.9)
 ```
 
@@ -71,11 +76,11 @@ Convert between any supported format:
 Calculate perceptual difference between colors:
 
 ```javascript
-"What's the perceptual distance between #6366f1 and #5355d1?"
+"What's the perceptual distance between #6366f1 and #5355d1?";
 // Uses Delta E 2000 algorithm
 // Result: 5.2 (very similar colors)
 
-"Compare #ff0000 and #00ff00 using Delta E"
+"Compare #ff0000 and #00ff00 using Delta E";
 // Result: 86.6 (very different colors)
 ```
 
@@ -84,13 +89,13 @@ Calculate perceptual difference between colors:
 Verify accessibility compliance:
 
 ```javascript
-"Check contrast between #1f2937 and #ffffff"
+"Check contrast between #1f2937 and #ffffff";
 // Result: 15.74:1 - Passes AAA for all text sizes
 
-"Is #6366f1 accessible on white background?"
+"Is #6366f1 accessible on white background?";
 // Result: 3.03:1 - Passes AA for large text only
 
-"What text color works on #6366f1 background?"
+"What text color works on #6366f1 background?";
 // Result: #ffffff (white) provides 4.6:1 contrast
 ```
 
@@ -101,13 +106,13 @@ Verify accessibility compliance:
 Generate harmonious color sets:
 
 ```javascript
-"Create a monochromatic palette from #6366f1"
+"Create a monochromatic palette from #6366f1";
 // Result: 5 shades of the same hue
 
-"Generate complementary colors for #6366f1"
+"Generate complementary colors for #6366f1";
 // Result: #6366f1 and its opposite
 
-"Create a triadic color scheme from #6366f1"
+"Create a triadic color scheme from #6366f1";
 // Result: 3 colors 120° apart
 ```
 
@@ -116,7 +121,7 @@ Generate harmonious color sets:
 Generate complete Material Design 3 themes:
 
 ```javascript
-"Create a Material Design theme from #6366f1"
+"Create a Material Design theme from #6366f1";
 // Generates:
 // - Primary, secondary, tertiary palettes
 // - Surface and background colors
@@ -129,10 +134,10 @@ Generate complete Material Design 3 themes:
 Create smooth color transitions:
 
 ```javascript
-"Create a gradient from #6366f1 to #ec4899 with 10 steps"
+"Create a gradient from #6366f1 to #ec4899 with 10 steps";
 // Result: 10 colors smoothly transitioning
 
-"Generate a gradient using LAB interpolation"
+"Generate a gradient using LAB interpolation";
 // Result: Perceptually smooth gradient
 ```
 
@@ -143,7 +148,7 @@ Create smooth color transitions:
 Match colors to existing CSS variables:
 
 ```javascript
-"Find the closest theme variable for #6365f0 in my CSS"
+"Find the closest theme variable for #6365f0 in my CSS";
 // Analyzes your theme CSS and finds best match
 // Result: --color-primary-500 (99% confidence)
 ```
@@ -173,7 +178,7 @@ Automatically replace hardcoded colors:
 Get dominant colors from images:
 
 ```javascript
-"Extract the main colors from this image"
+"Extract the main colors from this image";
 // Analyzes image and returns:
 // - Top 5 dominant colors
 // - Population percentages
@@ -185,7 +190,7 @@ Get dominant colors from images:
 Create a complete theme from an image:
 
 ```javascript
-"Create a Material Design theme from this album cover"
+"Create a Material Design theme from this album cover";
 // Extracts colors and generates:
 // - Source color selection
 // - Complete color scheme
@@ -200,16 +205,16 @@ Start with a brand color and expand:
 
 ```javascript
 // Step 1: Define primary color
-"My brand color is #6366f1"
+"My brand color is #6366f1";
 
 // Step 2: Generate palette
-"Create a complete color system from this"
+"Create a complete color system from this";
 
 // Step 3: Check accessibility
-"Verify all color combinations meet WCAG AA"
+"Verify all color combinations meet WCAG AA";
 
 // Step 4: Export as CSS
-"Generate CSS custom properties for this theme"
+"Generate CSS custom properties for this theme";
 ```
 
 ### 2. Migrating to Theme Variables
@@ -218,16 +223,16 @@ Convert existing CSS to use variables:
 
 ```javascript
 // Step 1: Define your theme
-"Here's my theme CSS: [paste theme]"
+"Here's my theme CSS: [paste theme]";
 
 // Step 2: Analyze existing styles
-"Find all hardcoded colors in styles.css"
+"Find all hardcoded colors in styles.css";
 
 // Step 3: Refactor automatically
-"Replace hardcoded colors with theme variables"
+"Replace hardcoded colors with theme variables";
 
 // Step 4: Review changes
-"Show me colors that couldn't be matched"
+"Show me colors that couldn't be matched";
 ```
 
 ### 3. Creating Accessible Designs
@@ -236,16 +241,16 @@ Ensure your colors meet standards:
 
 ```javascript
 // Step 1: Test current colors
-"Check contrast for my primary colors"
+"Check contrast for my primary colors";
 
 // Step 2: Fix issues
-"Adjust colors to meet WCAG AA"
+"Adjust colors to meet WCAG AA";
 
 // Step 3: Generate alternatives
-"Create high contrast version of theme"
+"Create high contrast version of theme";
 
 // Step 4: Validate
-"Verify all combinations are accessible"
+"Verify all combinations are accessible";
 ```
 
 ## Advanced Features
@@ -255,7 +260,7 @@ Ensure your colors meet standards:
 Make multiple colors work together:
 
 ```javascript
-"Harmonize these colors: #6366f1, #ec4899, #10b981"
+"Harmonize these colors: #6366f1, #ec4899, #10b981";
 // Adjusts colors to be more harmonious while maintaining identity
 ```
 
@@ -264,7 +269,7 @@ Make multiple colors work together:
 Avoid universally disliked colors:
 
 ```javascript
-"Is #6b7c3a a good color for UI?"
+"Is #6b7c3a a good color for UI?";
 // Detects "bile zone" colors and suggests alternatives
 ```
 
@@ -273,7 +278,7 @@ Avoid universally disliked colors:
 Process multiple colors efficiently:
 
 ```javascript
-"Match all these colors to my theme: [list of colors]"
+"Match all these colors to my theme: [list of colors]";
 // Processes all colors and returns best matches
 ```
 
@@ -325,12 +330,15 @@ Process multiple colors efficiently:
 ### Common Issues
 
 #### "Tool not found"
+
 Make sure Coolors MCP is properly installed and Claude has been restarted.
 
 #### "Invalid color format"
+
 Check that your color is in a supported format: hex (#RRGGBB), rgb(), hsl(), etc.
 
 #### "No theme matches found"
+
 Lower the confidence threshold or add more theme variables.
 
 ### Support
@@ -342,6 +350,7 @@ Lower the confidence threshold or add more theme variables.
 ## Quick Reference
 
 ### Supported Color Formats
+
 - **Hex**: `#RRGGBB` or `#RGB`
 - **RGB**: `rgb(r, g, b)` or `{r, g, b}`
 - **HSL**: `hsl(h, s%, l%)` or `{h, s, l}`
@@ -349,6 +358,7 @@ Lower the confidence threshold or add more theme variables.
 - **HCT**: `hct(h, c, t)` or `{h, c, t}`
 
 ### Common Tools
+
 - `convert_color` - Format conversion
 - `color_distance` - Perceptual difference
 - `check_contrast` - WCAG compliance
@@ -359,6 +369,7 @@ Lower the confidence threshold or add more theme variables.
 - `extract_image_colors` - Image analysis
 
 ### Contrast Requirements
+
 - **Normal text**: 4.5:1 (AA), 7:1 (AAA)
 - **Large text**: 3:1 (AA), 4.5:1 (AAA)
 - **UI elements**: 3:1 (AA)

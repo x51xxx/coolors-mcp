@@ -9,8 +9,8 @@
         </p>
       </div>
     </div>
-    <a 
-      href="https://github.com/sponsors/jamubc" 
+    <a
+      href="https://github.com/sponsors/jamubc"
       class="placeholder-cta"
       target="_blank"
       rel="noopener"

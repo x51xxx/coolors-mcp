@@ -8,7 +8,7 @@ Learn how to extract colors from images and generate dynamic themes using Coolor
 
 ```javascript
 // Extract dominant colors
-"Extract the main colors from this image"
+"Extract the main colors from this image";
 
 // Process:
 // 1. Quantizes image using Celebi algorithm (Wu + WSMeans)
@@ -21,7 +21,7 @@ Learn how to extract colors from images and generate dynamic themes using Coolor
 
 ```javascript
 // Create Material Design theme from image
-"Generate a theme from this album artwork"
+"Generate a theme from this album artwork";
 
 // Result:
 // - Extracts dominant colors
@@ -63,12 +63,12 @@ img.src = 'path/to/image.jpg';
 ### Node.js with Sharp
 
 ```javascript
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 async function extractColorsFromFile(imagePath) {
   // Load and prepare image
   const { data, info } = await sharp(imagePath)
-    .resize(300, 300, { fit: 'inside' })  // Resize for performance
+    .resize(300, 300, { fit: "inside" }) // Resize for performance
     .raw()
     .toBuffer({ resolveWithObject: true });
 
@@ -79,14 +79,14 @@ async function extractColorsFromFile(imagePath) {
   const result = await extractImageColors({
     imageData: pixels,
     maxColors: 8,
-    minPopulation: 0.01  // Include colors with 1%+ coverage
+    minPopulation: 0.01, // Include colors with 1%+ coverage
   });
 
   return result;
 }
 
 // Usage
-const colors = await extractColorsFromFile('logo.png');
+const colors = await extractColorsFromFile("logo.png");
 console.log(`Found ${colors.colors.length} dominant colors`);
 ```
 
@@ -94,53 +94,57 @@ console.log(`Found ${colors.colors.length} dominant colors`);
 
 ```html
 <!-- HTML -->
-<input type="file" id="imageUpload" accept="image/*">
+<input type="file" id="imageUpload" accept="image/*" />
 <div id="colorPalette"></div>
 
 <script>
-document.getElementById('imageUpload').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  document
+    .getElementById("imageUpload")
+    .addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-  // Read file as image
-  const img = new Image();
-  const reader = new FileReader();
+      // Read file as image
+      const img = new Image();
+      const reader = new FileReader();
 
-  reader.onload = async function(event) {
-    img.src = event.target.result;
+      reader.onload = async function (event) {
+        img.src = event.target.result;
 
-    img.onload = async function() {
-      // Create canvas
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+        img.onload = async function () {
+          // Create canvas
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
 
-      // Resize for performance
-      const maxSize = 400;
-      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+          // Resize for performance
+          const maxSize = 400;
+          const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
 
-      // Draw and extract
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          // Draw and extract
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      // Extract colors
-      const colors = await extractImageColors({
-        imageData: Array.from(imageData.data),
-        maxColors: 6
-      });
+          // Extract colors
+          const colors = await extractImageColors({
+            imageData: Array.from(imageData.data),
+            maxColors: 6,
+          });
 
-      // Display palette
-      displayPalette(colors.colors);
-    };
-  };
+          // Display palette
+          displayPalette(colors.colors);
+        };
+      };
 
-  reader.readAsDataURL(file);
-});
+      reader.readAsDataURL(file);
+    });
 
-function displayPalette(colors) {
-  const palette = document.getElementById('colorPalette');
-  palette.innerHTML = colors.map(color => `
+  function displayPalette(colors) {
+    const palette = document.getElementById("colorPalette");
+    palette.innerHTML = colors
+      .map(
+        (color) => `
     <div style="
       background: ${color.hex};
       width: 100px;
@@ -156,8 +160,10 @@ function displayPalette(colors) {
         font-size: 12px;
       ">${color.hex}</span>
     </div>
-  `).join('');
-}
+  `,
+      )
+      .join("");
+  }
 </script>
 ```
 
@@ -176,14 +182,14 @@ class AlbumThemeGenerator {
     const extraction = await extractImageColors({
       imageData: pixels,
       maxColors: 5,
-      targetChroma: 48  // Optimal for UI
+      targetChroma: 48, // Optimal for UI
     });
 
     // Generate Material theme
     const theme = await generateThemeFromImage({
       imageData: pixels,
-      variant: 'expressive',  // Creative for music
-      contrastLevel: 0
+      variant: "expressive", // Creative for music
+      contrastLevel: 0,
     });
 
     // Create player theme
@@ -201,18 +207,18 @@ class AlbumThemeGenerator {
       textSecondary: theme.schemes.dark.onSurfaceVariant,
 
       // Visualizer colors
-      visualizerColors: extraction.colors.map(c => c.hex)
+      visualizerColors: extraction.colors.map((c) => c.hex),
     };
   }
 }
 
 // Usage
 const player = new AlbumThemeGenerator();
-const theme = await player.generateFromArtwork('album.jpg');
+const theme = await player.generateFromArtwork("album.jpg");
 
 // Apply theme
-document.querySelector('.player').style.background = theme.backgroundGradient;
-document.querySelector('.controls').style.color = theme.controlsColor;
+document.querySelector(".player").style.background = theme.backgroundGradient;
+document.querySelector(".controls").style.color = theme.controlsColor;
 ```
 
 ### Logo Brand Color Extraction
@@ -225,35 +231,35 @@ async function extractBrandColors(logoPath) {
   // Extract with focus on distinct colors
   const result = await extractImageColors({
     imageData: pixels,
-    maxColors: 3,  // Most logos have 1-3 colors
-    minPopulation: 0.05  // 5% minimum for significance
+    maxColors: 3, // Most logos have 1-3 colors
+    minPopulation: 0.05, // 5% minimum for significance
   });
 
   // Check for disliked colors and fix
   const fixedColors = await fixDislikedColorsBatch({
-    colors: result.colors.map(c => c.hex)
+    colors: result.colors.map((c) => c.hex),
   });
 
   // Build brand palette
   const brandPalette = {
     primary: fixedColors.fixedColors[0],
     secondary: fixedColors.fixedColors[1] || null,
-    accent: fixedColors.fixedColors[2] || null
+    accent: fixedColors.fixedColors[2] || null,
   };
 
   // Generate full theme from primary
   const fullTheme = await generateMaterialTheme({
     sourceColor: brandPalette.primary,
-    customColors: brandPalette.secondary ? [
-      { name: 'brand', color: brandPalette.secondary }
-    ] : []
+    customColors: brandPalette.secondary
+      ? [{ name: "brand", color: brandPalette.secondary }]
+      : [],
   });
 
   return {
     extractedColors: result.colors,
     brandPalette,
     fullTheme,
-    cssVariables: generateBrandCSS(brandPalette)
+    cssVariables: generateBrandCSS(brandPalette),
   };
 }
 
@@ -265,7 +271,7 @@ function generateBrandCSS(palette) {
       --brand-accent: ${palette.accent || palette.primary};
 
       /* Generate shades */
-      ${generateShades('brand-primary', palette.primary)}
+      ${generateShades("brand-primary", palette.primary)}
     }
   `;
 }
@@ -283,7 +289,7 @@ class ProductColorAnalyzer {
     const extracted = await extractImageColors({
       imageData: pixels,
       maxColors: 10,
-      minPopulation: 0.02  // 2% threshold
+      minPopulation: 0.02, // 2% threshold
     });
 
     // Categorize colors
@@ -297,7 +303,7 @@ class ProductColorAnalyzer {
       accentColors: categorized.accents,
       availableVariants: variants,
       colorDescription: this.generateDescription(categorized),
-      searchTags: this.generateSearchTags(categorized)
+      searchTags: this.generateSearchTags(categorized),
     };
   }
 
@@ -306,9 +312,9 @@ class ProductColorAnalyzer {
     const sorted = colors.sort((a, b) => b.population - a.population);
 
     return {
-      primary: sorted[0],  // Most dominant
-      accents: sorted.slice(1, 4),  // Next 3 colors
-      details: sorted.slice(4)  // Remaining colors
+      primary: sorted[0], // Most dominant
+      accents: sorted.slice(1, 4), // Next 3 colors
+      details: sorted.slice(4), // Remaining colors
     };
   }
 
@@ -317,10 +323,10 @@ class ProductColorAnalyzer {
     const hue = categorized.primary.hct.hue;
 
     return [
-      { name: 'Original', color: categorized.primary.hex },
-      { name: 'Darker', color: adjustTone(categorized.primary, -20) },
-      { name: 'Lighter', color: adjustTone(categorized.primary, +20) },
-      { name: 'Vibrant', color: adjustChroma(categorized.primary, +30) }
+      { name: "Original", color: categorized.primary.hex },
+      { name: "Darker", color: adjustTone(categorized.primary, -20) },
+      { name: "Lighter", color: adjustTone(categorized.primary, +20) },
+      { name: "Vibrant", color: adjustChroma(categorized.primary, +30) },
     ];
   }
 
@@ -331,21 +337,21 @@ class ProductColorAnalyzer {
     const tone = primary.hct.tone;
 
     // Generate human-readable description
-    let description = '';
+    let description = "";
 
     // Hue description
-    if (hue >= 0 && hue < 20) description += 'Red';
-    else if (hue >= 20 && hue < 40) description += 'Orange';
-    else if (hue >= 40 && hue < 60) description += 'Yellow';
+    if (hue >= 0 && hue < 20) description += "Red";
+    else if (hue >= 20 && hue < 40) description += "Orange";
+    else if (hue >= 40 && hue < 60) description += "Yellow";
     // ... etc
 
     // Saturation
-    if (chroma < 20) description += ', muted';
-    else if (chroma > 60) description += ', vibrant';
+    if (chroma < 20) description += ", muted";
+    else if (chroma > 60) description += ", vibrant";
 
     // Lightness
-    if (tone < 30) description += ', dark';
-    else if (tone > 70) description += ', light';
+    if (tone < 30) description += ", dark";
+    else if (tone > 70) description += ", light";
 
     return description;
   }
@@ -363,7 +369,7 @@ async function extractWebsiteTheme(screenshotUrl) {
   const colors = await extractImageColors({
     imageData: pixels,
     maxColors: 8,
-    targetChroma: 40  // Lower chroma for web UI
+    targetChroma: 40, // Lower chroma for web UI
   });
 
   // Identify UI elements
@@ -375,34 +381,34 @@ async function extractWebsiteTheme(screenshotUrl) {
     primary: identified.brand || colors.colors[0].hex,
 
     // Background (lightest color)
-    background: identified.background || '#ffffff',
+    background: identified.background || "#ffffff",
 
     // Surface (cards, modals)
-    surface: identified.surface || '#ffffff',
+    surface: identified.surface || "#ffffff",
 
     // Text colors
-    textPrimary: identified.textPrimary || '#1f2937',
-    textSecondary: identified.textSecondary || '#6b7280',
+    textPrimary: identified.textPrimary || "#1f2937",
+    textSecondary: identified.textSecondary || "#6b7280",
 
     // Borders and dividers
-    border: identified.border || '#e5e7eb',
+    border: identified.border || "#e5e7eb",
 
     // Interactive elements
     link: identified.link || colors.colors[0].hex,
-    button: identified.button || colors.colors[0].hex
+    button: identified.button || colors.colors[0].hex,
   };
 
   return {
     extractedColors: colors,
     identifiedTheme: theme,
-    css: generateThemeCSS(theme)
+    css: generateThemeCSS(theme),
   };
 }
 
 function identifyUIColors(colors) {
   const identified = {};
 
-  colors.forEach(color => {
+  colors.forEach((color) => {
     const { hue, chroma, tone } = color.hct;
 
     // Very light colors are likely backgrounds
@@ -451,10 +457,10 @@ function extractFromRegion(imageData, region) {
     for (let col = x; col < x + width; col++) {
       const idx = (row * fullWidth + col) * 4;
       regionPixels.push(
-        imageData[idx],     // R
+        imageData[idx], // R
         imageData[idx + 1], // G
         imageData[idx + 2], // B
-        imageData[idx + 3]  // A
+        imageData[idx + 3], // A
       );
     }
   }
@@ -462,7 +468,7 @@ function extractFromRegion(imageData, region) {
   // Extract colors from region
   return extractImageColors({
     imageData: regionPixels,
-    maxColors: 5
+    maxColors: 5,
   });
 }
 
@@ -479,20 +485,20 @@ async function extractForegroundColors(imageData, backgroundColor) {
   // Extract all colors
   const allColors = await extractImageColors({
     imageData,
-    maxColors: 10
+    maxColors: 10,
   });
 
   // Filter out colors similar to background
-  const foregroundColors = allColors.colors.filter(color => {
+  const foregroundColors = allColors.colors.filter((color) => {
     const distance = colorDistance(color.hex, backgroundColor);
-    return distance > 10;  // Significant difference
+    return distance > 10; // Significant difference
   });
 
   return foregroundColors;
 }
 
 // Usage: Extract product colors without white background
-const productColors = await extractForegroundColors(pixels, '#ffffff');
+const productColors = await extractForegroundColors(pixels, "#ffffff");
 ```
 
 ### Weighted Extraction
@@ -511,10 +517,9 @@ function createWeightedPixelArray(imageData, width, height) {
 
       // Calculate weight based on distance from center
       const dist = Math.sqrt(
-        Math.pow(x - centerX, 2) +
-        Math.pow(y - centerY, 2)
+        Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2),
       );
-      const weight = 1 - (dist / maxDist) * 0.5;  // 50-100% weight
+      const weight = 1 - (dist / maxDist) * 0.5; // 50-100% weight
 
       // Add pixel multiple times based on weight
       const copies = Math.ceil(weight * 3);
@@ -523,7 +528,7 @@ function createWeightedPixelArray(imageData, width, height) {
           imageData[idx],
           imageData[idx + 1],
           imageData[idx + 2],
-          imageData[idx + 3]
+          imageData[idx + 3],
         );
       }
     }
@@ -536,7 +541,7 @@ function createWeightedPixelArray(imageData, width, height) {
 const weighted = createWeightedPixelArray(pixels, 300, 300);
 const centralColors = await extractImageColors({
   imageData: weighted,
-  maxColors: 5
+  maxColors: 5,
 });
 ```
 
@@ -550,14 +555,14 @@ async function extractLikableColors(imageData) {
   // Extract colors
   const extracted = await extractImageColors({
     imageData,
-    maxColors: 8
+    maxColors: 8,
   });
 
   // Check and fix disliked colors
-  const colorHexes = extracted.colors.map(c => c.hex);
+  const colorHexes = extracted.colors.map((c) => c.hex);
   const fixed = await fixDislikedColorsBatch({
     colors: colorHexes,
-    strategy: 'both'  // Shift hue and adjust tone
+    strategy: "both", // Shift hue and adjust tone
   });
 
   // Map back to full color objects
@@ -567,7 +572,7 @@ async function extractLikableColors(imageData) {
         ...color,
         hex: fixed.results[i].fixed,
         wasFixed: true,
-        originalHex: color.hex
+        originalHex: color.hex,
       };
     }
     return color;
@@ -576,7 +581,7 @@ async function extractLikableColors(imageData) {
   return {
     colors: likableColors,
     fixedCount: fixed.summary.fixed,
-    originalColors: extracted.colors
+    originalColors: extracted.colors,
   };
 }
 ```
@@ -588,17 +593,23 @@ async function extractLikableColors(imageData) {
 function detectBileZoneColors(colors) {
   const problematic = [];
 
-  colors.forEach(color => {
+  colors.forEach((color) => {
     const { hue, chroma, tone } = color.hct;
 
     // Bile zone: dark yellow-greens
-    if (hue >= 50 && hue <= 120 &&  // Yellow-green range
-        chroma >= 20 && chroma <= 50 &&  // Moderate saturation
-        tone >= 20 && tone <= 50) {  // Dark to medium
+    if (
+      hue >= 50 &&
+      hue <= 120 && // Yellow-green range
+      chroma >= 20 &&
+      chroma <= 50 && // Moderate saturation
+      tone >= 20 &&
+      tone <= 50
+    ) {
+      // Dark to medium
       problematic.push({
         color: color.hex,
         reason: 'Falls in universally disliked "bile zone"',
-        suggestion: adjustToLikable(color)
+        suggestion: adjustToLikable(color),
       });
     }
   });
@@ -610,7 +621,7 @@ function adjustToLikable(color) {
   // Shift hue away from problematic range
   let newHue = color.hct.hue;
   if (newHue >= 50 && newHue <= 120) {
-    newHue = newHue < 85 ? 40 : 130;  // Shift to yellow or green
+    newHue = newHue < 85 ? 40 : 130; // Shift to yellow or green
   }
 
   // Increase tone for lighter appearance
@@ -634,24 +645,24 @@ async function preprocessImage(imageUrl) {
   const scale = Math.min(
     maxDimension / img.width,
     maxDimension / img.height,
-    1
+    1,
   );
 
   // Apply slight blur to reduce noise
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
   canvas.width = img.width * scale;
   canvas.height = img.height * scale;
 
   // Enable image smoothing
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
+  ctx.imageSmoothingQuality = "high";
 
   // Draw scaled image
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
   // Optional: Apply slight blur
-  ctx.filter = 'blur(0.5px)';
+  ctx.filter = "blur(0.5px)";
   ctx.drawImage(canvas, 0, 0);
 
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -680,7 +691,7 @@ class ColorExtractionCache {
     const pixels = await loadImage(imageUrl);
     const result = await extractImageColors({
       imageData: pixels,
-      ...options
+      ...options,
     });
 
     // Cache result
@@ -706,7 +717,7 @@ class ColorExtractionCache {
 ```javascript
 // Process multiple images efficiently
 async function batchExtractColors(imageUrls, options = {}) {
-  const batchSize = 5;  // Process 5 at a time
+  const batchSize = 5; // Process 5 at a time
   const results = [];
 
   for (let i = 0; i < imageUrls.length; i += batchSize) {
@@ -714,18 +725,18 @@ async function batchExtractColors(imageUrls, options = {}) {
 
     // Process batch in parallel
     const batchResults = await Promise.all(
-      batch.map(async url => {
+      batch.map(async (url) => {
         try {
           const pixels = await loadImage(url);
           return await extractImageColors({
             imageData: pixels,
-            ...options
+            ...options,
           });
         } catch (error) {
           console.error(`Failed to process ${url}:`, error);
           return null;
         }
-      })
+      }),
     );
 
     results.push(...batchResults);
@@ -734,12 +745,12 @@ async function batchExtractColors(imageUrls, options = {}) {
     if (options.onProgress) {
       options.onProgress({
         processed: Math.min(i + batchSize, imageUrls.length),
-        total: imageUrls.length
+        total: imageUrls.length,
       });
     }
   }
 
-  return results.filter(r => r !== null);
+  return results.filter((r) => r !== null);
 }
 ```
 
@@ -765,7 +776,7 @@ function useImageColors(imageUrl) {
         const pixels = await loadImageFromUrl(imageUrl);
         const result = await extractImageColors({
           imageData: pixels,
-          maxColors: 5
+          maxColors: 5,
         });
         setColors(result.colors);
       } catch (err) {
@@ -811,11 +822,7 @@ function ImagePalette({ imageUrl }) {
 ```vue
 <template>
   <div class="image-theme-generator">
-    <input
-      type="file"
-      @change="handleFileUpload"
-      accept="image/*"
-    >
+    <input type="file" @change="handleFileUpload" accept="image/*" />
 
     <div v-if="loading">Generating theme...</div>
 
@@ -837,7 +844,7 @@ export default {
   data() {
     return {
       theme: null,
-      loading: false
+      loading: false,
     };
   },
 
@@ -853,7 +860,7 @@ export default {
         const theme = await this.generateTheme(pixels);
         this.theme = theme;
       } catch (error) {
-        console.error('Failed to generate theme:', error);
+        console.error("Failed to generate theme:", error);
       } finally {
         this.loading = false;
       }
@@ -866,10 +873,10 @@ export default {
     async generateTheme(pixels) {
       return await generateThemeFromImage({
         imageData: pixels,
-        variant: 'tonalSpot'
+        variant: "tonalSpot",
       });
-    }
-  }
+    },
+  },
 };
 </script>
 ```

@@ -32,22 +32,23 @@ The system first extracts and analyzes CSS variables:
 
 Variable names are analyzed to detect semantic roles:
 
-| Pattern | Detected Role | Usage Context |
-|---------|--------------|---------------|
-| `*primary*` | Primary | Main brand color |
-| `*secondary*` | Secondary | Supporting color |
-| `*surface*`, `*background*` | Surface | Backgrounds |
-| `*text*`, `*foreground*` | Text | Typography |
-| `*border*`, `*outline*` | Outline | Borders, dividers |
-| `*error*`, `*danger*` | Error | Error states |
-| `*success*` | Success | Success states |
-| `*warning*` | Warning | Warning states |
+| Pattern                     | Detected Role | Usage Context     |
+| --------------------------- | ------------- | ----------------- |
+| `*primary*`                 | Primary       | Main brand color  |
+| `*secondary*`               | Secondary     | Supporting color  |
+| `*surface*`, `*background*` | Surface       | Backgrounds       |
+| `*text*`, `*foreground*`    | Text          | Typography        |
+| `*border*`, `*outline*`     | Outline       | Borders, dividers |
+| `*error*`, `*danger*`       | Error         | Error states      |
+| `*success*`                 | Success       | Success states    |
+| `*warning*`                 | Warning       | Warning states    |
 
 ### 3. Multi-Factor Scoring
 
 Each potential match is scored based on multiple factors:
 
 #### Perceptual Distance (60% weight)
+
 Using HCT color space for accurate perception:
 
 ```javascript
@@ -58,13 +59,14 @@ function calculatePerceptualDistance(color1, color2) {
   // Weighted distance (tone weighted 2x for UI importance)
   return Math.sqrt(
     Math.pow(hct1.hue - hct2.hue, 2) +
-    Math.pow(hct1.chroma - hct2.chroma, 2) +
-    Math.pow((hct1.tone - hct2.tone) * 2, 2)
+      Math.pow(hct1.chroma - hct2.chroma, 2) +
+      Math.pow((hct1.tone - hct2.tone) * 2, 2),
   );
 }
 ```
 
 #### Semantic Context (20% weight)
+
 Matching semantic roles improves accuracy:
 
 ```javascript
@@ -81,6 +83,7 @@ function calculateSemanticScore(colorRole, variableRole, usage) {
 ```
 
 #### Accessibility Score (20% weight)
+
 Ensuring contrast requirements are met:
 
 ```javascript
@@ -101,35 +104,41 @@ function calculateAccessibilityScore(color, background, requiredRatio) {
 Final confidence score determines replacement:
 
 ```javascript
-confidence = (
-  perceptualScore * 0.6 +
-  semanticScore * 0.2 +
-  accessibilityScore * 0.2
-) * 100;
+confidence =
+  (perceptualScore * 0.6 + semanticScore * 0.2 + accessibilityScore * 0.2) *
+  100;
 ```
 
 ## Matching Strategies
 
 ### Exact Matching
+
 For colors that exactly match a theme variable:
+
 - **Confidence**: 100%
 - **Action**: Direct replacement
 - **Example**: `#6366f1` → `var(--color-primary-500)`
 
 ### Nearest Neighbor
+
 For colors close to theme variables:
+
 - **Confidence**: 70-99%
 - **Action**: Replace with warning
 - **Example**: `#6365f0` → `var(--color-primary-500)` (99% confidence)
 
 ### Semantic Matching
+
 For colors matching expected roles:
+
 - **Confidence**: 60-90%
 - **Action**: Context-aware replacement
 - **Example**: Border color `#e5e7eb` → `var(--color-border)`
 
 ### Fallback Matching
+
 When no good matches exist:
+
 - **Confidence**: <60%
 - **Action**: Keep original or create new variable
 - **Example**: `#123456` → `/* No match: #123456 */`
@@ -201,13 +210,13 @@ When no good matches exist:
 
 Different contexts have different priorities:
 
-| Context | Priority | Factors |
-|---------|----------|---------|
-| `text` | Contrast > Semantic > Color | Readability first |
-| `background` | Color > Semantic > Contrast | Visual accuracy |
-| `border` | Semantic > Color > Contrast | Structural meaning |
-| `accent` | Color > Contrast > Semantic | Brand consistency |
-| `decorative` | Color > Semantic > Contrast | Visual appeal |
+| Context      | Priority                    | Factors            |
+| ------------ | --------------------------- | ------------------ |
+| `text`       | Contrast > Semantic > Color | Readability first  |
+| `background` | Color > Semantic > Contrast | Visual accuracy    |
+| `border`     | Semantic > Color > Contrast | Structural meaning |
+| `accent`     | Color > Contrast > Semantic | Brand consistency  |
+| `decorative` | Color > Semantic > Contrast | Visual appeal      |
 
 ### Threshold Configuration
 
@@ -290,30 +299,42 @@ Use semantic, hierarchical naming:
 
 Recommended thresholds by use case:
 
-| Use Case | Min Confidence | Rationale |
-|----------|---------------|-----------|
-| Production refactor | 85% | High accuracy needed |
-| Development assist | 70% | Balance speed/accuracy |
-| Exploration | 50% | See all possibilities |
-| Exact only | 100% | No false positives |
+| Use Case            | Min Confidence | Rationale              |
+| ------------------- | -------------- | ---------------------- |
+| Production refactor | 85%            | High accuracy needed   |
+| Development assist  | 70%            | Balance speed/accuracy |
+| Exploration         | 50%            | See all possibilities  |
+| Exact only          | 100%           | No false positives     |
 
 ### Handling Edge Cases
 
 #### Very Similar Colors
+
 ```css
 /* Original */
-.element1 { color: #6366f1; }
-.element2 { color: #6366f0; }
+.element1 {
+  color: #6366f1;
+}
+.element2 {
+  color: #6366f0;
+}
 
 /* After matching - both map to same variable */
-.element1 { color: var(--color-primary); }
-.element2 { color: var(--color-primary); }
+.element1 {
+  color: var(--color-primary);
+}
+.element2 {
+  color: var(--color-primary);
+}
 ```
 
 #### No Good Matches
+
 ```css
 /* Original */
-.special { background: #742a2a; }
+.special {
+  background: #742a2a;
+}
 
 /* After - preserved with comment */
 .special {
@@ -330,11 +351,11 @@ Recommended thresholds by use case:
 module.exports = {
   plugins: [
     new ThemeMatcherPlugin({
-      themeFile: './theme.css',
+      themeFile: "./theme.css",
       minConfidence: 80,
-      generateReport: true
-    })
-  ]
+      generateReport: true,
+    }),
+  ],
 };
 ```
 
@@ -368,14 +389,17 @@ module.exports = {
 ### Common Issues
 
 #### Low Confidence Scores
+
 - **Cause**: Colors too different from theme
 - **Solution**: Lower threshold or add more theme variables
 
 #### Wrong Semantic Matches
+
 - **Cause**: Ambiguous variable names
 - **Solution**: Use clearer naming conventions
 
 #### Accessibility Failures
+
 - **Cause**: Insufficient contrast with background
 - **Solution**: Adjust theme colors or use different variables
 

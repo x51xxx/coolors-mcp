@@ -18,11 +18,36 @@ Advanced color operations MCP server with Material Design 3 support, CSS theme m
 
 ## Installation
 
+### Method 1: NPX (Recommended)
+
+No installation needed - runs directly:
+
+#### Claude Desktop Configuration
+
+```json
+{
+  "mcpServers": {
+    "coolors": {
+      "command": "npx",
+      "args": ["-y", "@trishchuk/coolors-mcp"]
+    }
+  }
+}
+```
+
+#### Claude Code Configuration
+
+```bash
+claude mcp add coolors --npm-package @trishchuk/coolors-mcp
+```
+
+### Method 2: NPM Install
+
 ```bash
 npm install @trishchuk/coolors-mcp
 ```
 
-Or for development:
+### Method 3: From Source
 
 ```bash
 git clone https://github.com/x51xxx/coolors-mcp

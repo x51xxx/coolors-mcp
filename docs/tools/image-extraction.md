@@ -8,27 +8,28 @@ Extract dominant colors from an image using Google's Celebi quantization algorit
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `imageData` | number[] | ✅ | RGBA pixel array (flat array of values 0-255) |
-| `maxColors` | number | ❌ | Maximum colors to extract (default: 5, max: 128) |
-| `minPopulation` | number | ❌ | Minimum pixel percentage for color (default: 0.01) |
-| `targetChroma` | number | ❌ | Preferred chroma for UI colors (default: 48) |
+| Parameter       | Type     | Required | Description                                        |
+| --------------- | -------- | -------- | -------------------------------------------------- |
+| `imageData`     | number[] | ✅       | RGBA pixel array (flat array of values 0-255)      |
+| `maxColors`     | number   | ❌       | Maximum colors to extract (default: 5, max: 128)   |
+| `minPopulation` | number   | ❌       | Minimum pixel percentage for color (default: 0.01) |
+| `targetChroma`  | number   | ❌       | Preferred chroma for UI colors (default: 48)       |
 
 ### Returns
 
 ```typescript
 {
   colors: Array<{
-    hex: string;         // Hex color value
-    rgb: [r, g, b];     // RGB values
-    hct: {              // HCT values
+    hex: string; // Hex color value
+    rgb: [r, g, b]; // RGB values
+    hct: {
+      // HCT values
       hue: number;
       chroma: number;
       tone: number;
     };
-    population: number;  // Percentage of image (0-1)
-    score: number;      // UI suitability score (0-1)
+    population: number; // Percentage of image (0-1)
+    score: number; // UI suitability score (0-1)
   }>;
   metadata: {
     totalPixels: number;
@@ -111,8 +112,8 @@ Extract dominant colors from an image using Google's Celebi quantization algorit
 #### From Canvas (Browser)
 
 ```javascript
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
 // Convert to flat array
@@ -120,25 +121,25 @@ const pixels = Array.from(imageData.data);
 
 // Extract colors
 const result = await extractColors({
-  imageData: pixels
+  imageData: pixels,
 });
 ```
 
 #### From Image File (Node.js)
 
 ```javascript
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 async function getPixelsFromImage(filepath) {
   const { data, info } = await sharp(filepath)
-    .resize(300)  // Resize for performance
+    .resize(300) // Resize for performance
     .raw()
     .toBuffer({ resolveWithObject: true });
 
   return Array.from(data);
 }
 
-const pixels = await getPixelsFromImage('photo.jpg');
+const pixels = await getPixelsFromImage("photo.jpg");
 ```
 
 ### Use Cases
@@ -154,18 +155,18 @@ Generate a complete Material Design 3 theme from an image.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `imageData` | number[] | ✅ | RGBA pixel array |
-| `variant` | string | ❌ | Theme variant: tonalSpot, fidelity, vibrant, expressive, neutral, monochrome |
-| `contrastLevel` | number | ❌ | Contrast level: 0 (default), 0.5 (medium), 1.0 (high) |
-| `sourceColorIndex` | number | ❌ | Which extracted color to use as source (default: 0) |
+| Parameter          | Type     | Required | Description                                                                  |
+| ------------------ | -------- | -------- | ---------------------------------------------------------------------------- |
+| `imageData`        | number[] | ✅       | RGBA pixel array                                                             |
+| `variant`          | string   | ❌       | Theme variant: tonalSpot, fidelity, vibrant, expressive, neutral, monochrome |
+| `contrastLevel`    | number   | ❌       | Contrast level: 0 (default), 0.5 (medium), 1.0 (high)                        |
+| `sourceColorIndex` | number   | ❌       | Which extracted color to use as source (default: 0)                          |
 
 ### Returns
 
 ```typescript
 {
-  sourceColor: string;   // Selected source color
+  sourceColor: string; // Selected source color
   extractedColors: Array<{
     hex: string;
     score: number;
@@ -178,19 +179,19 @@ Generate a complete Material Design 3 theme from an image.
       primaryContainer: string;
       onPrimaryContainer: string;
       // ... all Material Design color roles
-    };
+    }
     dark: {
       // ... dark theme colors
     }
-  };
+  }
   palettes: {
     primary: object;
     secondary: object;
     tertiary: object;
     neutral: object;
     error: object;
-  };
-  css: string;  // Generated CSS variables
+  }
+  css: string; // Generated CSS variables
 }
 ```
 
@@ -268,14 +269,14 @@ Generate a complete Material Design 3 theme from an image.
 
 ### Theme Variants
 
-| Variant | Description | Best For |
-|---------|-------------|----------|
-| `tonalSpot` | Default, balanced | General use |
-| `fidelity` | Preserves source color | Brand-critical |
-| `vibrant` | Higher chroma | Playful, energetic |
+| Variant      | Description             | Best For           |
+| ------------ | ----------------------- | ------------------ |
+| `tonalSpot`  | Default, balanced       | General use        |
+| `fidelity`   | Preserves source color  | Brand-critical     |
+| `vibrant`    | Higher chroma           | Playful, energetic |
 | `expressive` | Unexpected combinations | Creative, artistic |
-| `neutral` | Minimal color | Professional |
-| `monochrome` | Single hue | Minimalist |
+| `neutral`    | Minimal color           | Professional       |
+| `monochrome` | Single hue              | Minimalist         |
 
 ### Use Cases
 
@@ -290,10 +291,10 @@ Check if a color falls in the universally disliked "bile zone" and get a fixed v
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `color` | string | ✅ | Color to analyze (hex, rgb, hsl) |
-| `autoFix` | boolean | ❌ | Automatically return fixed version (default: true) |
+| Parameter | Type    | Required | Description                                        |
+| --------- | ------- | -------- | -------------------------------------------------- |
+| `color`   | string  | ✅       | Color to analyze (hex, rgb, hsl)                   |
+| `autoFix` | boolean | ❌       | Automatically return fixed version (default: true) |
 
 ### Returns
 
@@ -358,6 +359,7 @@ Check if a color falls in the universally disliked "bile zone" and get a fixed v
 ### The Dislike Zone
 
 Colors are universally disliked when they have:
+
 - **Hue**: 50-120° (yellow-green range)
 - **Chroma**: 20-50 (moderate saturation)
 - **Tone**: 20-50 (dark to medium)
@@ -377,10 +379,10 @@ Analyze and fix multiple colors, returning only liked versions.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `colors` | string[] | ✅ | Array of colors to check |
-| `strategy` | string | ❌ | Fix strategy: shift, lighten, both (default: both) |
+| Parameter  | Type     | Required | Description                                        |
+| ---------- | -------- | -------- | -------------------------------------------------- |
+| `colors`   | string[] | ✅       | Array of colors to check                           |
+| `strategy` | string   | ❌       | Fix strategy: shift, lighten, both (default: both) |
 
 ### Returns
 
@@ -466,6 +468,7 @@ Analyze and fix multiple colors, returning only liked versions.
 ### Image Preparation
 
 #### Optimal Size
+
 - Resize images to 200-500px width
 - Larger images don't improve accuracy
 - Smaller images process faster
@@ -473,11 +476,12 @@ Analyze and fix multiple colors, returning only liked versions.
 ```javascript
 // Resize before extraction
 const resized = await sharp(image)
-  .resize(300, null, { fit: 'inside' })
+  .resize(300, null, { fit: "inside" })
   .toBuffer();
 ```
 
 #### Image Quality
+
 - Use uncompressed or lightly compressed images
 - Avoid heavily filtered images
 - Ensure good color representation
@@ -505,19 +509,19 @@ function getCachedColors(imageHash) {
 ```javascript
 // Process multiple images efficiently
 const images = [img1, img2, img3];
-const results = await Promise.all(
-  images.map(img => extractColors(img))
-);
+const results = await Promise.all(images.map((img) => extractColors(img)));
 ```
 
 ### Color Selection
 
 #### For UI Themes
+
 - Prefer colors with chroma 40-60
 - Avoid very dark or very light colors
 - Check for accessibility
 
 #### For Artistic Palettes
+
 - Include wider chroma range
 - Keep accent colors
 - Preserve unique hues
@@ -534,11 +538,11 @@ async function themeFromAlbumArt(artworkUrl) {
   // 2. Generate theme
   const theme = await generateThemeFromImage({
     imageData: pixels,
-    variant: 'vibrant'  // Music apps often use vibrant themes
+    variant: "vibrant", // Music apps often use vibrant themes
   });
 
   // 3. Apply to UI
-  applyTheme(theme.schemes.dark);  // Music apps often use dark themes
+  applyTheme(theme.schemes.dark); // Music apps often use dark themes
 }
 ```
 
@@ -552,8 +556,8 @@ async function extractBrandColors(logoPath) {
   // 2. Extract colors
   const extracted = await extractColors({
     imageData: pixels,
-    maxColors: 3,  // Logos typically have few colors
-    minPopulation: 0.05  // Higher threshold for logos
+    maxColors: 3, // Logos typically have few colors
+    minPopulation: 0.05, // Higher threshold for logos
   });
 
   // 3. Fix any disliked colors
@@ -574,8 +578,8 @@ async function adaptiveBackground(imageUrl) {
   // 2. Create subtle background
   const background = {
     ...dominant.hct,
-    chroma: dominant.hct.chroma * 0.3,  // Reduce chroma
-    tone: 95  // Very light
+    chroma: dominant.hct.chroma * 0.3, // Reduce chroma
+    tone: 95, // Very light
   };
 
   return hctToHex(background);
@@ -588,6 +592,7 @@ async function adaptiveBackground(imageUrl) {
 
 **Problem**: Empty result from extraction
 **Solution**:
+
 - Check image data format (must be RGBA)
 - Verify pixel array is not empty
 - Lower minPopulation threshold
@@ -596,6 +601,7 @@ async function adaptiveBackground(imageUrl) {
 
 **Problem**: Extracted colors don't represent image well
 **Solution**:
+
 - Increase maxColors
 - Adjust targetChroma for different types
 - Try different quantization settings
@@ -604,6 +610,7 @@ async function adaptiveBackground(imageUrl) {
 
 **Problem**: Extracted colors are unpleasant
 **Solution**:
+
 - Use `fix_disliked_colors_batch`
 - Adjust extraction to avoid bile zone
 - Post-process results
@@ -612,6 +619,7 @@ async function adaptiveBackground(imageUrl) {
 
 **Problem**: Slow extraction for large images
 **Solution**:
+
 - Resize images before extraction
 - Use sampling (process every nth pixel)
 - Cache results for repeated images

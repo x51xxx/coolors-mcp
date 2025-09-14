@@ -10,19 +10,19 @@ Convert colors between different formats:
 
 ```javascript
 // Hex to RGB
-"Convert #6366f1 to RGB"
+"Convert #6366f1 to RGB";
 // Result: rgb(99, 102, 241)
 
 // RGB to HSL
-"Convert rgb(99, 102, 241) to HSL"
+"Convert rgb(99, 102, 241) to HSL";
 // Result: hsl(239, 84%, 67%)
 
 // HSL to HCT
-"Convert hsl(239, 84%, 67%) to HCT"
+"Convert hsl(239, 84%, 67%) to HCT";
 // Result: hct(265.8, 87.2, 47.9)
 
 // Any format to LAB
-"What is #6366f1 in LAB color space?"
+"What is #6366f1 in LAB color space?";
 // Result: lab(47.9, 35.2, -65.7)
 ```
 
@@ -31,7 +31,7 @@ Convert colors between different formats:
 Convert multiple colors at once:
 
 ```javascript
-"Convert these colors to HSL: #6366f1, #ec4899, #10b981"
+"Convert these colors to HSL: #6366f1, #ec4899, #10b981";
 
 // Results:
 // #6366f1 → hsl(239, 84%, 67%)
@@ -47,7 +47,7 @@ Verify conversion accuracy:
 // Original → HCT → Back to original
 const original = "#6366f1";
 const hct = "hct(265.8, 87.2, 47.9)";
-const backToHex = "#6366f1";  // Perfect round-trip
+const backToHex = "#6366f1"; // Perfect round-trip
 ```
 
 ## Color Palettes
@@ -57,16 +57,14 @@ const backToHex = "#6366f1";  // Perfect round-trip
 Generate shades of a single color:
 
 ```javascript
-"Create a monochromatic palette from #6366f1"
-
-// Result: 5 shades
-[
-  "#1a1d4d",  // Darkest
+"Create a monochromatic palette from #6366f1"[
+  // Result: 5 shades
+  ("#1a1d4d", // Darkest
   "#3336a3",
-  "#6366f1",  // Original
+  "#6366f1", // Original
   "#9598ff",
-  "#c7c8ff"   // Lightest
-]
+  "#c7c8ff") // Lightest
+];
 ```
 
 ### Complementary Colors
@@ -88,14 +86,12 @@ Find opposite colors on the color wheel:
 Get neighboring colors:
 
 ```javascript
-"Generate analogous colors for #6366f1"
-
-// Result: Colors 30° apart
-[
-  "#8c66f1",  // Purple-blue
-  "#6366f1",  // Original blue
-  "#66c6f1"   // Cyan-blue
-]
+"Generate analogous colors for #6366f1"[
+  // Result: Colors 30° apart
+  ("#8c66f1", // Purple-blue
+  "#6366f1", // Original blue
+  "#66c6f1") // Cyan-blue
+];
 ```
 
 ### Triadic Color Scheme
@@ -103,14 +99,12 @@ Get neighboring colors:
 Three colors evenly spaced on the color wheel:
 
 ```javascript
-"Create a triadic color scheme from #6366f1"
-
-// Result: Colors 120° apart
-[
-  "#6366f1",  // Blue (original)
-  "#f16366",  // Red
-  "#66f163"   // Green
-]
+"Create a triadic color scheme from #6366f1"[
+  // Result: Colors 120° apart
+  ("#6366f1", // Blue (original)
+  "#f16366", // Red
+  "#66f163") // Green
+];
 ```
 
 ### Tetradic (Square) Scheme
@@ -118,15 +112,13 @@ Three colors evenly spaced on the color wheel:
 Four colors evenly spaced:
 
 ```javascript
-"Generate a tetradic palette from #6366f1"
-
-// Result: Colors 90° apart
-[
-  "#6366f1",  // Blue
-  "#f166c6",  // Magenta
-  "#f1ee66",  // Yellow
-  "#66f18c"   // Green
-]
+"Generate a tetradic palette from #6366f1"[
+  // Result: Colors 90° apart
+  ("#6366f1", // Blue
+  "#f166c6", // Magenta
+  "#f1ee66", // Yellow
+  "#66f18c") // Green
+];
 ```
 
 ## Contrast Checking
@@ -166,14 +158,12 @@ Four colors evenly spaced:
 ### Finding Accessible Colors
 
 ```javascript
-"What text color works on #6366f1 background?"
-
-// Suggestions:
-[
-  { color: "#ffffff", ratio: 4.6 },  // White text
-  { color: "#f0f0f0", ratio: 4.2 },  // Light gray
-  { color: "#000000", ratio: 4.5 }   // Black text
-]
+"What text color works on #6366f1 background?"[
+  // Suggestions:
+  ({ color: "#ffffff", ratio: 4.6 }, // White text
+  { color: "#f0f0f0", ratio: 4.2 }, // Light gray
+  { color: "#000000", ratio: 4.5 }) // Black text
+];
 ```
 
 ## Color Distance
@@ -194,15 +184,15 @@ Four colors evenly spaced:
 ### Finding Similar Colors
 
 ```javascript
-"Find colors similar to #6366f1 in this palette"
+"Find colors similar to #6366f1 in this palette";
 
 const palette = ["#5355d1", "#7c3aed", "#6366f1", "#3b82f6"];
 
 // Results (ΔE < 10):
 [
-  { color: "#5355d1", distance: 5.2 },   // Very similar
-  { color: "#3b82f6", distance: 8.7 }    // Similar
-]
+  { color: "#5355d1", distance: 5.2 }, // Very similar
+  { color: "#3b82f6", distance: 8.7 }, // Similar
+];
 ```
 
 ### Color Matching Threshold
@@ -224,46 +214,36 @@ const palette = ["#5355d1", "#7c3aed", "#6366f1", "#3b82f6"];
 ### Two-Color Gradient
 
 ```javascript
-"Create a gradient from #6366f1 to #ec4899"
-
-// Result: 5 steps
-[
-  "#6366f1",  // Start
+"Create a gradient from #6366f1 to #ec4899"[
+  // Result: 5 steps
+  ("#6366f1", // Start
   "#8757d5",
   "#ab49b9",
   "#ce3a9d",
-  "#ec4899"   // End
-]
+  "#ec4899") // End
+];
 ```
 
 ### Multi-Stop Gradient
 
 ```javascript
-"Create a gradient: #6366f1 → #ec4899 → #10b981"
-
-// Result: Smooth transition through all colors
-[
-  "#6366f1",
-  "#a154c5",
-  "#ec4899",
-  "#a9636d",
-  "#10b981"
-]
+"Create a gradient: #6366f1 → #ec4899 → #10b981"[
+  // Result: Smooth transition through all colors
+  ("#6366f1", "#a154c5", "#ec4899", "#a9636d", "#10b981")
+];
 ```
 
 ### Perceptual Gradient
 
 ```javascript
-"Create a perceptually smooth gradient from blue to yellow"
-
-// Using LAB interpolation:
-[
-  "#0000ff",  // Blue
+"Create a perceptually smooth gradient from blue to yellow"[
+  // Using LAB interpolation:
+  ("#0000ff", // Blue
   "#4040df",
   "#8080bf",
   "#c0c09f",
-  "#ffff00"   // Yellow
-]
+  "#ffff00") // Yellow
+];
 // Avoids muddy colors in the middle
 ```
 
@@ -272,30 +252,30 @@ const palette = ["#5355d1", "#7c3aed", "#6366f1", "#3b82f6"];
 ### Lighten and Darken
 
 ```javascript
-"Make #6366f1 20% lighter"
+"Make #6366f1 20% lighter";
 // Result: #8c8ff5
 
-"Make #6366f1 30% darker"
+"Make #6366f1 30% darker";
 // Result: #3a3d94
 ```
 
 ### Saturation Adjustment
 
 ```javascript
-"Desaturate #6366f1 by 50%"
+"Desaturate #6366f1 by 50%";
 // Result: #8a8cc4 (more gray)
 
-"Make #6366f1 more vibrant"
+"Make #6366f1 more vibrant";
 // Result: #5050ff (higher chroma)
 ```
 
 ### Mix Colors
 
 ```javascript
-"Mix #6366f1 and #ec4899"
+"Mix #6366f1 and #ec4899";
 // Result: #a857c5 (purple)
 
-"Mix #ff0000 and #00ff00 and #0000ff equally"
+"Mix #ff0000 and #00ff00 and #0000ff equally";
 // Result: #808080 (gray)
 ```
 
@@ -309,9 +289,9 @@ const primary = "#6366f1";
 
 const buttonStates = {
   default: primary,
-  hover: lighten(primary, 10),    // #797cf3
-  active: darken(primary, 10),    // #5053d0
-  disabled: desaturate(primary, 60) // #9a9bc7
+  hover: lighten(primary, 10), // #797cf3
+  active: darken(primary, 10), // #5053d0
+  disabled: desaturate(primary, 60), // #9a9bc7
 };
 ```
 
@@ -322,20 +302,20 @@ const buttonStates = {
 const statusColors = {
   success: {
     bg: "#10b981",
-    text: "#ffffff",  // Contrast: 4.5:1 ✓
+    text: "#ffffff", // Contrast: 4.5:1 ✓
   },
   warning: {
     bg: "#f59e0b",
-    text: "#000000",  // Contrast: 10.7:1 ✓
+    text: "#000000", // Contrast: 10.7:1 ✓
   },
   error: {
     bg: "#ef4444",
-    text: "#ffffff",  // Contrast: 4.5:1 ✓
+    text: "#ffffff", // Contrast: 4.5:1 ✓
   },
   info: {
     bg: "#3b82f6",
-    text: "#ffffff",  // Contrast: 4.6:1 ✓
-  }
+    text: "#ffffff", // Contrast: 4.6:1 ✓
+  },
 };
 ```
 
@@ -351,7 +331,7 @@ const colorSystem = {
     50: "#eef2ff",
     100: "#e0e7ff",
     500: brand,
-    900: "#312e81"
+    900: "#312e81",
   },
 
   // Grays from brand
@@ -361,8 +341,8 @@ const colorSystem = {
   semantic: {
     success: harmonize("#10b981", brand),
     warning: harmonize("#f59e0b", brand),
-    error: harmonize("#ef4444", brand)
-  }
+    error: harmonize("#ef4444", brand),
+  },
 };
 ```
 
@@ -372,11 +352,11 @@ const colorSystem = {
 // Accessible form field colors
 const input = {
   background: "#ffffff",
-  border: "#d1d5db",        // 3:1 contrast ✓
-  text: "#1f2937",          // 15.7:1 contrast ✓
-  placeholder: "#9ca3af",   // 4.5:1 contrast ✓
-  focus: "#6366f1",         // 3:1 contrast ✓
-  error: "#ef4444"          // 4.5:1 contrast ✓
+  border: "#d1d5db", // 3:1 contrast ✓
+  text: "#1f2937", // 15.7:1 contrast ✓
+  placeholder: "#9ca3af", // 4.5:1 contrast ✓
+  focus: "#6366f1", // 3:1 contrast ✓
+  error: "#ef4444", // 4.5:1 contrast ✓
 };
 ```
 
@@ -385,24 +365,24 @@ const input = {
 ### Get Luminance
 
 ```javascript
-"What is the luminance of #6366f1?"
+"What is the luminance of #6366f1?";
 // Result: 0.166 (scale 0-1)
 ```
 
 ### Get Dominant Channel
 
 ```javascript
-"Which color channel is strongest in #6366f1?"
+"Which color channel is strongest in #6366f1?";
 // Result: Blue (241 of 255)
 ```
 
 ### Color Temperature
 
 ```javascript
-"Is #6366f1 a warm or cool color?"
+"Is #6366f1 a warm or cool color?";
 // Result: Cool (blue hue at 239°)
 
-"Is #ff6b6b warm or cool?"
+"Is #ff6b6b warm or cool?";
 // Result: Warm (red hue at 0°)
 ```
 
@@ -431,12 +411,12 @@ function getThemeSafeColor(color) {
 // Validate color format
 function validateColor(input) {
   const formats = [
-    /^#[0-9a-f]{6}$/i,        // Hex
-    /^rgb\(\d+,\s*\d+,\s*\d+\)$/,  // RGB
-    /^hsl\(\d+,\s*\d+%,\s*\d+%\)$/  // HSL
+    /^#[0-9a-f]{6}$/i, // Hex
+    /^rgb\(\d+,\s*\d+,\s*\d+\)$/, // RGB
+    /^hsl\(\d+,\s*\d+%,\s*\d+%\)$/, // HSL
   ];
 
-  return formats.some(regex => regex.test(input));
+  return formats.some((regex) => regex.test(input));
 }
 ```
 
@@ -448,14 +428,14 @@ function generatePalette(baseColor, options = {}) {
   const {
     shades = 5,
     includeComplementary = true,
-    includeAnalogous = true
+    includeAnalogous = true,
   } = options;
 
   return {
     base: baseColor,
     shades: generateShades(baseColor, shades),
     complementary: includeComplementary ? getComplement(baseColor) : null,
-    analogous: includeAnalogous ? getAnalogous(baseColor) : null
+    analogous: includeAnalogous ? getAnalogous(baseColor) : null,
   };
 }
 ```
@@ -463,21 +443,25 @@ function generatePalette(baseColor, options = {}) {
 ## Tips and Best Practices
 
 ### Color Conversion
+
 - ✅ Use HCT for perceptual operations
 - ✅ Use RGB/Hex for final output
 - ❌ Don't chain too many conversions
 
 ### Palette Generation
+
 - ✅ Start with 5-7 colors maximum
 - ✅ Test palettes with color blindness simulators
 - ❌ Don't use pure black (#000000) with pure white
 
 ### Contrast Checking
+
 - ✅ Always check against actual backgrounds
 - ✅ Test at different font sizes
 - ❌ Don't rely on color alone for meaning
 
 ### Gradients
+
 - ✅ Use LAB/HCT for smooth gradients
 - ✅ Limit to 5-10 steps for performance
 - ❌ Don't interpolate in RGB (causes muddy colors)

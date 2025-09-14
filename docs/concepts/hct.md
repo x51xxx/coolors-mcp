@@ -50,7 +50,7 @@ Tone Difference | Approximate Contrast Ratio
 const primary = { h: 265, c: 50, t: 50 };
 
 // Guaranteed accessible combinations
-const onPrimary = { h: 265, c: 50, t: 100 };     // t: 50 → 100 = 50 diff = 4.5:1
+const onPrimary = { h: 265, c: 50, t: 100 }; // t: 50 → 100 = 50 diff = 4.5:1
 const primaryContainer = { h: 265, c: 25, t: 90 }; // Lower chroma, high tone
 const onPrimaryContainer = { h: 265, c: 50, t: 10 }; // t: 90 → 10 = 80 diff = 7:1+
 ```
@@ -62,11 +62,13 @@ HCT is the foundation of Material Design 3's color system:
 ### Tonal Palettes
 
 Material Design uses 13 standard tones:
+
 ```
 [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100]
 ```
 
 Each tone has specific use cases:
+
 - **0-10**: On-colors for light surfaces
 - **20-40**: Accent and emphasis colors
 - **50**: Medium, often primary color
@@ -79,16 +81,16 @@ HCT enables semantic color roles with guaranteed contrast:
 
 ```javascript
 // Primary color family
-primary: tone(40)           // Main brand color
-onPrimary: tone(100)        // Text on primary
-primaryContainer: tone(90)  // Light container
-onPrimaryContainer: tone(10) // Text on container
+primary: tone(40); // Main brand color
+onPrimary: tone(100); // Text on primary
+primaryContainer: tone(90); // Light container
+onPrimaryContainer: tone(10); // Text on container
 
 // Surface colors
-surface: tone(99)           // Main background
-onSurface: tone(10)         // Text on surface
-surfaceVariant: tone(95)   // Secondary background
-onSurfaceVariant: tone(30) // Secondary text
+surface: tone(99); // Main background
+onSurface: tone(10); // Text on surface
+surfaceVariant: tone(95); // Secondary background
+onSurfaceVariant: tone(30); // Secondary text
 ```
 
 ## Chroma Behavior
@@ -106,6 +108,7 @@ Chroma in HCT represents color intensity, but unlike saturation in HSL, it maint
 ### Chroma and Tone Interaction
 
 Maximum achievable chroma varies by tone:
+
 ```
 Tone 0-10:   Low max chroma (dark colors can't be very colorful)
 Tone 40-60:  Highest max chroma (mid-tones most colorful)
@@ -128,7 +131,7 @@ function generateTheme(sourceColor) {
     tertiary: { h: hct.h + 120, c: hct.c * 0.7, t: 40 },
     error: { h: 25, c: 84, t: 40 },
     neutral: { h: hct.h, c: 4, t: 50 },
-    neutralVariant: { h: hct.h, c: 8, t: 50 }
+    neutralVariant: { h: hct.h, c: 8, t: 50 },
   };
 }
 ```
@@ -139,8 +142,7 @@ Create accessible color variations:
 
 ```javascript
 function createAccessiblePair(baseHct, contrastRatio = 4.5) {
-  const toneDiff = contrastRatio >= 7 ? 70 :
-                   contrastRatio >= 4.5 ? 50 : 40;
+  const toneDiff = contrastRatio >= 7 ? 70 : contrastRatio >= 4.5 ? 50 : 40;
 
   const lighter = { ...baseHct, t: Math.min(100, baseHct.t + toneDiff) };
   const darker = { ...baseHct, t: Math.max(0, baseHct.t - toneDiff) };
@@ -172,21 +174,21 @@ function harmonize(color1Hct, color2Hct) {
 
 ### HCT vs LAB
 
-| Aspect | HCT | LAB |
-|--------|-----|-----|
-| Perceptual Uniformity | ✅ Optimized for UI | ✅ General purpose |
-| Contrast Prediction | ✅ Direct tone mapping | ❌ Requires calculation |
-| UI Optimization | ✅ Designed for screens | ❌ Designed for all media |
-| Impossible Colors | ❌ None | ✅ Can represent |
+| Aspect                | HCT                     | LAB                       |
+| --------------------- | ----------------------- | ------------------------- |
+| Perceptual Uniformity | ✅ Optimized for UI     | ✅ General purpose        |
+| Contrast Prediction   | ✅ Direct tone mapping  | ❌ Requires calculation   |
+| UI Optimization       | ✅ Designed for screens | ❌ Designed for all media |
+| Impossible Colors     | ❌ None                 | ✅ Can represent          |
 
 ### HCT vs HSL
 
-| Aspect | HCT | HSL |
-|--------|-----|-----|
-| Perceptual Uniformity | ✅ Yes | ❌ No |
-| Lightness Accuracy | ✅ Perceptual | ❌ Mathematical |
-| Contrast Prediction | ✅ Built-in | ❌ Requires calculation |
-| Designer Familiarity | 🔶 Learning curve | ✅ Well known |
+| Aspect                | HCT               | HSL                     |
+| --------------------- | ----------------- | ----------------------- |
+| Perceptual Uniformity | ✅ Yes            | ❌ No                   |
+| Lightness Accuracy    | ✅ Perceptual     | ❌ Mathematical         |
+| Contrast Prediction   | ✅ Built-in       | ❌ Requires calculation |
+| Designer Familiarity  | 🔶 Learning curve | ✅ Well known           |
 
 ## Advanced Concepts
 
@@ -197,6 +199,7 @@ HCT is built on the CAM16 color appearance model, which models how humans percei
 ### Viewing Conditions
 
 HCT assumes standard viewing conditions:
+
 - Average surround
 - Adapting luminance of 200 cd/m²
 - 20% background luminance
@@ -238,9 +241,9 @@ const darkSurface = { h: 265, c: 0, t: 10 };
 
 ```javascript
 // Standard error colors in HCT
-const error = { h: 25, c: 84, t: 40 };        // Red-orange, high chroma
+const error = { h: 25, c: 84, t: 40 }; // Red-orange, high chroma
 const errorContainer = { h: 25, c: 30, t: 90 }; // Muted, light
-const onError = { h: 25, c: 0, t: 100 };      // White
+const onError = { h: 25, c: 0, t: 100 }; // White
 const onErrorContainer = { h: 25, c: 84, t: 10 }; // Dark red
 ```
 

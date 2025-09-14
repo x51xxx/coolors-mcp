@@ -1,6 +1,6 @@
 {
   "name": "@trishchuk/coolors-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/CoolorsMCP.js",
   "scripts": {
     "build": "tsup",
@@ -57,7 +57,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/x51xxx/coolors-mcp"
+    "url": "git+https://github.com/x51xxx/coolors-mcp.git"
   },
   "homepage": "https://github.com/x51xxx/coolors-mcp",
   "bugs": {

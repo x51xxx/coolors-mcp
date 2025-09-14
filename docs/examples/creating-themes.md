@@ -8,7 +8,7 @@ Learn how to create comprehensive color themes using Material Design 3 principle
 
 ```javascript
 // Create a complete theme from one color
-"Generate a Material Design theme from #6366f1"
+"Generate a Material Design theme from #6366f1";
 
 // Result: Complete light and dark schemes with:
 // - Primary, secondary, tertiary, neutral, error palettes
@@ -21,7 +21,7 @@ Learn how to create comprehensive color themes using Material Design 3 principle
 
 ```javascript
 // Extract colors and create theme
-"Generate a theme from this logo image"
+"Generate a theme from this logo image";
 
 // Process:
 // 1. Extracts dominant colors using Celebi algorithm
@@ -119,9 +119,9 @@ const theme = generateMaterialTheme({
 ```javascript
 // Professional dashboard colors
 const dashboardTheme = {
-  sourceColor: "#2563eb",  // Blue
-  variant: "neutral",       // Minimal color variation
-  contrastLevel: 0         // Standard contrast
+  sourceColor: "#2563eb", // Blue
+  variant: "neutral", // Minimal color variation
+  contrastLevel: 0, // Standard contrast
 };
 
 // Generated theme emphasizes:
@@ -151,8 +151,8 @@ const result = {
     success: "#10b981",
     warning: "#f59e0b",
     error: "#ef4444",
-    info: "#3b82f6"
-  }
+    info: "#3b82f6",
+  },
 };
 ```
 
@@ -161,9 +161,9 @@ const result = {
 ```javascript
 // Vibrant shopping experience
 const ecommerceTheme = {
-  sourceColor: "#ec4899",  // Pink
-  variant: "vibrant",      // Higher chroma
-  contrastLevel: 0.5       // Medium contrast
+  sourceColor: "#ec4899", // Pink
+  variant: "vibrant", // Higher chroma
+  contrastLevel: 0.5, // Medium contrast
 };
 
 // Features:
@@ -188,8 +188,8 @@ const shopTheme = {
 
     // Reviews
     starActive: "#f59e0b",
-    starInactive: "#e5e7eb"
-  }
+    starInactive: "#e5e7eb",
+  },
 };
 ```
 
@@ -204,8 +204,8 @@ async function createMusicTheme(albumArtUrl) {
   // Generate theme from dominant color
   const theme = await generateThemeFromImage({
     imageData: imageColors,
-    variant: "expressive",  // Creative combinations
-    contrastLevel: 0
+    variant: "expressive", // Creative combinations
+    contrastLevel: 0,
   });
 
   return {
@@ -225,11 +225,7 @@ async function createMusicTheme(albumArtUrl) {
     songTitle: theme.dark.onSurfaceVariant,
 
     // Visualizer colors
-    visualizer: [
-      theme.dark.primary,
-      theme.dark.secondary,
-      theme.dark.tertiary
-    ]
+    visualizer: [theme.dark.primary, theme.dark.secondary, theme.dark.tertiary],
   };
 }
 ```
@@ -253,7 +249,7 @@ const designSystem = {
     action: {
       primary: "#6366f1",
       secondary: "#8b92ff",
-      disabled: "#c7c7c7"
+      disabled: "#c7c7c7",
     },
 
     // Feedback
@@ -261,7 +257,7 @@ const designSystem = {
       success: "#10b981",
       warning: "#f59e0b",
       error: "#ef4444",
-      info: "#3b82f6"
+      info: "#3b82f6",
     },
 
     // Content
@@ -269,8 +265,8 @@ const designSystem = {
       primary: "#1f2937",
       secondary: "#4b5563",
       disabled: "#9ca3af",
-      inverse: "#ffffff"
-    }
+      inverse: "#ffffff",
+    },
   },
 
   // Component tokens
@@ -280,14 +276,14 @@ const designSystem = {
         bg: "palette.primary.500",
         text: "white",
         hover: "palette.primary.600",
-        active: "palette.primary.700"
+        active: "palette.primary.700",
       },
       secondary: {
         bg: "palette.primary.100",
         text: "palette.primary.700",
         hover: "palette.primary.200",
-        active: "palette.primary.300"
-      }
+        active: "palette.primary.300",
+      },
     },
 
     input: {
@@ -295,15 +291,15 @@ const designSystem = {
       border: "palette.neutral.300",
       text: "content.primary",
       placeholder: "content.secondary",
-      focus: "palette.primary.500"
+      focus: "palette.primary.500",
     },
 
     card: {
       bg: "white",
       border: "palette.neutral.200",
-      shadow: "0 1px 3px rgba(0,0,0,0.1)"
-    }
-  }
+      shadow: "0 1px 3px rgba(0,0,0,0.1)",
+    },
+  },
 };
 ```
 
@@ -371,19 +367,19 @@ Adjust contrast for accessibility needs:
 // Standard contrast (WCAG AA)
 const standard = {
   sourceColor: "#6366f1",
-  contrastLevel: 0  // Default
+  contrastLevel: 0, // Default
 };
 
 // Medium contrast (Between AA and AAA)
 const medium = {
   sourceColor: "#6366f1",
-  contrastLevel: 0.5
+  contrastLevel: 0.5,
 };
 
 // High contrast (WCAG AAA)
 const high = {
   sourceColor: "#6366f1",
-  contrastLevel: 1.0
+  contrastLevel: 1.0,
 };
 
 // Results in different tone mappings:
@@ -401,15 +397,15 @@ const high = {
 function createUserTheme(preferences) {
   const {
     favoriteColor,
-    contrastNeeds,  // "normal", "high", "maximum"
-    colorBlindness,  // null, "protanopia", "deuteranopia", etc.
-    darkMode
+    contrastNeeds, // "normal", "high", "maximum"
+    colorBlindness, // null, "protanopia", "deuteranopia", etc.
+    darkMode,
   } = preferences;
 
   // Base theme
   let theme = generateMaterialTheme({
     sourceColor: favoriteColor,
-    contrastLevel: contrastNeeds === "high" ? 1.0 : 0
+    contrastLevel: contrastNeeds === "high" ? 1.0 : 0,
   });
 
   // Adjust for color blindness
@@ -434,28 +430,28 @@ function getTimeBasedTheme() {
     return {
       sourceColor: "#1a1a2e",
       variant: "monochrome",
-      scheme: "dark"
+      scheme: "dark",
     };
   } else if (hour < 12) {
     // Morning theme (bright, energetic)
     return {
       sourceColor: "#fbbf24",
       variant: "vibrant",
-      scheme: "light"
+      scheme: "light",
     };
   } else if (hour < 18) {
     // Afternoon theme (balanced)
     return {
       sourceColor: "#3b82f6",
       variant: "tonalSpot",
-      scheme: "light"
+      scheme: "light",
     };
   } else {
     // Evening theme (warm, relaxed)
     return {
       sourceColor: "#f97316",
       variant: "neutral",
-      scheme: "dark"
+      scheme: "dark",
     };
   }
 }
@@ -467,31 +463,31 @@ function getTimeBasedTheme() {
 // Generate theme based on content
 async function createContentTheme(contentType, contentData) {
   switch (contentType) {
-    case 'article':
+    case "article":
       // Clean, readable theme
       return {
         sourceColor: "#1f2937",
         variant: "neutral",
-        contrastLevel: 0.5
+        contrastLevel: 0.5,
       };
 
-    case 'gallery':
+    case "gallery":
       // Let images stand out
       return {
         sourceColor: contentData.dominantColor,
         variant: "monochrome",
-        scheme: "dark"
+        scheme: "dark",
       };
 
-    case 'video':
+    case "video":
       // Dark, immersive theme
       return {
         sourceColor: "#0f172a",
         variant: "monochrome",
-        scheme: "dark"
+        scheme: "dark",
       };
 
-    case 'product':
+    case "product":
       // Match product color
       return generateThemeFromImage(contentData.productImage);
   }
@@ -559,16 +555,16 @@ function generateTailwindConfig(theme) {
             700: theme.palettes.primary[30],
             800: theme.palettes.primary[20],
             900: theme.palettes.primary[10],
-            950: theme.palettes.primary[0]
+            950: theme.palettes.primary[0],
           },
           surface: {
             DEFAULT: theme.surface,
             container: theme.surfaceContainer,
-            variant: theme.surfaceVariant
-          }
-        }
-      }
-    }
+            variant: theme.surfaceVariant,
+          },
+        },
+      },
+    },
   };
 }
 ```
@@ -583,11 +579,11 @@ $theme-primary-container: #e0e0ff;
 $theme-on-primary-container: #070764;
 
 // Mixin for component theming
-@mixin apply-theme($role: 'surface') {
-  @if $role == 'primary' {
+@mixin apply-theme($role: "surface") {
+  @if $role == "primary" {
     background: $theme-primary;
     color: $theme-on-primary;
-  } @else if $role == 'primary-container' {
+  } @else if $role == "primary-container" {
     background: $theme-primary-container;
     color: $theme-on-primary-container;
   }
@@ -595,7 +591,7 @@ $theme-on-primary-container: #070764;
 
 // Usage
 .button-primary {
-  @include apply-theme('primary');
+  @include apply-theme("primary");
 }
 ```
 
@@ -614,21 +610,21 @@ function validateThemeAccessibility(theme) {
 
     // Interactive elements
     { fg: theme.primary, bg: theme.surface, min: 3.0 },
-    { fg: theme.outline, bg: theme.surface, min: 3.0 }
+    { fg: theme.outline, bg: theme.surface, min: 3.0 },
   ];
 
-  const results = checks.map(check => {
+  const results = checks.map((check) => {
     const ratio = checkContrast(check.fg, check.bg);
     return {
       ...check,
       ratio,
-      passes: ratio >= check.min
+      passes: ratio >= check.min,
     };
   });
 
   return {
-    allPass: results.every(r => r.passes),
-    failures: results.filter(r => !r.passes)
+    allPass: results.every((r) => r.passes),
+    failures: results.filter((r) => !r.passes),
   };
 }
 ```
@@ -654,7 +650,7 @@ function createHighContrastTheme(baseTheme) {
 
     // Remove subtle variations
     surfaceVariant: "#ffffff",
-    surfaceContainer: "#ffffff"
+    surfaceContainer: "#ffffff",
   };
 }
 ```
@@ -665,19 +661,19 @@ function createHighContrastTheme(baseTheme) {
 // Adjust theme for color blindness
 function adjustForColorBlindness(theme, type) {
   switch (type) {
-    case 'protanopia':  // Red-blind
+    case "protanopia": // Red-blind
       // Shift reds toward blue
-      return shiftProblemColors(theme, ['red'], 'blue');
+      return shiftProblemColors(theme, ["red"], "blue");
 
-    case 'deuteranopia':  // Green-blind
+    case "deuteranopia": // Green-blind
       // Enhance red-blue distinction
-      return enhanceColorDistinction(theme, ['red', 'blue']);
+      return enhanceColorDistinction(theme, ["red", "blue"]);
 
-    case 'tritanopia':  // Blue-blind
+    case "tritanopia": // Blue-blind
       // Use red-green distinction
-      return shiftProblemColors(theme, ['blue'], 'green');
+      return shiftProblemColors(theme, ["blue"], "green");
 
-    case 'achromatopsia':  // Total color blindness
+    case "achromatopsia": // Total color blindness
       // Use only lightness variations
       return createMonochromeTheme(theme);
   }
@@ -692,9 +688,9 @@ function adjustForColorBlindness(theme, type) {
 // Serious, trustworthy appearance
 const newsTheme = {
   // Core colors
-  primary: "#1e40af",      // Deep blue
-  secondary: "#dc2626",    // Breaking news red
-  neutral: "#1f2937",      // Text
+  primary: "#1e40af", // Deep blue
+  secondary: "#dc2626", // Breaking news red
+  neutral: "#1f2937", // Text
 
   // Sections
   politics: "#1e40af",
@@ -711,7 +707,7 @@ const newsTheme = {
   // Typography
   headline: "#111827",
   body: "#374151",
-  caption: "#6b7280"
+  caption: "#6b7280",
 };
 ```
 
@@ -720,13 +716,13 @@ const newsTheme = {
 ```javascript
 // Friendly, engaging theme
 const socialTheme = generateMaterialTheme({
-  sourceColor: "#3b82f6",  // Facebook-like blue
+  sourceColor: "#3b82f6", // Facebook-like blue
   customColors: [
-    { name: "like", color: "#ef4444" },     // Red heart
-    { name: "share", color: "#10b981" },    // Green share
-    { name: "comment", color: "#6366f1" }   // Blue comment
+    { name: "like", color: "#ef4444" }, // Red heart
+    { name: "share", color: "#10b981" }, // Green share
+    { name: "comment", color: "#6366f1" }, // Blue comment
   ],
-  variant: "vibrant"
+  variant: "vibrant",
 });
 
 // Additional social elements
@@ -742,7 +738,7 @@ const socialElements = {
   // Status indicators
   online: "#10b981",
   away: "#f59e0b",
-  offline: "#6b7280"
+  offline: "#6b7280",
 };
 ```
 
@@ -752,11 +748,11 @@ const socialElements = {
 // Clear, focused learning environment
 const eduTheme = {
   // Subject colors
-  math: "#3b82f6",       // Blue
-  science: "#10b981",    // Green
+  math: "#3b82f6", // Blue
+  science: "#10b981", // Green
   literature: "#8b5cf6", // Purple
-  history: "#f59e0b",    // Amber
-  arts: "#ec4899",       // Pink
+  history: "#f59e0b", // Amber
+  arts: "#ec4899", // Pink
 
   // Progress indicators
   notStarted: "#e5e7eb",
@@ -767,7 +763,7 @@ const eduTheme = {
   beginner: "#10b981",
   intermediate: "#3b82f6",
   advanced: "#7c3aed",
-  expert: "#dc2626"
+  expert: "#dc2626",
 };
 ```
 
@@ -785,21 +781,21 @@ function previewTheme(theme) {
       color,
       hex: color,
       rgb: hexToRgb(color),
-      hsl: hexToHsl(color)
+      hsl: hexToHsl(color),
     })),
 
     // Sample components
     components: {
       button: generateButtonPreview(theme),
       card: generateCardPreview(theme),
-      form: generateFormPreview(theme)
+      form: generateFormPreview(theme),
     },
 
     // Accessibility report
     accessibility: validateThemeAccessibility(theme),
 
     // Color harmony analysis
-    harmony: analyzeColorHarmony(theme)
+    harmony: analyzeColorHarmony(theme),
   };
 
   return preview;
@@ -810,23 +806,23 @@ function previewTheme(theme) {
 
 ```javascript
 // Test theme generation
-describe('Theme Creation', () => {
-  test('generates accessible color pairs', () => {
-    const theme = generateMaterialTheme('#6366f1');
+describe("Theme Creation", () => {
+  test("generates accessible color pairs", () => {
+    const theme = generateMaterialTheme("#6366f1");
 
     // Check primary colors
     const ratio = getContrast(
       theme.schemes.light.primary,
-      theme.schemes.light.onPrimary
+      theme.schemes.light.onPrimary,
     );
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
-  test('maintains brand color fidelity', () => {
-    const brand = '#ff5722';
+  test("maintains brand color fidelity", () => {
+    const brand = "#ff5722";
     const theme = generateMaterialTheme({
       sourceColor: brand,
-      variant: 'fidelity'
+      variant: "fidelity",
     });
 
     const distance = colorDistance(brand, theme.schemes.light.primary);
@@ -850,11 +846,11 @@ const themeJson = {
     created: new Date().toISOString(),
     sourceColor: "#6366f1",
     variant: "tonalSpot",
-    contrastLevel: 0
-  }
+    contrastLevel: 0,
+  },
 };
 
-fs.writeFileSync('theme.json', JSON.stringify(themeJson, null, 2));
+fs.writeFileSync("theme.json", JSON.stringify(themeJson, null, 2));
 ```
 
 ### Design Tokens
@@ -865,28 +861,28 @@ const tokens = {
   color: {
     primary: {
       value: theme.primary,
-      type: "color"
+      type: "color",
     },
     onPrimary: {
       value: theme.onPrimary,
-      type: "color"
-    }
+      type: "color",
+    },
   },
   spacing: {
     small: { value: "8px", type: "dimension" },
     medium: { value: "16px", type: "dimension" },
-    large: { value: "24px", type: "dimension" }
+    large: { value: "24px", type: "dimension" },
   },
   typography: {
     heading: {
       value: {
         fontFamily: "Inter",
         fontSize: "24px",
-        fontWeight: 600
+        fontWeight: 600,
       },
-      type: "typography"
-    }
-  }
+      type: "typography",
+    },
+  },
 };
 ```
 

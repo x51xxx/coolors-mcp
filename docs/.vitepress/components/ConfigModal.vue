@@ -17,9 +17,11 @@
           <span class="config-badge">Config Files</span>
           <h2>Claude Desktop Configuration</h2>
         </div>
-        <button @click="closeModal" class="close-btn" title="Close">&times;</button>
+        <button @click="closeModal" class="close-btn" title="Close">
+          &times;
+        </button>
       </div>
-      
+
       <div class="modal-body">
         <div class="config-section">
           <h3 class="section-title">
@@ -31,40 +33,107 @@
                 <strong>🍎 macOS</strong>
               </div>
               <div class="file-path">
-                <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
-                <button class="copy-path-btn" @click="copyPath('~/Library/Application Support/Claude/claude_desktop_config.json')" title="Copy path">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                <code
+                  >~/Library/Application
+                  Support/Claude/claude_desktop_config.json</code
+                >
+                <button
+                  class="copy-path-btn"
+                  @click="
+                    copyPath(
+                      '~/Library/Application Support/Claude/claude_desktop_config.json',
+                    )
+                  "
+                  title="Copy path"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <rect
+                      x="9"
+                      y="9"
+                      width="13"
+                      height="13"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <path
+                      d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                    ></path>
                   </svg>
                 </button>
               </div>
             </div>
-            
+
             <div class="location-item">
               <div class="platform-name">
                 <strong>🪟 Windows</strong>
               </div>
               <div class="file-path">
                 <code>%APPDATA%\Claude\claude_desktop_config.json</code>
-                <button class="copy-path-btn" @click="copyPath('%APPDATA%\\Claude\\claude_desktop_config.json')" title="Copy path">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <button
+                  class="copy-path-btn"
+                  @click="
+                    copyPath('%APPDATA%\\Claude\\claude_desktop_config.json')
+                  "
+                  title="Copy path"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <rect
+                      x="9"
+                      y="9"
+                      width="13"
+                      height="13"
+                      rx="2"
+                      ry="2"
+                    ></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"></path>
                   </svg>
                 </button>
               </div>
             </div>
-            
+
             <div class="location-item">
               <div class="platform-name">
                 <strong>🐧 Linux</strong>
               </div>
               <div class="file-path">
                 <code>~/.config/claude/claude_desktop_config.json</code>
-                <button class="copy-path-btn" @click="copyPath('~/.config/claude/claude_desktop_config.json')" title="Copy path">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <button
+                  class="copy-path-btn"
+                  @click="
+                    copyPath('~/.config/claude/claude_desktop_config.json')
+                  "
+                  title="Copy path"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <rect
+                      x="9"
+                      y="9"
+                      width="13"
+                      height="13"
+                      rx="2"
+                      ry="2"
+                    ></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"></path>
                   </svg>
                 </button>
@@ -78,72 +147,72 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from "vue";
 
-const isOpen = ref(false)
+const isOpen = ref(false);
 
 const openModal = () => {
-  isOpen.value = true
-  document.body.style.overflow = 'hidden'
-}
+  isOpen.value = true;
+  document.body.style.overflow = "hidden";
+};
 
 const closeModal = () => {
-  isOpen.value = false
-  document.body.style.overflow = ''
-}
+  isOpen.value = false;
+  document.body.style.overflow = "";
+};
 
 const copyPath = async (path) => {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(path)
+      await navigator.clipboard.writeText(path);
     } else {
       // Fallback for older browsers
-      const textArea = document.createElement('textarea')
-      textArea.value = path
-      textArea.style.position = 'fixed'
-      textArea.style.left = '-9999px'
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textArea)
+      const textArea = document.createElement("textarea");
+      textArea.value = path;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
     }
-    
+
     // Visual feedback - find the button that was clicked
-    const button = event.target.closest('.copy-path-btn')
+    const button = event.target.closest(".copy-path-btn");
     if (button) {
-      const originalContent = button.innerHTML
-      button.classList.add('copied')
+      const originalContent = button.innerHTML;
+      button.classList.add("copied");
       button.innerHTML = `
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <polyline points="20,6 9,17 4,12"></polyline>
         </svg>
-      `
-      
+      `;
+
       // Reset after 2 seconds
       setTimeout(() => {
-        button.classList.remove('copied')
-        button.innerHTML = originalContent
-      }, 2000)
+        button.classList.remove("copied");
+        button.innerHTML = originalContent;
+      }, 2000);
     }
   } catch (err) {
-    console.error('Failed to copy path:', err)
+    console.error("Failed to copy path:", err);
   }
-}
+};
 
 const handleKeydown = (e) => {
-  if (e.key === 'Escape' && isOpen.value) {
-    closeModal()
+  if (e.key === "Escape" && isOpen.value) {
+    closeModal();
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
+  document.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-  document.body.style.overflow = ''
-})
+  document.removeEventListener("keydown", handleKeydown);
+  document.body.style.overflow = "";
+});
 </script>
 
 <style scoped>
@@ -154,7 +223,11 @@ onUnmounted(() => {
   margin: 16px 0;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(135deg, var(--vp-c-bg-soft) 0%, var(--vp-c-bg-alt) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--vp-c-bg-soft) 0%,
+    var(--vp-c-bg-alt) 100%
+  );
   border-left: 4px solid var(--vp-c-brand);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
@@ -164,18 +237,29 @@ onUnmounted(() => {
 .config-card:hover {
   border-color: var(--vp-c-brand);
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--vp-c-brand-light);
-  background: linear-gradient(135deg, var(--vp-c-bg) 0%, var(--vp-c-bg-soft) 100%);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 1px var(--vp-c-brand-light);
+  background: linear-gradient(
+    135deg,
+    var(--vp-c-bg) 0%,
+    var(--vp-c-bg-soft) 100%
+  );
 }
 
 .config-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -2px;
   left: -2px;
   right: -2px;
   bottom: -2px;
-  background: linear-gradient(45deg, var(--vp-c-brand), transparent, var(--vp-c-brand));
+  background: linear-gradient(
+    45deg,
+    var(--vp-c-brand),
+    transparent,
+    var(--vp-c-brand)
+  );
   border-radius: 12px;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -187,7 +271,7 @@ onUnmounted(() => {
 }
 
 .config-card::after {
-  content: '✨';
+  content: "✨";
   position: absolute;
   top: 10px;
   right: 15px;
@@ -430,44 +514,44 @@ onUnmounted(() => {
     width: 95vw;
     max-height: 90vh;
   }
-  
+
   .modal-header {
     padding: 16px 20px;
   }
-  
+
   .modal-title h2 {
     font-size: 18px;
   }
-  
+
   .modal-body {
     padding: 20px;
   }
-  
+
   .config-card {
     padding: 14px;
   }
-  
+
   .config-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .expand-hint {
     opacity: 1;
     font-size: 11px;
   }
-  
+
   .location-item {
     padding: 12px;
   }
-  
+
   .file-path {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .copy-path-btn {
     align-self: flex-end;
     width: 32px;

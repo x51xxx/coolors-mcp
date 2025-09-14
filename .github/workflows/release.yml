@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., 1.0.0)'
+        description: "Release version (e.g., 1.0.0)"
         required: true
         type: string
 
@@ -18,20 +18,20 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-      
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
       - name: Verify package name
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -39,16 +39,16 @@ jobs:
             echo "❌ Package name mismatch. Expected @trishchuk/coolors-mcp, got $PACKAGE_NAME"
             exit 1
           fi
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests and build
         run: |
           npm run lint
           npm run build
           npm test || true
-      
+
       - name: Verify build output
         run: |
           if [ ! -f "dist/bin/server.js" ]; then
@@ -56,7 +56,7 @@ jobs:
             exit 1
           fi
           echo "✅ Build output verified"
-      
+
       - name: Create tarball and check size
         run: |
           npm pack --dry-run
@@ -65,13 +65,13 @@ jobs:
           if [ $SIZE -gt 10485760 ]; then
             echo "⚠️ Warning: Package size exceeds 10MB"
           fi
-      
+
       - name: Publish to npm
         run: |
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

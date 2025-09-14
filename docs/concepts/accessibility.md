@@ -8,12 +8,13 @@ Coolors MCP ensures color choices meet accessibility standards through comprehen
 
 The Web Content Accessibility Guidelines (WCAG) define contrast requirements for readable content:
 
-| Level | Normal Text | Large Text | Non-Text |
-|-------|------------|------------|----------|
-| **AA** | 4.5:1 | 3:1 | 3:1 |
-| **AAA** | 7:1 | 4.5:1 | N/A |
+| Level   | Normal Text | Large Text | Non-Text |
+| ------- | ----------- | ---------- | -------- |
+| **AA**  | 4.5:1       | 3:1        | 3:1      |
+| **AAA** | 7:1         | 4.5:1      | N/A      |
 
 **Large text** is defined as:
+
 - 18pt (24px) or larger
 - 14pt (18.5px) or larger if bold
 
@@ -24,11 +25,9 @@ Contrast ratio is based on relative luminance:
 ```javascript
 // Relative luminance calculation
 function getLuminance(rgb) {
-  const [r, g, b] = rgb.map(val => {
+  const [r, g, b] = rgb.map((val) => {
     val = val / 255;
-    return val <= 0.03928
-      ? val / 12.92
-      : Math.pow((val + 0.055) / 1.055, 2.4);
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
   });
 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -59,19 +58,19 @@ function getContrastRatio(color1, color2) {
 
 HCT's tone component directly correlates with contrast:
 
-| Tone Difference | Approximate Contrast | Use Case |
-|-----------------|---------------------|----------|
-| 40 | ~3:1 | Large text, UI elements |
-| 50 | ~4.5:1 | Normal text (AA) |
-| 70 | ~7:1 | Enhanced (AAA) |
-| 90 | ~15:1 | Maximum readability |
+| Tone Difference | Approximate Contrast | Use Case                |
+| --------------- | -------------------- | ----------------------- |
+| 40              | ~3:1                 | Large text, UI elements |
+| 50              | ~4.5:1               | Normal text (AA)        |
+| 70              | ~7:1                 | Enhanced (AAA)          |
+| 90              | ~15:1                | Maximum readability     |
 
 ### Predictable Relationships
 
 ```javascript
 // Guaranteed accessible pairs in HCT
-const background = { h: 200, c: 20, t: 95 };  // Light surface
-const text = { h: 200, c: 20, t: 20 };       // Dark text
+const background = { h: 200, c: 20, t: 95 }; // Light surface
+const text = { h: 200, c: 20, t: 20 }; // Dark text
 // Tone difference: 75 = guaranteed 7:1+ contrast
 ```
 
@@ -117,7 +116,9 @@ const text = { h: 200, c: 20, t: 20 };       // Dark text
 ## Material Design Contrast Levels
 
 ### Default Contrast (0.0)
+
 Meets AA accessibility:
+
 - **Guaranteed minimums**:
   - 4.5:1 for all text and icons
   - 3:1 for required non-text elements
@@ -125,7 +126,9 @@ Meets AA accessibility:
   - 7:1 for high emphasis text
 
 ### Medium Contrast (+0.5)
+
 Exceeds AA requirements:
+
 - **Guaranteed minimums**:
   - 4.5:1 for all text
   - 3:1 for all non-text elements
@@ -134,7 +137,9 @@ Exceeds AA requirements:
   - 11:1 for high emphasis
 
 ### High Contrast (+1.0)
+
 Meets AAA accessibility:
+
 - **Guaranteed minimums**:
   - 7:1 for all text and icons
   - 4.5:1 for all non-text elements
@@ -196,9 +201,9 @@ function getAccessibleTextColor(background) {
 
   // Use white or black based on background
   if (bgLuminance > 0.5) {
-    return '#000000'; // Dark text on light background
+    return "#000000"; // Dark text on light background
   } else {
-    return '#ffffff'; // Light text on dark background
+    return "#ffffff"; // Light text on dark background
   }
 }
 ```
@@ -209,12 +214,12 @@ function getAccessibleTextColor(background) {
 
 Material Design ensures these pairs always meet contrast requirements:
 
-| Background | Foreground | Min Contrast | Use Case |
-|------------|------------|--------------|----------|
-| surface | onSurface | 4.5:1 | Main content |
-| primary | onPrimary | 4.5:1 | Primary actions |
-| primaryContainer | onPrimaryContainer | 4.5:1 | Containers |
-| error | onError | 4.5:1 | Error states |
+| Background       | Foreground         | Min Contrast | Use Case        |
+| ---------------- | ------------------ | ------------ | --------------- |
+| surface          | onSurface          | 4.5:1        | Main content    |
+| primary          | onPrimary          | 4.5:1        | Primary actions |
+| primaryContainer | onPrimaryContainer | 4.5:1        | Containers      |
+| error            | onError            | 4.5:1        | Error states    |
 
 ### Role-Based Adjustments
 
@@ -225,17 +230,17 @@ function assignColorRoles(sourceColor, contrastLevel = 0) {
 
   // Adjust tone mappings based on contrast level
   const toneMap = {
-    primary: 40 - (contrastLevel * 10),
+    primary: 40 - contrastLevel * 10,
     onPrimary: 100,
-    primaryContainer: 90 + (contrastLevel * 5),
-    onPrimaryContainer: 10 - (contrastLevel * 5)
+    primaryContainer: 90 + contrastLevel * 5,
+    onPrimaryContainer: 10 - contrastLevel * 5,
   };
 
   // Ensure minimum contrast
   return Object.entries(toneMap).map(([role, tone]) => ({
     role,
     color: palette[tone],
-    meetsContrast: true
+    meetsContrast: true,
   }));
 }
 ```
@@ -245,6 +250,7 @@ function assignColorRoles(sourceColor, contrastLevel = 0) {
 ### Design Guidelines
 
 #### DO's
+
 - ✅ Test all color combinations for contrast
 - ✅ Provide high contrast mode options
 - ✅ Use semantic color roles consistently
@@ -252,6 +258,7 @@ function assignColorRoles(sourceColor, contrastLevel = 0) {
 - ✅ Test with real content, not just color swatches
 
 #### DON'Ts
+
 - ❌ Rely on color alone to convey information
 - ❌ Use low contrast for aesthetic reasons
 - ❌ Assume large text allows poor contrast
@@ -261,6 +268,7 @@ function assignColorRoles(sourceColor, contrastLevel = 0) {
 ### Testing Strategies
 
 #### Automated Testing
+
 ```javascript
 // Test all color combinations in theme
 function testThemeAccessibility(theme) {
@@ -276,7 +284,7 @@ function testThemeAccessibility(theme) {
       context,
       ratio,
       passes: ratio >= required,
-      recommendation: getRecommendation(ratio, context)
+      recommendation: getRecommendation(ratio, context),
     });
   });
 
@@ -285,6 +293,7 @@ function testThemeAccessibility(theme) {
 ```
 
 #### Manual Testing
+
 1. **Blur test**: Blur your vision - can you still read it?
 2. **Grayscale test**: Convert to grayscale - still distinguishable?
 3. **Sunlight test**: View in bright light conditions
@@ -297,14 +306,15 @@ function testThemeAccessibility(theme) {
 
 Approximately 8% of men and 0.5% of women have color vision deficiency:
 
-| Type | Frequency | Description | Design Impact |
-|------|-----------|-------------|---------------|
-| Protanopia | 1.3% | No red cones | Red/green confusion |
-| Deuteranopia | 1.2% | No green cones | Red/green confusion |
-| Tritanopia | 0.001% | No blue cones | Blue/yellow confusion |
-| Monochromacy | Rare | No color vision | Rely on contrast only |
+| Type         | Frequency | Description     | Design Impact         |
+| ------------ | --------- | --------------- | --------------------- |
+| Protanopia   | 1.3%      | No red cones    | Red/green confusion   |
+| Deuteranopia | 1.2%      | No green cones  | Red/green confusion   |
+| Tritanopia   | 0.001%    | No blue cones   | Blue/yellow confusion |
+| Monochromacy | Rare      | No color vision | Rely on contrast only |
 
 #### Design Strategies
+
 ```javascript
 // Ensure information isn't conveyed by color alone
 ✓ Error: "❌ Invalid input" (icon + text)
@@ -326,15 +336,15 @@ Dark themes require special attention:
 ```javascript
 // Light theme
 const lightTheme = {
-  surface: { tone: 99 },      // Very light
-  onSurface: { tone: 10 },    // Very dark
+  surface: { tone: 99 }, // Very light
+  onSurface: { tone: 10 }, // Very dark
   // Contrast: ~15:1
 };
 
 // Dark theme - NOT just inverted
 const darkTheme = {
-  surface: { tone: 10 },      // Very dark
-  onSurface: { tone: 90 },    // Light, not white
+  surface: { tone: 10 }, // Very dark
+  onSurface: { tone: 90 }, // Light, not white
   // Contrast: ~13:1 (slightly less harsh)
 };
 ```
@@ -354,9 +364,9 @@ function getEffectiveColor(foreground, background, alpha) {
 
 // Ensure minimum opacity for text
 const minOpacity = {
-  normalText: 0.87,  // ~87% opacity minimum
-  secondaryText: 0.60,  // ~60% for secondary
-  disabledText: 0.38   // ~38% for disabled
+  normalText: 0.87, // ~87% opacity minimum
+  secondaryText: 0.6, // ~60% for secondary
+  disabledText: 0.38, // ~38% for disabled
 };
 ```
 
@@ -366,7 +376,7 @@ const minOpacity = {
 
 ```jsx
 function AccessibleButton({ color, children }) {
-  const [textColor, setTextColor] = useState('#ffffff');
+  const [textColor, setTextColor] = useState("#ffffff");
 
   useEffect(() => {
     // Automatically choose accessible text color
@@ -378,7 +388,7 @@ function AccessibleButton({ color, children }) {
     <button
       style={{
         backgroundColor: color,
-        color: textColor
+        color: textColor,
       }}
       aria-label={children}
     >
@@ -434,14 +444,14 @@ class AccessibilityValidator {
           background,
           ratio,
           required: this.minRatio,
-          suggestion: this.suggestFix(color, background)
+          suggestion: this.suggestFix(color, background),
         });
       }
     });
 
     return {
       valid: issues.length === 0,
-      issues
+      issues,
     };
   }
 
@@ -454,6 +464,7 @@ class AccessibilityValidator {
 ## Resources
 
 ### Testing Tools
+
 - Chrome DevTools (Lighthouse)
 - Firefox Accessibility Inspector
 - axe DevTools
@@ -461,6 +472,7 @@ class AccessibilityValidator {
 - Stark (Figma/Sketch plugin)
 
 ### Guidelines
+
 - [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/)
 - [Material Design Accessibility](https://m3.material.io/foundations/accessible-design)
 - [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
