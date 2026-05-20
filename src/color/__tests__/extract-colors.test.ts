@@ -27,9 +27,8 @@ describe("Color Extraction", () => {
     });
 
     it("should extract colors with default options", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       // Mock quantizer to return test colors
@@ -106,9 +105,8 @@ describe("Color Extraction", () => {
     });
 
     it("should extract colors without scoring", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const mockQuantized = new Map([
@@ -140,9 +138,8 @@ describe("Color Extraction", () => {
     });
 
     it("should handle empty image data", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       vi.mocked(QuantizerCelebi.quantize).mockReturnValue(new Map());
@@ -159,9 +156,8 @@ describe("Color Extraction", () => {
     });
 
     it("should calculate correct percentages", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const mockQuantized = new Map([
@@ -194,9 +190,8 @@ describe("Color Extraction", () => {
     });
 
     it("should extract theme palette with primary color", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const mockQuantized = new Map([
@@ -219,9 +214,8 @@ describe("Color Extraction", () => {
     });
 
     it("should extract secondary with different hue", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const mockQuantized = new Map([
@@ -251,9 +245,8 @@ describe("Color Extraction", () => {
     });
 
     it("should find neutral color with low chroma", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const mockQuantized = new Map([
@@ -280,9 +273,8 @@ describe("Color Extraction", () => {
     });
 
     it("should find error color in red hue range", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const primaryArgb = utils.argbFromRgb(103, 80, 164);
@@ -311,9 +303,8 @@ describe("Color Extraction", () => {
     });
 
     it("should throw error for empty image", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       vi.mocked(QuantizerCelebi.quantize).mockReturnValue(new Map());
@@ -331,9 +322,8 @@ describe("Color Extraction", () => {
     });
 
     it("should handle single color image", async () => {
-      const { QuantizerCelebi } = await import(
-        "../quantize/quantizer_celebi.js"
-      );
+      const { QuantizerCelebi } =
+        await import("../quantize/quantizer_celebi.js");
       const { Score } = await import("../score/score.js");
 
       const mockQuantized = new Map([

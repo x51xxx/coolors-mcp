@@ -165,7 +165,7 @@ export function refactorCss(
 
   const replacements: ColorReplacement[] = [];
   const warnings: RefactoringWarning[] = [];
-  let refactoredCss = css;
+  let refactoredCss: string;
   let totalColors = 0;
   let replacedColors = 0;
   let totalConfidence = 0;

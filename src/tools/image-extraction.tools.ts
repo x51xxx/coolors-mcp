@@ -2,15 +2,7 @@
  * MCP tools for image color extraction
  */
 
-import type { Tool } from "../types.js";
-
-type ImageData = {
-  data: number[] | Uint8ClampedArray;
-  height: number;
-  width: number;
-};
-
-type McpTool = Tool<unknown>;
+import { z } from "zod";
 
 import {
   extractColors,
@@ -19,31 +11,37 @@ import {
 } from "../color/extract-colors.js";
 import { generateMaterialTheme } from "../color/material-theme.js";
 
+const imageDataSchema = z
+  .object({
+    data: z.array(z.number()).describe("Flat array of RGBA values (0-255)"),
+    height: z.number().int().positive().describe("Image height in pixels"),
+    width: z.number().int().positive().describe("Image width in pixels"),
+  })
+  .describe("Image data with RGBA values");
+
+type ImageDataInput = z.infer<typeof imageDataSchema>;
+
 /**
  * Extract dominant colors from image data
  */
-export const extractImageColorsTool: McpTool = {
+export const extractImageColorsTool = {
   description:
     "Extract dominant colors from an image. Input should be image data as an array of RGBA values.",
-  execute: async (args: unknown, _context: unknown) => {
+  execute: async (args: {
+    format?: "css" | "json" | "palette";
+    imageData: ImageDataInput;
+    maxColors?: number;
+    quality?: "high" | "low" | "medium";
+  }) => {
     const {
       format = "json",
       imageData,
       maxColors = 5,
       quality = "medium",
-    } = args as {
-      format?: string;
-      imageData: ImageData;
-      maxColors?: number;
-      quality?: "high" | "low" | "medium";
-    };
+    } = args;
 
     try {
-      // Convert data array to Uint8ClampedArray if needed
-      const data =
-        imageData.data instanceof Uint8ClampedArray
-          ? imageData.data
-          : new Uint8ClampedArray(imageData.data);
+      const data = new Uint8ClampedArray(imageData.data);
 
       const processedImageData = {
         data,
@@ -75,74 +73,44 @@ export const extractImageColorsTool: McpTool = {
       return `Error extracting colors: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
-  inputSchema: {
-    properties: {
-      format: {
-        description: "Output format: json, css, or palette (default: json)",
-        enum: ["json", "css", "palette"],
-        type: "string",
-      },
-      imageData: {
-        description: "Image data with RGBA values",
-        properties: {
-          data: {
-            description: "Flat array of RGBA values (0-255)",
-            items: { type: "number" },
-            type: "array",
-          },
-          height: {
-            description: "Image height in pixels",
-            type: "number",
-          },
-          width: {
-            description: "Image width in pixels",
-            type: "number",
-          },
-        },
-        required: ["data", "width", "height"],
-        type: "object",
-      },
-      maxColors: {
-        description: "Maximum number of colors to extract (default: 5)",
-        maximum: 20,
-        minimum: 1,
-        type: "number",
-      },
-      quality: {
-        description:
-          "Extraction quality: low, medium, or high (default: medium)",
-        enum: ["low", "medium", "high"],
-        type: "string",
-      },
-    },
-    required: ["imageData"],
-    type: "object",
-  },
   name: "extract_image_colors",
+  parameters: z.object({
+    format: z
+      .enum(["json", "css", "palette"])
+      .optional()
+      .default("json")
+      .describe("Output format"),
+    imageData: imageDataSchema,
+    maxColors: z
+      .number()
+      .int()
+      .min(1)
+      .max(20)
+      .optional()
+      .default(5)
+      .describe("Maximum number of colors to extract"),
+    quality: z
+      .enum(["low", "medium", "high"])
+      .optional()
+      .default("medium")
+      .describe("Extraction quality"),
+  }),
 };
 
 /**
  * Generate a Material Design theme from an image
  */
-export const generateThemeFromImageTool: McpTool = {
+export const generateThemeFromImageTool = {
   description: "Generate a complete Material Design 3 theme from an image",
-  execute: async (args: unknown, _context: unknown) => {
-    const {
-      imageData,
-      includeCustomColors = true,
-      isDark = false,
-    } = args as {
-      imageData: ImageData;
-      includeCustomColors?: boolean;
-      isDark?: boolean;
-    };
+  execute: async (args: {
+    imageData: ImageDataInput;
+    includeCustomColors?: boolean;
+    isDark?: boolean;
+  }) => {
+    const { imageData, includeCustomColors = true, isDark = false } = args;
 
     try {
-      // Convert data array to Uint8ClampedArray if needed
-      const data =
-        imageData.data instanceof Uint8ClampedArray
-          ? imageData.data
-          : new Uint8ClampedArray(imageData.data);
+      const data = new Uint8ClampedArray(imageData.data);
 
       const processedImageData = {
         data,
@@ -212,41 +180,20 @@ export const generateThemeFromImageTool: McpTool = {
       return `Error generating theme: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
-  inputSchema: {
-    properties: {
-      imageData: {
-        description: "Image data with RGBA values",
-        properties: {
-          data: {
-            description: "Flat array of RGBA values (0-255)",
-            items: { type: "number" },
-            type: "array",
-          },
-          height: {
-            description: "Image height in pixels",
-            type: "number",
-          },
-          width: {
-            description: "Image width in pixels",
-            type: "number",
-          },
-        },
-        required: ["data", "width", "height"],
-        type: "object",
-      },
-      includeCustomColors: {
-        description: "Include custom colors from image (default: true)",
-        type: "boolean",
-      },
-      isDark: {
-        description: "Generate dark theme (default: false for light theme)",
-        type: "boolean",
-      },
-    },
-    required: ["imageData"],
-    type: "object",
-  },
   name: "generate_theme_from_image",
+  parameters: z.object({
+    imageData: imageDataSchema,
+    includeCustomColors: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe("Include custom colors from image"),
+    isDark: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Generate dark theme (false for light theme)"),
+  }),
 };
 
 // Helper functions for formatting

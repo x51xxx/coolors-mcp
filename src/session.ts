@@ -6,7 +6,7 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { toJsonSchema } from "xsschema";
 
@@ -99,9 +99,17 @@ export class CoolorsMCPSession extends (EventEmitter as {
         args = parsed.value;
       }
 
+      const noop = () => {};
+      const context = {
+        client: { version: this.#server.getClientVersion() },
+        log: { debug: noop, error: noop, info: noop, warn: noop },
+        reportProgress: async () => {},
+        session: undefined,
+        streamContent: async () => {},
+      };
       const result = await tool.execute(
         args as Parameters<typeof tool.execute>[0],
-        {} as CoolorsMCPSessionAuth,
+        context as Parameters<typeof tool.execute>[1],
       );
 
       if (typeof result === "string") {

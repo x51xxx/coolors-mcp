@@ -3,9 +3,7 @@
  * Identifies and fixes universally disliked colors based on color psychology research
  */
 
-import type { Tool } from "../types.js";
-
-type McpTool = Tool<any>;
+import { z } from "zod";
 
 import { DislikeAnalyzer } from "../color/dislike/dislike-analyzer.js";
 import { Hct } from "../color/hct/hct-class.js";
@@ -14,14 +12,11 @@ import { parseColor, rgbToArgb } from "../color/index.js";
 /**
  * Analyze if a color is universally disliked
  */
-export const analyzeColorLikabilityTool: McpTool = {
+export const analyzeColorLikabilityTool = {
   description:
     "Check if a color is universally disliked (dark yellow-green associated with biological waste) and get a fixed version if needed",
-  execute: async (args: unknown, _context: any) => {
-    const { autoFix = true, color } = args as {
-      autoFix?: boolean;
-      color: string;
-    };
+  execute: async (args: { autoFix?: boolean; color: string }) => {
+    const { autoFix = true, color } = args;
 
     try {
       // Parse the input color
@@ -95,40 +90,37 @@ export const analyzeColorLikabilityTool: McpTool = {
       return `Error analyzing color: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
-  inputSchema: {
-    properties: {
-      autoFix: {
-        description:
-          "Automatically return fixed version if disliked (default: true)",
-        type: "boolean",
-      },
-      color: {
-        description: "Color to analyze (hex, rgb, hsl, etc.)",
-        type: "string",
-      },
-    },
-    required: ["color"],
-    type: "object",
-  },
   name: "analyze_color_likability",
+  parameters: z.object({
+    autoFix: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe("Automatically return fixed version if disliked"),
+    color: z.string().describe("Color to analyze (hex, rgb, hsl, etc.)"),
+  }),
 };
 
 /**
  * Fix multiple disliked colors in a batch
  */
-export const fixDislikedColorsBatchTool: McpTool = {
-  description: "Analyze and fix multiple colors, returning only liked versions",
-  execute: async (args: unknown, _context: any) => {
-    const { colors, includeAnalysis = false } = args as {
-      colors: string[];
-      includeAnalysis?: boolean;
+type BatchHct =
+  | { c: number; h: number; t: number }
+  | {
+      fixed: { c: number; h: number; t: number };
+      original: { c: number; h: number; t: number };
     };
+
+export const fixDislikedColorsBatchTool = {
+  description: "Analyze and fix multiple colors, returning only liked versions",
+  execute: async (args: { colors: string[]; includeAnalysis?: boolean }) => {
+    const { colors, includeAnalysis = false } = args;
 
     try {
       const results: Array<{
         error?: string;
         fixed?: string;
-        hct?: unknown;
+        hct?: BatchHct;
         original: string;
         wasDisliked?: boolean;
       }> = [];
@@ -202,14 +194,16 @@ export const fixDislikedColorsBatchTool: McpTool = {
           output += `- **${result.original}**: ❌ ${result.error}\n`;
         } else if (result.wasDisliked) {
           output += `- **${result.original}** → **${result.fixed}** (fixed)\n`;
-          if (includeAnalysis && result.hct) {
-            output += `  - Original HCT: (${result.hct.original.h.toFixed(0)}°, ${result.hct.original.c.toFixed(0)}, ${result.hct.original.t.toFixed(0)})\n`;
-            output += `  - Fixed HCT: (${result.hct.fixed.h.toFixed(0)}°, ${result.hct.fixed.c.toFixed(0)}, ${result.hct.fixed.t.toFixed(0)})\n`;
+          if (includeAnalysis && result.hct && "original" in result.hct) {
+            const { fixed, original } = result.hct;
+            output += `  - Original HCT: (${original.h.toFixed(0)}°, ${original.c.toFixed(0)}, ${original.t.toFixed(0)})\n`;
+            output += `  - Fixed HCT: (${fixed.h.toFixed(0)}°, ${fixed.c.toFixed(0)}, ${fixed.t.toFixed(0)})\n`;
           }
         } else {
           output += `- **${result.original}** ✓ (already liked)\n`;
-          if (includeAnalysis && result.hct) {
-            output += `  - HCT: (${result.hct.h.toFixed(0)}°, ${result.hct.c.toFixed(0)}, ${result.hct.t.toFixed(0)})\n`;
+          if (includeAnalysis && result.hct && "h" in result.hct) {
+            const { c, h, t } = result.hct;
+            output += `  - HCT: (${h.toFixed(0)}°, ${c.toFixed(0)}, ${t.toFixed(0)})\n`;
           }
         }
       }
@@ -225,23 +219,16 @@ export const fixDislikedColorsBatchTool: McpTool = {
       return `Error processing colors: ${error instanceof Error ? error.message : String(error)}`;
     }
   },
-  inputSchema: {
-    properties: {
-      colors: {
-        description: "Array of colors to analyze (hex, rgb, hsl, etc.)",
-        items: {
-          type: "string",
-        },
-        type: "array",
-      },
-      includeAnalysis: {
-        description:
-          "Include detailed analysis for each color (default: false)",
-        type: "boolean",
-      },
-    },
-    required: ["colors"],
-    type: "object",
-  },
   name: "fix_disliked_colors_batch",
+  parameters: z.object({
+    colors: z
+      .array(z.string())
+      .min(1)
+      .describe("Array of colors to analyze (hex, rgb, hsl, etc.)"),
+    includeAnalysis: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include detailed analysis for each color"),
+  }),
 };

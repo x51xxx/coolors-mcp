@@ -1,5 +1,5 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 
 import { CoolorsMCPSession } from "./session.js";

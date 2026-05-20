@@ -1,8 +1,18 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "noEmit": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
-  }
+    "noUnusedParameters": true,
+    "types": ["node"]
+  },
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/examples",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*_test.ts"
+  ]
 }

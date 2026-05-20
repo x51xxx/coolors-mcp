@@ -11,4 +11,17 @@ export default tseslint.config(
   {
     ignores: ["**/*.js", "dist/**"],
   },
+  {
+    // Vendored Material Color Utilities use the "declare-then-assign-in-loop"
+    // pattern liberally; that conflicts with ESLint 10's new no-useless-assignment.
+    files: [
+      "src/color/quantize/**",
+      "src/color/utils/color_utils.ts",
+      "src/color/hct/**",
+      "src/color/score/**",
+    ],
+    rules: {
+      "no-useless-assignment": "off",
+    },
+  },
 );

@@ -142,11 +142,14 @@ export interface ThemeVariable {
  * Collection of theme variables organized by role
  */
 export interface ThemeVariables {
+  background?: ThemeVariable[];
   custom?: Record<string, ThemeVariable[]>;
   error?: ThemeVariable[];
   neutral?: ThemeVariable[];
+  outline?: ThemeVariable[];
   primary?: ThemeVariable[];
   secondary?: ThemeVariable[];
+  shadow?: ThemeVariable[];
   surface?: ThemeVariable[];
   tertiary?: ThemeVariable[];
 }

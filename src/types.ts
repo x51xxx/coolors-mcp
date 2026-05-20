@@ -36,8 +36,8 @@ export type Context<T extends CoolorsMCPSessionAuth> = {
 };
 
 export type CoolorsMCPEvents = {
-  connect: (event: { session: any }) => void;
-  disconnect: (event: { session: any }) => void;
+  connect: (event: { session: unknown }) => void;
+  disconnect: (event: { session: unknown }) => void;
 };
 
 export type CoolorsMCPSessionAuth = Record<string, unknown> | undefined;
@@ -164,7 +164,6 @@ export type Tool<
     | ResourceLink
     | string
     | TextContent
-    | void
   >;
   name: string;
   parameters?: Params;

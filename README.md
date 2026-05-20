@@ -15,6 +15,12 @@ Advanced color operations MCP server with Material Design 3 support, CSS theme m
 - 🌈 **Advanced Palette Generation** - Create palettes with locked colors
 - 🎨 **Gradient Generation** - Smooth gradients with multiple interpolation methods
 - 🚫 **Dislike Analysis** - Detect and fix universally disliked colors
+- 👁️ **Color-Blindness Simulation** - Brettel/Machado matrices for protan/deutan/tritan + accessibility audit
+- 🆎 **APCA Contrast** - WCAG 3 draft contrast (Lc) alongside classic WCAG 2.x ratio
+- 🎚️ **Tonal Scales & State Colors** - Tailwind-style 50–950 scales and hover/active/focus/disabled variants in HCT
+- 🧬 **Palette Cohesion Score** - Quantify visual unity (tone / chroma / hue harmony) with targeted fix suggestions
+- 🪪 **Semantic Palettes** - One brand color → primary/secondary/tertiary + success/warning/error/info in a unified family
+- 📦 **Palette Export** - CSS custom properties, SCSS, Tailwind config, W3C design tokens, JSON
 
 ## Installation
 
@@ -52,8 +58,8 @@ npm install @trishchuk/coolors-mcp
 ```bash
 git clone https://github.com/x51xxx/coolors-mcp
 cd coolors-mcp
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 ## Quick Start
@@ -114,14 +120,28 @@ Calculate perceptual distance between colors.
 
 #### `check_contrast`
 
-Check WCAG contrast ratio compliance.
+Check contrast between two colors. Supports the WCAG 2.x luminance ratio (default), APCA Lc (WCAG 3 draft), or both side-by-side.
 
 ```typescript
 {
   "foreground": "#000000",
-  "background": "#ffffff"
+  "background": "#ffffff",
+  "algorithm": "both"  // "wcag" (default) | "apca" | "both"
 }
-// Output: Contrast Ratio: 21.00:1 ✓ WCAG AAA
+// Output: WCAG 21.00:1 + APCA Lc 106.0
+```
+
+#### `adjust_color`
+
+Lighten / darken / saturate / desaturate / grayscale / invert / mix a color.
+
+```typescript
+{
+  "color": "#6750a4",
+  "operation": "mix",
+  "with": "#ff6b6b",
+  "amount": 0.5  // weight (0-1) for mix, percent (0-100) for the others
+}
 ```
 
 ### Palette Generation
@@ -272,6 +292,93 @@ Generate Material Design theme from image colors.
 }
 ```
 
+### Visual Cohesion
+
+#### `generate_tonal_scale`
+
+Build a Tailwind-style 50/100/.../900/950 scale from one seed color. Uses HCT so steps are perceptually even regardless of hue.
+
+```typescript
+{
+  "seed": "#6750a4",
+  "name": "brand",        // CSS variable base name
+  "chromaBoost": 1,       // multiplier on seed chroma
+  "stops": [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+}
+```
+
+#### `generate_state_colors`
+
+Derive interaction states (hover/active/pressed/focus/disabled/selected) from a base color with consistent tonal deltas.
+
+```typescript
+{
+  "base": "#6750a4",
+  "isDark": false   // true to lighten on hover instead of darkening
+}
+```
+
+#### `analyze_palette_consistency`
+
+Score visual cohesion of a palette: tonal step uniformity, chroma spread, hue harmony, plus a single 0–100 score and targeted suggestions.
+
+```typescript
+{
+  "colors": ["#6750a4", "#7f67be", "#a48dc8", "#ff0000"]
+}
+// Output: cohesion 77/100 + outlier #ff0000 (chroma 105 vs avg 60)
+```
+
+#### `generate_semantic_palette`
+
+From one brand color, generate primary/secondary/tertiary + success/warning/error/info with normalized chroma & tone so every color feels like part of the same family.
+
+```typescript
+{
+  "brand": "#6750a4",
+  "isDark": false
+}
+```
+
+### Accessibility & Color Blindness
+
+#### `simulate_color_blindness`
+
+Simulate how colors appear to viewers with protanopia / deuteranopia / tritanopia (and the milder anomaly forms, plus achromatopsia). Uses Machado-style linear-sRGB confusion-line matrices.
+
+```typescript
+{
+  "colors": ["#e63946", "#2a9d8f"],
+  "types": ["protanopia", "deuteranopia"]  // optional, defaults to all 7
+}
+```
+
+#### `check_palette_accessibility`
+
+Audit a palette for color-blind friendliness — flags pairs of colors that become indistinguishable under each CVD type.
+
+```typescript
+{
+  "colors": ["#e63946", "#2a9d8f", "#264653", "#f4a261"],
+  "indistinguishableThreshold": 10  // ΔE2000 below which colors collide
+}
+```
+
+### Palette Export
+
+#### `export_palette`
+
+Export a palette as CSS custom properties, SCSS variables, a Tailwind config snippet, W3C design tokens, or JSON.
+
+```typescript
+{
+  "colors": ["#fef3c7", "#fde68a", "#fcd34d"],
+  "format": "tailwind",   // "css" | "scss" | "tailwind" | "tokens" | "json"
+  "prefix": "amber",
+  "names": ["50", "100", "200"]   // optional, default uses 50/100…900 scale
+}
+```
+
 ### Color Psychology
 
 #### `analyze_color_likability`
@@ -332,21 +439,23 @@ Multi-factor scoring system:
 
 ## Development
 
+This project uses [pnpm](https://pnpm.io). Install it once with `npm i -g pnpm` or `corepack enable`.
+
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Build the project
-npm run build
+pnpm run build
 
 # Run tests
-npm test
+pnpm test
 
 # Format code
-npm run format
+pnpm run format
 
 # Lint
-npm run lint
+pnpm run lint
 ```
 
 ## Architecture
@@ -410,13 +519,13 @@ Create smooth, perceptually uniform gradients for modern UIs.
 
 Contributions welcome! Please ensure:
 
-- Tests pass (`npm test`)
-- Code is formatted (`npm run format`)
-- Type checking passes (`npm run lint`)
+- Tests pass (`pnpm test`)
+- Code is formatted (`pnpm run format`)
+- Type checking passes (`pnpm run lint`)
 
 ## License
 
-MIT
+MIT © [Taras Trishchuk](https://trishchuk.com)
 
 ## Credits
 

@@ -256,7 +256,7 @@ function calculateHctDistance(color1: HCT, color2: HCT): number {
  * Calculate multi-factor match score
  */
 function calculateMatchScore(
-  inputHct: HCT,
+  _inputHct: HCT,
   candidate: ThemeVariable,
   distance: number,
   weights: { accessibility: number; perceptual: number; semantic: number },

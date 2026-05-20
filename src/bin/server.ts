@@ -24,16 +24,28 @@ const server = new CoolorsMcp({
   instructions:
     "Advanced color operations server with Material Design 3 support, CSS theme matching, image extraction, and accessibility compliance. Uses HCT color space for perceptually accurate operations.",
   name: "coolors-mcp",
-  version: "1.0.0",
+  version: "1.1.0",
 });
 
 // Core color operations: conversion, distance metrics, accessibility
 server.addTool(tools.colorConversionTool);
 server.addTool(tools.colorDistanceTool);
 server.addTool(tools.contrastCheckerTool);
+server.addTool(tools.adjustColorTool);
 server.addTool(tools.paletteGeneratorTool);
 server.addTool(tools.paletteWithLocksTool);
 server.addTool(tools.gradientGeneratorTool);
+server.addTool(tools.exportPaletteTool);
+
+// Color-blindness simulation & accessibility audit
+server.addTool(tools.simulateColorBlindnessTool);
+server.addTool(tools.checkPaletteAccessibilityTool);
+
+// Visual cohesion: tonal scales, state colors, palette consistency, semantics
+server.addTool(tools.generateTonalScaleTool);
+server.addTool(tools.generateStateColorsTool);
+server.addTool(tools.analyzePaletteConsistencyTool);
+server.addTool(tools.generateSemanticPaletteTool);
 
 // Material Design 3: theme generation, harmonization, tonal palettes
 server.addTool(tools.generateMaterialThemeTool);

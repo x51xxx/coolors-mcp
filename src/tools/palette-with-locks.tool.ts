@@ -9,7 +9,7 @@ import {
   rgbToHsl,
   rgbToLab,
 } from "../color/index.js";
-import { HSL, RGB } from "../color/types.js";
+import { RGB } from "../color/types.js";
 
 export const paletteWithLocksTool = {
   description:
@@ -64,7 +64,9 @@ export const paletteWithLocksTool = {
 
             let minDistance = Infinity;
             for (const locked of parsedLocked) {
-              const dist = colorDistance(candidate, locked, "deltaE2000");
+              const dist = colorDistance(candidate, locked, {
+                metric: "deltaE2000",
+              });
               if (dist < minDistance) minDistance = dist;
             }
 
@@ -135,17 +137,15 @@ export const paletteWithLocksTool = {
       case "harmony": {
         // Generate harmonious colors based on locked colors
         const baseHsl = rgbToHsl(parsedLocked[0]);
-        const hueStep = 360 / totalColors;
 
         for (let i = 0; i < remainingSlots; i++) {
-          let newHue = baseHsl.h;
           let attempts = 0;
           let bestColor: null | RGB = null;
           let maxMinDistance = 0;
 
           // Try different hues to find one that's not too close to locked colors
           while (attempts < 36) {
-            newHue = (baseHsl.h + attempts * 10) % 360;
+            const newHue = (baseHsl.h + attempts * 10) % 360;
             const candidate = hslToRgb({
               h: newHue,
               l: baseHsl.l + (Math.random() - 0.5) * 20,
@@ -155,7 +155,9 @@ export const paletteWithLocksTool = {
             // Check minimum distance to all locked colors
             let minDistance = Infinity;
             for (const locked of parsedLocked) {
-              const dist = colorDistance(candidate, locked, "deltaE2000");
+              const dist = colorDistance(candidate, locked, {
+                metric: "deltaE2000",
+              });
               if (dist < minDistance) minDistance = dist;
             }
 
