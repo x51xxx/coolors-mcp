@@ -55,7 +55,14 @@ export const generateTonalScaleTool = {
 
     const stops = args.stops?.length ? args.stops : Array.from(TONAL_STOPS);
     const chromaBoost = args.chromaBoost ?? 1;
-    const name = (args.name ?? "color").toLowerCase();
+    // CSS-safe custom-property name: "Brand Blue" → "brand-blue"
+    const name =
+      (args.name ?? "color")
+        .normalize("NFKD")
+        .replace(/\p{M}+/gu, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "color";
 
     // Map Tailwind-style stops to HCT tones (50 -> tone 95, 950 -> tone 5).
     const tones = stops.map((s) => Math.max(0, Math.min(100, 100 - s / 10)));

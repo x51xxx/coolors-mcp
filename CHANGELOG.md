@@ -109,6 +109,8 @@ handling and input limits changed — see **Changed**.
   (`:root { --a: #fff }`, valid CSS) and failed on comments inside values.
 - `generate_theme_from_image` showed 0% coverage for a seed adjusted away from
   a disliked color, and ignored `includeCustomColors`.
+- `generate_tonal_scale` used `name` verbatim, so `"Brand Blue"` produced the
+  invalid custom property `--brand blue-500`; names are now slugified.
 - `match_theme_color` reported invalid colors as "no match", and theme CSS
   without color variables is now an error.
 - `package.json` `main` pointed to a missing file, and the `jsr.json` export

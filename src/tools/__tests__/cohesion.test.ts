@@ -97,3 +97,14 @@ describe("generateSemanticPaletteTool", () => {
     }
   });
 });
+
+describe("generateTonalScaleTool name", () => {
+  it("slugifies the CSS variable base name", async () => {
+    const out = await generateTonalScaleTool.execute({
+      name: "Brand Blue",
+      seed: "#1f6feb",
+    });
+    expect(out).toContain("--brand-blue-500:");
+    expect(out).not.toContain("--brand blue");
+  });
+});
