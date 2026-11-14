@@ -1,399 +1,113 @@
 # Distance Metrics
 
-Understanding how to measure the difference between colors is crucial for color matching, palette generation, and theme creation. Different metrics serve different purposes.
+`color_distance` measures how different two colors are. The default metric, **CIEDE2000 (ΔE00)**, is also used inside the palette and accessibility audits. The implementations are in `src/color/metrics.ts`.
 
-## Overview
+## Available metrics
 
-Color distance metrics quantify how different two colors appear. The challenge is that simple mathematical distance doesn't match human perception - two colors that are numerically similar might look very different, and vice versa.
+| `metric`               | Space               | Summary                                                                        |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------ |
+| `deltaE2000` (default) | CIE L\*a\*b\* (D65) | CIEDE2000, with lightness, chroma and hue weighting and the blue rotation term |
+| `deltaE94`             | CIE L\*a\*b\* (D65) | CIE94, graphic-arts constants; **not symmetric**                               |
+| `deltaE76`             | CIE L\*a\*b\* (D65) | Plain Euclidean distance in Lab                                                |
+| `euclidean`            | sRGB 0–255          | Plain Euclidean distance in RGB                                                |
+| `weighted`             | sRGB 0–255          | RGB distance with each channel weighted by 0.3 / 0.59 / 0.11                   |
 
-## Available Metrics
+Lab values come from the 8-bit sRGB color via XYZ with the D65 white point (X 95.047, Y 100, Z 108.883). `color_distance` has no other parameters; the weights and constants below are fixed.
 
-### Euclidean Distance (RGB)
+## Formulas
 
-The simplest metric, calculating straight-line distance in RGB space:
+### Euclidean (RGB)
 
-```javascript
-distance = √((r₂-r₁)² + (g₂-g₁)² + (b₂-b₁)²)
+```text
+d = √( ΔR² + ΔG² + ΔB² )          range 0 … 441.67 (black ↔ white)
 ```
 
-**Pros:**
+### Weighted (RGB)
 
-- Fast to compute
-- Simple to understand
-- Good for rough comparisons
-
-**Cons:**
-
-- Not perceptually uniform
-- Poor for subtle color differences
-- Doesn't match human vision
-
-**When to use:**
-
-- Quick filtering
-- Performance-critical applications
-- When accuracy isn't crucial
-
-### Delta E CIE76
-
-The original perceptual color difference formula using LAB color space:
-
-```javascript
-ΔE*₇₆ = √((L₂-L₁)² + (a₂-a₁)² + (b₂-b₁)²)
+```text
+d = √( (0.3·ΔR)² + (0.59·ΔG)² + (0.11·ΔB)² )
 ```
 
-**Characteristics:**
+The weights are the classic luma coefficients: green differences count most and blue least. This is still an RGB metric, not a perceptual one.
 
-- First attempt at perceptual uniformity
-- Simple LAB distance calculation
-- Threshold: ΔE < 2.3 is barely perceptible
+### ΔE 1976
 
-**When to use:**
-
-- Basic perceptual matching
-- Legacy systems
-- When computation speed matters
-
-### Delta E CIE94
-
-Improved formula with weighting factors for different color attributes:
-
-```javascript
-ΔE*₉₄ = √((ΔL/kₗSₗ)² + (ΔC/kᴄSᴄ)² + (ΔH/kₕSₕ)²)
+```text
+ΔE76 = √( ΔL*² + Δa*² + Δb*² )
 ```
 
-**Improvements:**
+### ΔE 1994
 
-- Separate weights for lightness, chroma, hue
-- Better for textiles and graphics
-- More accurate than CIE76
-
-**When to use:**
-
-- Textile industry
-- Graphic arts
-- Better accuracy than CIE76
-
-### Delta E 2000 (CIEDE2000)
-
-The most accurate standard for color difference, addressing perceptual non-uniformities:
-
-```javascript
-// Complex formula with multiple correction factors
-ΔE*₀₀ = √((ΔL'/kₗSₗ)² + (ΔC'/kᴄSᴄ)² + (ΔH'/kₕSₕ)² + Rᴛ(ΔC'/kᴄSᴄ)(ΔH'/kₕSₕ))
+```text
+ΔE94 = √( (ΔL/S_L)² + (ΔC/S_C)² + (ΔH/S_H)² )
+S_L = 1,  S_C = 1 + 0.045·C₁,  S_H = 1 + 0.015·C₁,  k_L = k_C = k_H = 1
 ```
 
-**Features:**
+`C₁` is the chroma of the **first** color, so swapping `color1` and `color2` changes the result: `#6750a4` → `#7d5fc4` is 8.01, the reverse is 7.93.
 
-- Rotation term for blue region
-- Lightness, chroma, hue corrections
-- Most accurate for human perception
-- Industry standard
+### ΔE 2000
 
-**When to use:**
+CIEDE2000 as formulated by Sharma, Wu & Dalal (2005), with k_L = k_C = k_H = 1:
 
-- Color matching applications
-- Quality control
-- When accuracy is paramount
-- Default for most use cases
-
-### HCT Distance
-
-Weighted distance in Google's HCT color space:
-
-```javascript
-distance = √((Δh × wₕ)² + (Δc × wᴄ)² + (Δt × wᴛ)²)
-// Typical weights: wₕ=1, wᴄ=1, wᴛ=2
+```text
+ΔE00 = √( (ΔL'/S_L)² + (ΔC'/S_C)² + (ΔH'/S_H)² + R_T·(ΔC'/S_C)·(ΔH'/S_H) )
 ```
 
-**Advantages:**
+It adds an a\* rescaling for near-neutral colors (G), lightness, chroma and hue weighting functions (S_L, S_C, S_H with the hue-dependent T term), and a rotation term R_T for the blue region. It is symmetric.
 
-- Optimized for UI colors
-- Tone component predicts contrast
-- Better for Material Design
+::: tip Verified
+The implementation was run against the 34 test pairs published by Sharma, Wu & Dalal (2005). All 34 agree with the published ΔE00 values to 4 decimals.
+:::
 
-**When to use:**
+## Real comparisons
 
-- UI/UX design
-- Material Design systems
-- Theme matching
-- Accessibility considerations
+`color_distance` output for the same pairs under every metric:
 
-## Perceptibility Thresholds
+| Pair                   | deltaE2000 | deltaE94 | deltaE76 | euclidean | weighted |
+| ---------------------- | ---------- | -------- | -------- | --------- | -------- |
+| `#6750a4` vs `#7d5fc4` | 7.44       | 8.01     | 11.42    | 41.63     | 11.59    |
+| `#7d5fc4` vs `#6750a4` | 7.44       | 7.93     | 11.42    | 41.63     | 11.59    |
+| `#808080` vs `#8a8a8a` | 3.66       | 3.89     | 3.89     | 17.32     | 6.71     |
+| `#0000ff` vs `#3c3cff` | 7.68       | 8.74     | 22.97    | 84.85     | 39.71    |
+| `#ffff00` vs `#c3c300` | 13.83      | 20.95    | 27.23    | 84.85     | 39.71    |
+| `#1f1f1f` vs `#1c1b1e` | 2.76       | 2.88     | 2.88     | 5.10      | 2.53     |
 
-Different ΔE values represent different levels of color difference:
-
-| ΔE Value | Perception             | Use Case           |
-| -------- | ---------------------- | ------------------ |
-| 0-1      | Not perceptible        | Exact matches      |
-| 1-2      | Barely perceptible     | Very close matches |
-| 2-3.5    | Perceptible by experts | Close matches      |
-| 3.5-5    | Noticeable difference  | Acceptable matches |
-| 5-10     | Clear difference       | Related colors     |
-| >10      | Different colors       | Distinct colors    |
-
-## Metric Comparison
-
-### Performance Comparison
-
-```javascript
-// Relative computation time (normalized)
-{
-  "euclidean": 1,      // Baseline
-  "deltaE76": 2,       // 2x slower
-  "deltaE94": 3,       // 3x slower
-  "deltaE2000": 10,    // 10x slower
-  "hct": 4             // 4x slower
-}
+```json
+{ "color1": "#0000ff", "color2": "#3c3cff", "metric": "deltaE2000" }
 ```
 
-### Accuracy Comparison
-
-```javascript
-// Correlation with human perception (0-1)
-{
-  "euclidean": 0.65,   // Poor
-  "deltaE76": 0.75,    // Fair
-  "deltaE94": 0.85,    // Good
-  "deltaE2000": 0.95,  // Excellent
-  "hct": 0.90          // Very good for UI
-}
+```text
+Distance between #0000ff and #3c3cff: 7.68
 ```
 
-## Using Distance Metrics in Coolors MCP
+What the table shows:
 
-### Basic Color Distance
+- **RGB metrics can't tell these apart.** The blue pair and the yellow pair are both 84.85 apart in RGB (and 39.71 weighted), but ΔE2000 rates the yellow pair almost twice as different (13.83 vs 7.68).
+- **ΔE76 inflates differences between saturated colors.** 22.97 for the blue pair against 7.68 in ΔE2000. CIEDE2000's chroma weighting, plus its blue-region rotation term, corrects for this.
+- **For greys, ΔE94 = ΔE76.** With zero chroma, both reduce to the lightness difference (3.89).
+- **Only ΔE94 depends on argument order.**
 
-```javascript
-// Using Delta E 2000 (default)
-{
-  "name": "color_distance",
-  "arguments": {
-    "color1": "#6366f1",
-    "color2": "#5355d1"
-  }
-}
-// Result: 5.2 (noticeable but related)
+## How the tools use ΔE2000
 
-// Using specific metric
-{
-  "name": "color_distance",
-  "arguments": {
-    "color1": "#6366f1",
-    "color2": "#5355d1",
-    "metric": "euclidean"
-  }
-}
-// Result: 32.5 (less meaningful number)
-```
+| Where                                           | Threshold                                                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `check_palette_accessibility`                   | `indistinguishableThreshold`, default 10 (1–30)                                           |
+| `audit_design_md` CVD collisions                | `cvdThreshold`, default 10 (1–30)                                                         |
+| `audit_design_md` near-duplicate tokens         | below 2 (fixed)                                                                           |
+| `audit_ui_colors` swatch CVD collisions         | below 8 (fixed)                                                                           |
+| `fix_contrast`, `check_contrast` fix suggestion | picks the candidate with the smallest ΔE2000 shift and reports it                         |
+| `generate_categorical_palette`                  | maximizes the minimum ΔE2000 under normal vision and protanopia, deuteranopia, tritanopia |
+| `generate_palette_with_locks`                   | ΔE2000 to the locked colors when choosing candidates                                      |
 
-### Weighted HCT Distance
+These thresholds are deliberately large: they ask whether two UI colors stay clearly distinct, not whether they are measurably different.
 
-```javascript
-// Custom weights for UI matching
-{
-  "name": "color_distance",
-  "arguments": {
-    "color1": "#6366f1",
-    "color2": "#5355d1",
-    "metric": "weighted",
-    "weights": {
-      "hue": 1,
-      "chroma": 1,
-      "tone": 2  // Emphasize lightness
-    }
-  }
-}
-```
+## HCT distance (theme matching only)
 
-## Choosing the Right Metric
-
-### Decision Tree
-
-```
-Is performance critical?
-├─ Yes → Euclidean
-└─ No → Is it for UI/UX?
-    ├─ Yes → HCT Distance
-    └─ No → Need maximum accuracy?
-        ├─ Yes → Delta E 2000
-        └─ No → Delta E 76
-```
-
-### Use Case Guidelines
-
-| Use Case             | Recommended Metric | Reason                |
-| -------------------- | ------------------ | --------------------- |
-| CSS color matching   | Delta E 2000       | Accuracy              |
-| Real-time filtering  | Euclidean          | Speed                 |
-| Theme generation     | HCT                | UI optimization       |
-| Print color matching | Delta E 2000       | Industry standard     |
-| Palette creation     | HCT                | Perceptual uniformity |
-| Image quantization   | Delta E 76         | Balance               |
-
-## Implementation Examples
-
-### Finding Similar Colors
-
-```javascript
-function findSimilarColors(targetColor, palette, threshold = 5) {
-  return palette.filter((color) => {
-    const distance = colorDistance(targetColor, color, "deltaE2000");
-    return distance < threshold;
-  });
-}
-
-// Usage
-const similar = findSimilarColors("#6366f1", myPalette, 10);
-// Returns colors within ΔE 10 of target
-```
-
-### Color Clustering
-
-```javascript
-function clusterColors(colors, maxDistance = 5) {
-  const clusters = [];
-
-  colors.forEach((color) => {
-    let added = false;
-
-    for (const cluster of clusters) {
-      const distance = colorDistance(color, cluster.center, "deltaE2000");
-      if (distance < maxDistance) {
-        cluster.colors.push(color);
-        added = true;
-        break;
-      }
-    }
-
-    if (!added) {
-      clusters.push({
-        center: color,
-        colors: [color],
-      });
-    }
-  });
-
-  return clusters;
-}
-```
-
-### Perceptual Interpolation
-
-```javascript
-function interpolatePerceptual(color1, color2, steps) {
-  // Convert to LAB for perceptual interpolation
-  const lab1 = rgbToLab(color1);
-  const lab2 = rgbToLab(color2);
-
-  const colors = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const lab = {
-      l: lab1.l + (lab2.l - lab1.l) * t,
-      a: lab1.a + (lab2.a - lab1.a) * t,
-      b: lab1.b + (lab2.b - lab1.b) * t,
-    };
-    colors.push(labToRgb(lab));
-  }
-
-  return colors;
-}
-```
-
-## Advanced Concepts
-
-### Weighted Metrics
-
-Different applications benefit from custom weightings:
-
-```javascript
-// UI Design - emphasize tone differences
-const uiWeights = { lightness: 2, chroma: 1, hue: 0.5 };
-
-// Brand Colors - emphasize hue accuracy
-const brandWeights = { lightness: 1, chroma: 1.5, hue: 2 };
-
-// Accessibility - focus on lightness
-const a11yWeights = { lightness: 3, chroma: 0.5, hue: 0.5 };
-```
-
-### Context-Aware Distance
-
-Distance perception changes based on viewing conditions:
-
-```javascript
-function contextualDistance(color1, color2, context) {
-  switch (context) {
-    case "small-text":
-      // Need larger differences for readability
-      return colorDistance(color1, color2) * 1.5;
-
-    case "large-area":
-      // Subtle differences more noticeable
-      return colorDistance(color1, color2) * 0.8;
-
-    case "dark-mode":
-      // Adjust for dark backgrounds
-      return adjustedDarkModeDistance(color1, color2);
-
-    default:
-      return colorDistance(color1, color2);
-  }
-}
-```
-
-### Multi-Dimensional Distance
-
-Sometimes you need to consider multiple factors:
-
-```javascript
-function multiFactorDistance(color1, color2) {
-  const perceptual = deltaE2000(color1, color2);
-  const contrast = Math.abs(getContrast(color1) - getContrast(color2));
-  const semantic = getSemanticDistance(color1, color2);
-
-  return {
-    overall: perceptual * 0.6 + contrast * 0.3 + semantic * 0.1,
-    components: { perceptual, contrast, semantic },
-  };
-}
-```
-
-## Common Pitfalls
-
-### RGB Distance Misuse
-
-❌ Don't use RGB distance for perceptual matching
-✅ Use Delta E or HCT distance instead
-
-### Ignoring Context
-
-❌ Don't use the same threshold for all use cases
-✅ Adjust thresholds based on application
-
-### Over-Engineering
-
-❌ Don't always use the most complex metric
-✅ Choose based on actual requirements
-
-### Wrong Color Space
-
-❌ Don't interpolate in RGB for gradients
-✅ Use LAB or HCT for smooth transitions
-
-## Best Practices
-
-1. **Start with Delta E 2000** - It's the most accurate general-purpose metric
-2. **Use HCT for UI** - Better for interface design and accessibility
-3. **Cache computations** - Distance calculations can be expensive
-4. **Test with real users** - Perception varies between individuals
-5. **Consider viewing conditions** - Screen, lighting affect perception
-6. **Document your choice** - Explain why you chose a specific metric
+The theme-matching tools do not use ΔE. They use their own weighted HCT distance, where tone counts twice (see [Theme Matching](/concepts/theme-matching)). It is not available as a `color_distance` metric. It also behaves differently for near-greys: `#1f1f1f` vs `#1c1b1e` is 2.76 in ΔE2000, but about 47 in the HCT matcher, because their meaningless hues differ by 84°.
 
 ## See Also
 
-- [Color Spaces](./color-spaces.md) - Understanding different color models
-- [HCT System](./hct.md) - Google's perceptual color space
-- [Theme Matching](./theme-matching.md) - Using distance for matching
-- [Accessibility](./accessibility.md) - Contrast and perception
+- [Color Spaces](/concepts/color-spaces) — Lab, OKLCH, HCT and the accepted inputs
+- [Accessibility](/concepts/accessibility) — CVD audits built on ΔE2000
+- [Theme Matching](/concepts/theme-matching) — the HCT matching distance
+- [Color Operations tools](/tools/color-operations) — `color_distance` parameters

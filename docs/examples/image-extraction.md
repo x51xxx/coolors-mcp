@@ -1,889 +1,276 @@
 # Image Extraction Examples
 
-Learn how to extract colors from images and generate dynamic themes using Coolors MCP's advanced quantization and scoring algorithms.
+Two tools work with images:
 
-## Quick Start
+- `extract_image_colors`: the dominant colors of an image, as JSON, CSS variables or a readable palette
+- `generate_theme_from_image`: a Material Design 3 theme seeded from the image's best theme color
 
-### Extract Colors from Image
+Every result on this page is real output from the current server. Parameter details are on [Image Extraction](/tools/image-extraction). The algorithm is explained in [Image Analysis](/concepts/image-analysis).
 
-```javascript
-// Extract dominant colors
-"Extract the main colors from this image";
+## What the Tools Accept
 
-// Process:
-// 1. Quantizes image using Celebi algorithm (Wu + WSMeans)
-// 2. Scores colors for UI suitability (target chroma ~48)
-// 3. Filters out universally disliked colors
-// 4. Returns ranked color palette
-```
+The tools do not open files or URLs. They take raw pixels:
 
-### Generate Theme from Image
-
-```javascript
-// Create Material Design theme from image
-"Generate a theme from this album artwork";
-
-// Result:
-// - Extracts dominant colors
-// - Selects best color for theme generation
-// - Creates complete light/dark schemes
-// - Provides CSS variables and palettes
-```
-
-## Working with Image Data
-
-### Browser Canvas Example
-
-```javascript
-// Get image data from canvas
-const canvas = document.getElementById('imageCanvas');
-const ctx = canvas.getContext('2d');
-const img = new Image();
-
-img.onload = function() {
-  // Draw image to canvas
-  ctx.drawImage(img, 0, 0);
-
-  // Get pixel data
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const pixels = Array.from(imageData.data);
-
-  // Extract colors
-  const colors = await extractImageColors({
-    imageData: pixels,
-    maxColors: 5
-  });
-
-  console.log('Dominant colors:', colors);
-};
-
-img.src = 'path/to/image.jpg';
-```
-
-### Node.js with Sharp
-
-```javascript
-const sharp = require("sharp");
-
-async function extractColorsFromFile(imagePath) {
-  // Load and prepare image
-  const { data, info } = await sharp(imagePath)
-    .resize(300, 300, { fit: "inside" }) // Resize for performance
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  // Convert to RGBA array
-  const pixels = Array.from(data);
-
-  // Extract colors
-  const result = await extractImageColors({
-    imageData: pixels,
-    maxColors: 8,
-    minPopulation: 0.01, // Include colors with 1%+ coverage
-  });
-
-  return result;
-}
-
-// Usage
-const colors = await extractColorsFromFile("logo.png");
-console.log(`Found ${colors.colors.length} dominant colors`);
-```
-
-### File Upload Example
-
-```html
-<!-- HTML -->
-<input type="file" id="imageUpload" accept="image/*" />
-<div id="colorPalette"></div>
-
-<script>
-  document
-    .getElementById("imageUpload")
-    .addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      // Read file as image
-      const img = new Image();
-      const reader = new FileReader();
-
-      reader.onload = async function (event) {
-        img.src = event.target.result;
-
-        img.onload = async function () {
-          // Create canvas
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-
-          // Resize for performance
-          const maxSize = 400;
-          const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-
-          // Draw and extract
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-          // Extract colors
-          const colors = await extractImageColors({
-            imageData: Array.from(imageData.data),
-            maxColors: 6,
-          });
-
-          // Display palette
-          displayPalette(colors.colors);
-        };
-      };
-
-      reader.readAsDataURL(file);
-    });
-
-  function displayPalette(colors) {
-    const palette = document.getElementById("colorPalette");
-    palette.innerHTML = colors
-      .map(
-        (color) => `
-    <div style="
-      background: ${color.hex};
-      width: 100px;
-      height: 100px;
-      display: inline-block;
-      margin: 5px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    ">
-      <span style="
-        background: white;
-        padding: 2px 4px;
-        font-size: 12px;
-      ">${color.hex}</span>
-    </div>
-  `,
-      )
-      .join("");
-  }
-</script>
-```
-
-## Real-World Examples
-
-### Album Art Dynamic Theming
-
-```javascript
-// Music player that adapts to album artwork
-class AlbumThemeGenerator {
-  async generateFromArtwork(artworkUrl) {
-    // Load artwork
-    const pixels = await this.loadImage(artworkUrl);
-
-    // Extract colors with UI optimization
-    const extraction = await extractImageColors({
-      imageData: pixels,
-      maxColors: 5,
-      targetChroma: 48, // Optimal for UI
-    });
-
-    // Generate Material theme
-    const theme = await generateThemeFromImage({
-      imageData: pixels,
-      variant: "expressive", // Creative for music
-      contrastLevel: 0,
-    });
-
-    // Create player theme
-    return {
-      // Background gradient from extracted colors
-      backgroundGradient: `linear-gradient(135deg,
-        ${extraction.colors[0].hex} 0%,
-        ${extraction.colors[1].hex} 100%)`,
-
-      // UI elements from Material theme
-      playerBackground: theme.schemes.dark.surface,
-      controlsColor: theme.schemes.dark.primary,
-      progressBar: theme.schemes.dark.primary,
-      textPrimary: theme.schemes.dark.onSurface,
-      textSecondary: theme.schemes.dark.onSurfaceVariant,
-
-      // Visualizer colors
-      visualizerColors: extraction.colors.map((c) => c.hex),
-    };
-  }
-}
-
-// Usage
-const player = new AlbumThemeGenerator();
-const theme = await player.generateFromArtwork("album.jpg");
-
-// Apply theme
-document.querySelector(".player").style.background = theme.backgroundGradient;
-document.querySelector(".controls").style.color = theme.controlsColor;
-```
-
-### Logo Brand Color Extraction
-
-```javascript
-// Extract brand colors from company logo
-async function extractBrandColors(logoPath) {
-  const pixels = await loadLogo(logoPath);
-
-  // Extract with focus on distinct colors
-  const result = await extractImageColors({
-    imageData: pixels,
-    maxColors: 3, // Most logos have 1-3 colors
-    minPopulation: 0.05, // 5% minimum for significance
-  });
-
-  // Check for disliked colors and fix
-  const fixedColors = await fixDislikedColorsBatch({
-    colors: result.colors.map((c) => c.hex),
-  });
-
-  // Build brand palette
-  const brandPalette = {
-    primary: fixedColors.fixedColors[0],
-    secondary: fixedColors.fixedColors[1] || null,
-    accent: fixedColors.fixedColors[2] || null,
-  };
-
-  // Generate full theme from primary
-  const fullTheme = await generateMaterialTheme({
-    sourceColor: brandPalette.primary,
-    customColors: brandPalette.secondary
-      ? [{ name: "brand", color: brandPalette.secondary }]
-      : [],
-  });
-
-  return {
-    extractedColors: result.colors,
-    brandPalette,
-    fullTheme,
-    cssVariables: generateBrandCSS(brandPalette),
-  };
-}
-
-function generateBrandCSS(palette) {
-  return `
-    :root {
-      --brand-primary: ${palette.primary};
-      --brand-secondary: ${palette.secondary || palette.primary};
-      --brand-accent: ${palette.accent || palette.primary};
-
-      /* Generate shades */
-      ${generateShades("brand-primary", palette.primary)}
-    }
-  `;
-}
-```
-
-### Product Photo Color Analysis
-
-```javascript
-// E-commerce product color detection
-class ProductColorAnalyzer {
-  async analyzeProduct(imageUrl) {
-    const pixels = await this.loadProductImage(imageUrl);
-
-    // Extract more colors for products
-    const extracted = await extractImageColors({
-      imageData: pixels,
-      maxColors: 10,
-      minPopulation: 0.02, // 2% threshold
-    });
-
-    // Categorize colors
-    const categorized = this.categorizeColors(extracted.colors);
-
-    // Generate variants
-    const variants = await this.generateProductVariants(categorized);
-
-    return {
-      mainColor: categorized.primary,
-      accentColors: categorized.accents,
-      availableVariants: variants,
-      colorDescription: this.generateDescription(categorized),
-      searchTags: this.generateSearchTags(categorized),
-    };
-  }
-
-  categorizeColors(colors) {
-    // Sort by population
-    const sorted = colors.sort((a, b) => b.population - a.population);
-
-    return {
-      primary: sorted[0], // Most dominant
-      accents: sorted.slice(1, 4), // Next 3 colors
-      details: sorted.slice(4), // Remaining colors
-    };
-  }
-
-  generateProductVariants(categorized) {
-    // Find similar products in different colors
-    const hue = categorized.primary.hct.hue;
-
-    return [
-      { name: "Original", color: categorized.primary.hex },
-      { name: "Darker", color: adjustTone(categorized.primary, -20) },
-      { name: "Lighter", color: adjustTone(categorized.primary, +20) },
-      { name: "Vibrant", color: adjustChroma(categorized.primary, +30) },
-    ];
-  }
-
-  generateDescription(categorized) {
-    const primary = categorized.primary;
-    const hue = primary.hct.hue;
-    const chroma = primary.hct.chroma;
-    const tone = primary.hct.tone;
-
-    // Generate human-readable description
-    let description = "";
-
-    // Hue description
-    if (hue >= 0 && hue < 20) description += "Red";
-    else if (hue >= 20 && hue < 40) description += "Orange";
-    else if (hue >= 40 && hue < 60) description += "Yellow";
-    // ... etc
-
-    // Saturation
-    if (chroma < 20) description += ", muted";
-    else if (chroma > 60) description += ", vibrant";
-
-    // Lightness
-    if (tone < 30) description += ", dark";
-    else if (tone > 70) description += ", light";
-
-    return description;
+<!-- prettier-ignore -->
+```json
+{
+  "imageData": {
+    "width": 4,
+    "height": 2,
+    "data": [99, 102, 241, 255, 99, 102, 241, 255, 99, 102, 241, 255, 99, 102, 241, 255, 236, 72, 153, 255, 236, 72, 153, 255, 255, 255, 255, 255, 255, 255, 255, 255]
   }
 }
 ```
 
-### Website Screenshot Theming
+- `data` is a flat list of R, G, B, A values (integers 0–255), four per pixel, row by row.
+- `data.length` must equal `width × height × 4`.
+- At most 65 536 pixels (for example 256 × 256). Larger images must be downscaled first.
 
-```javascript
-// Extract theme from website screenshot
-async function extractWebsiteTheme(screenshotUrl) {
-  const pixels = await loadScreenshot(screenshotUrl);
+::: warning Pixel data is a large payload
+The pixels travel as JSON numbers inside the tool call, so they count toward the assistant's context. In a measurement with random pixels, 64 × 64 came to about 58 000 characters of JSON and 256 × 256 to about 937 000. Downscale to around 64 px on the longest side. A thumbnail is enough to find dominant colors.
+:::
 
-  // Extract with UI-appropriate settings
-  const colors = await extractImageColors({
-    imageData: pixels,
-    maxColors: 8,
-    targetChroma: 40, // Lower chroma for web UI
-  });
+## Preparing the Pixels
 
-  // Identify UI elements
-  const identified = identifyUIColors(colors.colors);
+Your assistant has to decode and downscale the image itself, usually by running a short script. In Claude Code, for example, it can run this Python script (requires Pillow). This exact script produced the 64 × 48 input used in the tip below:
 
-  // Generate compatible theme
-  const theme = {
-    // Primary brand color (most vibrant)
-    primary: identified.brand || colors.colors[0].hex,
+```python
+import json, sys
+from PIL import Image
 
-    // Background (lightest color)
-    background: identified.background || "#ffffff",
-
-    // Surface (cards, modals)
-    surface: identified.surface || "#ffffff",
-
-    // Text colors
-    textPrimary: identified.textPrimary || "#1f2937",
-    textSecondary: identified.textSecondary || "#6b7280",
-
-    // Borders and dividers
-    border: identified.border || "#e5e7eb",
-
-    // Interactive elements
-    link: identified.link || colors.colors[0].hex,
-    button: identified.button || colors.colors[0].hex,
-  };
-
-  return {
-    extractedColors: colors,
-    identifiedTheme: theme,
-    css: generateThemeCSS(theme),
-  };
-}
-
-function identifyUIColors(colors) {
-  const identified = {};
-
-  colors.forEach((color) => {
-    const { hue, chroma, tone } = color.hct;
-
-    // Very light colors are likely backgrounds
-    if (tone > 95) {
-      identified.background = color.hex;
-    }
-    // Light grays are surfaces
-    else if (tone > 90 && chroma < 10) {
-      identified.surface = color.hex;
-    }
-    // Dark colors are text
-    else if (tone < 30) {
-      identified.textPrimary = color.hex;
-    }
-    // Medium grays are secondary text or borders
-    else if (tone > 40 && tone < 70 && chroma < 10) {
-      if (!identified.textSecondary) {
-        identified.textSecondary = color.hex;
-      } else {
-        identified.border = color.hex;
-      }
-    }
-    // Vibrant colors are brand/interactive
-    else if (chroma > 40) {
-      identified.brand = color.hex;
-    }
-  });
-
-  return identified;
-}
+img = Image.open(sys.argv[1]).convert("RGBA")       # always 4 channels
+img.thumbnail((64, 64), Image.Resampling.NEAREST)    # ≤ 64 px, keeps aspect ratio
+w, h = img.size
+data = list(img.tobytes())
+assert len(data) == w * h * 4
+print(json.dumps({"width": w, "height": h, "data": data}))
 ```
 
-## Advanced Extraction Techniques
+The output is the `imageData` object. If the assistant cannot run code, it cannot produce pixel data. In that case, pick the color some other way, for example with an eyedropper, and call `generate_material_theme` with it.
 
-### Focusing on Specific Regions
+::: tip Use nearest-neighbour for logos and flat graphics
+Smooth resampling blends edge pixels into new in-between colors. The extractor ranks colors by how vivid they are within each hue family, not by pixel count, so it can pick one of those blended edge shades.
 
-```javascript
-// Extract colors from specific image region
-function extractFromRegion(imageData, region) {
-  const { x, y, width, height } = region;
-  const fullWidth = Math.sqrt(imageData.length / 4);
+Test image: a 400 × 300 PNG, about 65% `#6366f1`, with a `#ec4899` circle on white, reduced to 64 × 48 px. With Pillow's default (bicubic) resampling, `extract_image_colors` returned `#5e61f1` with `Usage: 2.1%`. With `Image.Resampling.NEAREST` it returned the real colors:
 
-  // Extract pixels from region
-  const regionPixels = [];
-  for (let row = y; row < y + height; row++) {
-    for (let col = x; col < x + width; col++) {
-      const idx = (row * fullWidth + col) * 4;
-      regionPixels.push(
-        imageData[idx], // R
-        imageData[idx + 1], // G
-        imageData[idx + 2], // B
-        imageData[idx + 3], // A
-      );
+```text
+## Color 1
+- Hex: #6366f1
+- RGB: rgb(99, 102, 241)
+- HCT: H:284.6° C:68.0 T:50.1
+- Usage: 90.7%
+
+## Color 2
+- Hex: #ec4899
+- RGB: rgb(236, 72, 153)
+- HCT: H:356.0° C:79.2 T:56.8
+- Usage: 9.3%
+```
+
+:::
+
+## Extracting Colors
+
+The examples below use the 4 × 2 image from [What the Tools Accept](#what-the-tools-accept): four `#6366f1` pixels, two `#ec4899` pixels and two white pixels.
+
+> "Extract the main colors from this image."
+
+Tool call: `extract_image_colors { "imageData": <4×2 image> }`
+
+```text
+[
+  {
+    "hct": {
+      "c": 67.96373289279813,
+      "h": 284.63430585146614,
+      "t": 50.10448316412558
+    },
+    "hex": "#6366f1",
+    "percentage": 66.66666666666666,
+    "population": 4,
+    "rgb": {
+      "b": 241,
+      "g": 102,
+      "r": 99
     }
-  }
-
-  // Extract colors from region
-  return extractImageColors({
-    imageData: regionPixels,
-    maxColors: 5,
-  });
-}
-
-// Usage: Extract logo colors from header
-const headerRegion = { x: 0, y: 0, width: 200, height: 100 };
-const logoColors = await extractFromRegion(pixels, headerRegion);
-```
-
-### Excluding Background Colors
-
-```javascript
-// Remove background color from extraction
-async function extractForegroundColors(imageData, backgroundColor) {
-  // Extract all colors
-  const allColors = await extractImageColors({
-    imageData,
-    maxColors: 10,
-  });
-
-  // Filter out colors similar to background
-  const foregroundColors = allColors.colors.filter((color) => {
-    const distance = colorDistance(color.hex, backgroundColor);
-    return distance > 10; // Significant difference
-  });
-
-  return foregroundColors;
-}
-
-// Usage: Extract product colors without white background
-const productColors = await extractForegroundColors(pixels, "#ffffff");
-```
-
-### Weighted Extraction
-
-```javascript
-// Weight center pixels more heavily
-function createWeightedPixelArray(imageData, width, height) {
-  const weighted = [];
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-
-      // Calculate weight based on distance from center
-      const dist = Math.sqrt(
-        Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2),
-      );
-      const weight = 1 - (dist / maxDist) * 0.5; // 50-100% weight
-
-      // Add pixel multiple times based on weight
-      const copies = Math.ceil(weight * 3);
-      for (let i = 0; i < copies; i++) {
-        weighted.push(
-          imageData[idx],
-          imageData[idx + 1],
-          imageData[idx + 2],
-          imageData[idx + 3],
-        );
-      }
-    }
-  }
-
-  return weighted;
-}
-
-// Usage: Focus on center of image
-const weighted = createWeightedPixelArray(pixels, 300, 300);
-const centralColors = await extractImageColors({
-  imageData: weighted,
-  maxColors: 5,
-});
-```
-
-## Dislike Zone Handling
-
-### Automatic Correction
-
-```javascript
-// Fix universally disliked colors
-async function extractLikableColors(imageData) {
-  // Extract colors
-  const extracted = await extractImageColors({
-    imageData,
-    maxColors: 8,
-  });
-
-  // Check and fix disliked colors
-  const colorHexes = extracted.colors.map((c) => c.hex);
-  const fixed = await fixDislikedColorsBatch({
-    colors: colorHexes,
-    strategy: "both", // Shift hue and adjust tone
-  });
-
-  // Map back to full color objects
-  const likableColors = extracted.colors.map((color, i) => {
-    if (fixed.results[i].isDisliked) {
-      return {
-        ...color,
-        hex: fixed.results[i].fixed,
-        wasFixed: true,
-        originalHex: color.hex,
-      };
-    }
-    return color;
-  });
-
-  return {
-    colors: likableColors,
-    fixedCount: fixed.summary.fixed,
-    originalColors: extracted.colors,
-  };
-}
-```
-
-### Bile Zone Detection
-
-```javascript
-// Identify problematic colors in palette
-function detectBileZoneColors(colors) {
-  const problematic = [];
-
-  colors.forEach((color) => {
-    const { hue, chroma, tone } = color.hct;
-
-    // Bile zone: dark yellow-greens
-    if (
-      hue >= 50 &&
-      hue <= 120 && // Yellow-green range
-      chroma >= 20 &&
-      chroma <= 50 && // Moderate saturation
-      tone >= 20 &&
-      tone <= 50
-    ) {
-      // Dark to medium
-      problematic.push({
-        color: color.hex,
-        reason: 'Falls in universally disliked "bile zone"',
-        suggestion: adjustToLikable(color),
-      });
-    }
-  });
-
-  return problematic;
-}
-
-function adjustToLikable(color) {
-  // Shift hue away from problematic range
-  let newHue = color.hct.hue;
-  if (newHue >= 50 && newHue <= 120) {
-    newHue = newHue < 85 ? 40 : 130; // Shift to yellow or green
-  }
-
-  // Increase tone for lighter appearance
-  const newTone = Math.min(color.hct.tone + 20, 80);
-
-  return hctToHex({ hue: newHue, chroma: color.hct.chroma, tone: newTone });
-}
-```
-
-## Performance Optimization
-
-### Image Preprocessing
-
-```javascript
-// Optimize image before extraction
-async function preprocessImage(imageUrl) {
-  const img = await loadImage(imageUrl);
-
-  // Resize for performance
-  const maxDimension = 400;
-  const scale = Math.min(
-    maxDimension / img.width,
-    maxDimension / img.height,
-    1,
-  );
-
-  // Apply slight blur to reduce noise
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  canvas.width = img.width * scale;
-  canvas.height = img.height * scale;
-
-  // Enable image smoothing
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-
-  // Draw scaled image
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  // Optional: Apply slight blur
-  ctx.filter = "blur(0.5px)";
-  ctx.drawImage(canvas, 0, 0);
-
-  return ctx.getImageData(0, 0, canvas.width, canvas.height);
-}
-```
-
-### Caching Extracted Colors
-
-```javascript
-// Cache extraction results
-class ColorExtractionCache {
-  constructor() {
-    this.cache = new Map();
-  }
-
-  async extractColors(imageUrl, options = {}) {
-    // Generate cache key
-    const key = this.generateKey(imageUrl, options);
-
-    // Check cache
-    if (this.cache.has(key)) {
-      return this.cache.get(key);
-    }
-
-    // Extract colors
-    const pixels = await loadImage(imageUrl);
-    const result = await extractImageColors({
-      imageData: pixels,
-      ...options,
-    });
-
-    // Cache result
-    this.cache.set(key, result);
-
-    // Limit cache size
-    if (this.cache.size > 100) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
-    }
-
-    return result;
-  }
-
-  generateKey(url, options) {
-    return `${url}_${JSON.stringify(options)}`;
-  }
-}
-```
-
-### Batch Processing
-
-```javascript
-// Process multiple images efficiently
-async function batchExtractColors(imageUrls, options = {}) {
-  const batchSize = 5; // Process 5 at a time
-  const results = [];
-
-  for (let i = 0; i < imageUrls.length; i += batchSize) {
-    const batch = imageUrls.slice(i, i + batchSize);
-
-    // Process batch in parallel
-    const batchResults = await Promise.all(
-      batch.map(async (url) => {
-        try {
-          const pixels = await loadImage(url);
-          return await extractImageColors({
-            imageData: pixels,
-            ...options,
-          });
-        } catch (error) {
-          console.error(`Failed to process ${url}:`, error);
-          return null;
-        }
-      }),
-    );
-
-    results.push(...batchResults);
-
-    // Progress callback
-    if (options.onProgress) {
-      options.onProgress({
-        processed: Math.min(i + batchSize, imageUrls.length),
-        total: imageUrls.length,
-      });
-    }
-  }
-
-  return results.filter((r) => r !== null);
-}
-```
-
-## Integration Examples
-
-### React Component
-
-```jsx
-// React hook for image color extraction
-function useImageColors(imageUrl) {
-  const [colors, setColors] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!imageUrl) return;
-
-    const extractColors = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const pixels = await loadImageFromUrl(imageUrl);
-        const result = await extractImageColors({
-          imageData: pixels,
-          maxColors: 5,
-        });
-        setColors(result.colors);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    extractColors();
-  }, [imageUrl]);
-
-  return { colors, loading, error };
-}
-
-// Usage in component
-function ImagePalette({ imageUrl }) {
-  const { colors, loading, error } = useImageColors(imageUrl);
-
-  if (loading) return <div>Extracting colors...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!colors) return null;
-
-  return (
-    <div className="palette">
-      {colors.map((color, i) => (
-        <div
-          key={i}
-          className="color-swatch"
-          style={{ backgroundColor: color.hex }}
-        >
-          <span>{color.hex}</span>
-          <span>{Math.round(color.population * 100)}%</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-### Vue Component
-
-```vue
-<template>
-  <div class="image-theme-generator">
-    <input type="file" @change="handleFileUpload" accept="image/*" />
-
-    <div v-if="loading">Generating theme...</div>
-
-    <div v-if="theme" class="theme-preview">
-      <div
-        v-for="(color, name) in theme.schemes.light"
-        :key="name"
-        :style="{ backgroundColor: color }"
-        class="color-block"
-      >
-        {{ name }}: {{ color }}
-      </div>
-    </div>
-  </div>
-</template>
-
-<script>
-export default {
-  data() {
-    return {
-      theme: null,
-      loading: false,
-    };
   },
-
-  methods: {
-    async handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      this.loading = true;
-
-      try {
-        const pixels = await this.getImagePixels(file);
-        const theme = await this.generateTheme(pixels);
-        this.theme = theme;
-      } catch (error) {
-        console.error("Failed to generate theme:", error);
-      } finally {
-        this.loading = false;
-      }
+  {
+    "hct": {
+      "c": 79.2247583857399,
+      "h": 355.9564794954552,
+      "t": 56.84818545954954
     },
-
-    async getImagePixels(file) {
-      // Implementation here
-    },
-
-    async generateTheme(pixels) {
-      return await generateThemeFromImage({
-        imageData: pixels,
-        variant: "tonalSpot",
-      });
-    },
-  },
-};
-</script>
+    "hex": "#ec4899",
+    "percentage": 33.33333333333333,
+    "population": 2,
+    "rgb": {
+      "b": 153,
+      "g": 72,
+      "r": 236
+    }
+  }
+]
 ```
+
+Two things to note:
+
+- **White is missing and the percentages add up to 100% without it.** Pixels that are almost white or almost black (rough luminance outside 5–95%) are dropped before colors are picked. `percentage` is a share of the remaining pixels, here 4 of 6 and 2 of 6.
+- **`maxColors` (default 5) is a maximum.** Only two colors qualified.
+
+The other formats show the same colors.
+
+Tool call: `extract_image_colors { "imageData": <4×2 image>, "format": "css", "maxColors": 3 }`
+
+```text
+:root {
+  --extracted-color-1: #6366f1; /* 66.7% */
+  --extracted-color-2: #ec4899; /* 33.3% */
+}
+
+/* Color Details */
+/* Color 1: #6366f1
+   RGB: rgb(99, 102, 241)
+   HCT: hct(284.6, 68.0, 50.1)
+   Population: 66.7%
+*/
+…
+```
+
+`"format": "palette"` gives the Markdown list shown in the tip above. `quality` (`low` / `medium` / `high`) controls how many pixels are sampled and how many clusters are used.
+
+### Images Without Colorful Pixels
+
+For an image with only white and grey, `extract_image_colors` still reports what is there:
+
+Tool call: `extract_image_colors { "imageData": { "width": 2, "height": 2, "data": [255,255,255,255, 255,255,255,255, 255,255,255,255, 128,128,128,255] }, "format": "palette" }`
+
+```text
+# Extracted Color Palette
+
+## Color 1
+- Hex: #ffffff
+- RGB: rgb(255, 255, 255)
+- HCT: H:209.5° C:2.9 T:100.0
+- Usage: 75.0%
+
+## Color 2
+- Hex: #808080
+- RGB: rgb(128, 128, 128)
+- HCT: H:209.5° C:1.9 T:53.6
+- Usage: 25.0%
+```
+
+## Generating a Theme from an Image
+
+> "Make a Material theme from this image."
+
+Tool call: `generate_theme_from_image { "imageData": <4×2 image> }`
+
+```text
+# Material Design 3 Theme from Image
+
+## Source Colors
+- Primary: #6366f1 (66.7%)
+- Secondary: #ec4899 (33.3%)
+
+## Theme Colors (Light Mode)
+
+### Primary
+- primary: #494bd6
+- onPrimary: #ffffff
+- primaryContainer: #e1e0ff
+- onPrimaryContainer: #07006c
+
+### Surface
+- surface: #fffbff
+- onSurface: #1c1b1f
+- surfaceVariant: #e4e1ec
+- onSurfaceVariant: #46464f
+
+### Background
+- background: #fffbff
+- onBackground: #1c1b1f
+```
+
+With `"isDark": true` the same call returns the dark roles:
+
+```text
+…
+## Theme Colors (Dark Mode)
+
+### Primary
+- primary: #c0c1ff
+- onPrimary: #1000a9
+- primaryContainer: #2f2ebe
+- onPrimaryContainer: #e1e0ff
+
+### Surface
+- surface: #1c1b1f
+- onSurface: #e5e1e6
+- surfaceVariant: #46464f
+- onSurfaceVariant: #c8c5d0
+…
+```
+
+The response lists only the primary, surface and background roles. The theme is seeded from the `Primary` source color, so for the complete light and dark schemes (secondary, tertiary, error, outline…) call `generate_material_theme { "sourceColor": "#6366f1" }`. That returns the same values; see [Creating Themes](/examples/creating-themes).
+
+A theme needs a colorful seed, so the white-and-grey image above is rejected with `isError: true`:
+
+```text
+The image has no sufficiently colorful pixels to seed a theme (Material's scorer fell back to #4285F4). Use a more colorful image, or call generate_material_theme with an explicit sourceColor.
+```
+
+## Disliked Colors
+
+Dark yellow-greens are widely disliked, and logos and photos sometimes contain them. `extract_image_colors` reports colors as they are. Here is a 4 × 4 test image with ten `#6b6b1e` pixels, four `#2563eb` and two near-white:
+
+```text
+## Color 1
+- Hex: #6b6b1e
+- RGB: rgb(107, 107, 30)
+- HCT: H:111.1° C:37.1 T:43.9
+- Usage: 71.4%
+
+## Color 2
+- Hex: #2563eb
+- RGB: rgb(37, 99, 235)
+- HCT: H:272.2° C:69.6 T:46.1
+- Usage: 28.6%
+```
+
+To use them in a UI, pass them through `fix_disliked_colors_batch`:
+
+Tool call: `fix_disliked_colors_batch { "colors": ["#6b6b1e", "#2563eb"] }`
+
+```text
+# Batch Color Likability Analysis
+
+## Summary
+- Total colors: 2
+- Disliked colors found: 1
+- Percentage disliked: 50.0%
+
+## Results
+
+- **#6b6b1e** → **#b0af5b** (fixed)
+- **#2563eb** ✓ (already liked)
+…
+```
+
+`generate_theme_from_image` makes this fix to its seed automatically. For this image its source lines read `Primary: #b0af5b (71.4%)` and `Secondary: #2563eb (28.6%)`: the percentage is the share of the original `#6b6b1e` cluster that the lightened seed replaces.
+
+## Input Errors
+
+Both tools check the pixel data before doing anything:
+
+| Problem                                  | Result (`isError: true`)                                                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `data.length` ≠ `width × height × 4`     | `Invalid arguments for tool 'extract_image_colors': imageData: data length must equal width * height * 4 (RGBA)`    |
+| More than 65 536 pixels (300 × 300 here) | `Invalid arguments for tool 'extract_image_colors': imageData.data: Too big: expected array to have <=262144 items` |
 
 ## Next Steps
 
-- Learn about [Creating Themes](./creating-themes.md) for comprehensive design systems
-- Explore [CSS Refactoring](./css-refactoring.md) to apply extracted colors
-- Read [Image Analysis Concepts](../concepts/image-analysis.md) for theory
-- Check [Image Extraction Tools](../tools/image-extraction.md) for API reference
+- [Creating Themes](/examples/creating-themes): full Material schemes, CSS and exports
+- [CSS Refactoring](/examples/css-refactoring): apply the theme to existing CSS
+- [Image Analysis Concepts](/concepts/image-analysis): quantization and scoring
+- [Image Extraction Tools](/tools/image-extraction): parameter reference

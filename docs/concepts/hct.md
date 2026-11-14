@@ -1,264 +1,111 @@
 # HCT Color System
 
-HCT (Hue, Chroma, Tone) is Google's perceptually uniform color space, specifically designed for user interface applications. It forms the foundation of Material Design 3's dynamic color system.
+HCT (Hue, Chroma, Tone) is the color space behind Material Design 3's dynamic color. Coolors MCP does not reimplement it: every HCT value is computed by Google's [`@material/material-color-utilities`](https://github.com/material-foundation/material-color-utilities) (`Hct` and its solver, wrapped in `src/color/hct/hct-solver.ts` and `hct-class.ts`), so the numbers match Material's own tooling.
 
-## What is HCT?
+## The three components
 
-HCT is a color space that combines the best aspects of LAB (perceptual uniformity) with practical considerations for UI design:
+| Component  | Computed from       | Range                                   | Meaning                                                   |
+| ---------- | ------------------- | --------------------------------------- | --------------------------------------------------------- |
+| **Hue**    | CAM16 hue angle     | 0–360°                                  | Which color family                                        |
+| **Chroma** | CAM16 chroma        | 0 up to ~113 in sRGB (`#ff0000`: 113.4) | Colorfulness; the reachable maximum depends on hue & tone |
+| **Tone**   | CIE L\* (D65 white) | 0–100                                   | Perceptual lightness: 0 = black, 100 = white              |
 
-- **Hue** (0-360°): The color's position on the color wheel
-- **Chroma** (0-120+): The color's intensity or purity
-- **Tone** (0-100): The color's perceptual lightness
+Hue and chroma come from the CAM16 color appearance model under Material's default viewing conditions: D65 white point, adapting luminance ≈ 11.72 cd/m² (200 lux), background L\* 50, average surround, illuminant not discounted.
 
-## Why HCT?
+## Real values
 
-### Problem with Traditional Color Spaces
+From `convert_color` with `to: "hct"`:
 
-Traditional color spaces have significant limitations for UI design:
+| Color     | HCT                       |
+| --------- | ------------------------- |
+| `#6750a4` | `hct(299.0, 47.9, 40.1)`  |
+| `#0000ff` | `hct(282.8, 87.2, 32.3)`  |
+| `#ff0000` | `hct(27.4, 113.4, 53.2)`  |
+| `#00ff00` | `hct(142.1, 108.4, 87.7)` |
+| `#ffff00` | `hct(111.1, 75.5, 97.1)`  |
+| `#808080` | `hct(209.5, 1.9, 53.6)`   |
+| `#ffffff` | `hct(209.5, 2.9, 100.0)`  |
+| `#000000` | `hct(0.0, 0.0, 0.0)`      |
 
-1. **RGB**: Not perceptually uniform; equal numeric changes don't produce equal visual changes
-2. **HSL**: Lightness is not perceptually accurate; colors with same L can appear very different
-3. **LAB**: While perceptually uniform, it's not optimized for UI contrast requirements
+CAM16 hue is not HSL hue: pure blue sits at 282.8° (HSL 240°) and pure red at 27.4° (HSL 0°). HSL lightness is not tone either — `#ffff00` and `#0000ff` are both `hsl(…, 100%, 50%)`, but their tones are 97.1 and 32.3.
 
-### HCT's Solutions
+`hct(h, c, t)` is also accepted as **input** by every tool, e.g. `hct(299, 48, 40)` → `#6750a4`.
 
-HCT addresses these issues with UI-specific optimizations:
+## Tone is L\*
 
-1. **Predictable Contrast**: Tone values directly correlate with WCAG contrast ratios
-2. **Perceptual Uniformity**: Equal changes produce equal perceptual differences
-3. **No Impossible Colors**: All HCT values represent real, displayable colors
-4. **Chroma Preservation**: Maintains color intensity across tone changes better than HSL
+Tone is exactly CIE L\*. `convert_color` shows the same number both ways: `#6750a4` → `lab(40.08, 29.43, -42.24)` and `hct(299.0, 47.9, 40.1)`.
 
-## Tone and Contrast
+When an HCT color is converted to sRGB, the requested tone is kept. The only error left is from rounding to 8-bit sRGB: a sweep over 24 hues × 4 chromas × tones 1–99 landed within 0.25 L\* of the requested tone.
 
-The most powerful feature of HCT is the predictable relationship between tone values and contrast ratios:
+## Out-of-gamut chroma is reduced, never tone
 
-### Contrast Guarantees
+Many hue/chroma/tone combinations do not exist in sRGB. The solver keeps hue and tone and lowers chroma to the most it can reach:
 
-```
-Tone Difference | Approximate Contrast Ratio
-----------------|---------------------------
-      40        |         3:1 (WCAG AA large text)
-      50        |         4.5:1 (WCAG AA normal text)
-      70        |         7:1 (WCAG AAA)
-```
+| Requested              | Result    | Converted back           |
+| ---------------------- | --------- | ------------------------ |
+| `hct(120, 200, 50)`    | `#6d7f00` | `hct(120.1, 52.8, 50.0)` |
+| `hct(299, 48, 90)`     | `#e9ddff` | `hct(299.7, 20.2, 90.0)` |
+| `hct(282.8, 87.2, 80)` | `#bfc2ff` | `hct(282.9, 34.6, 80.1)` |
 
-### Example: Accessible Color Pairs
+The reachable chroma depends on both hue and tone (library `maxChroma(hue, tone)`):
 
-```javascript
-// Base color
-const primary = { h: 265, c: 50, t: 50 };
+| Tone | Hue 299 (violet) | Hue 120 (yellow-green) |
+| ---- | ---------------- | ---------------------- |
+| 10   | 47.6             | 23.6                   |
+| 30   | 77.2             | 39.1                   |
+| 40   | 87.5             | 46.1                   |
+| 50   | 77.5             | 52.8                   |
+| 70   | 51.8             | 65.8                   |
+| 90   | 20.2             | 78.0                   |
 
-// Guaranteed accessible combinations
-const onPrimary = { h: 265, c: 50, t: 100 }; // t: 50 → 100 = 50 diff = 4.5:1
-const primaryContainer = { h: 265, c: 25, t: 90 }; // Lower chroma, high tone
-const onPrimaryContainer = { h: 265, c: 50, t: 10 }; // t: 90 → 10 = 80 diff = 7:1+
-```
+Violet peaks around tone 40; yellow-green keeps getting more colorful toward light tones. So a tonal palette has a constant hue and a constant _requested_ chroma, but its very light and very dark tones are usually less chromatic than requested (tone 90 of the `#6750a4` palette is `#e9ddff`, chroma 20.2).
 
-## Material Design Integration
+## Greys keep a little chroma
 
-HCT is the foundation of Material Design 3's color system:
+Under these viewing conditions CAM16 does not map neutral greys to exactly zero chroma: `#808080` has chroma 1.9 and white 2.9, both at hue ≈ 209.5°; only black is exactly `hct(0.0, 0.0, 0.0)`. In practice:
 
-### Tonal Palettes
+- The hue of a grey or near-grey is meaningless; do not compare hues of low-chroma colors (this is a known weak spot of [theme matching](/concepts/theme-matching)).
+- Re-toning a grey in HCT keeps that residual chroma. Example: `check_contrast` suggests `#767677` (not `#767676`) as the AA fix for `#888888` on `#ffffff`.
+- Thresholds that mean "colorful" sit above the residual: Material's image scorer drops colors with chroma < 5, and the dislike check needs chroma > 16.
 
-Material Design uses 13 standard tones:
+## Why tone matters for contrast
 
-```
-[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100]
-```
+WCAG 2.x contrast depends only on relative luminance, and L\* is a function of luminance alone. So two colors' tones determine their contrast ratio, whatever their hue and chroma (up to 8-bit rounding). This is why Material defines its roles as tone pairs.
 
-Each tone has specific use cases:
+A sweep of tone pairs (6 hues, chroma 0/16/48, every tone 0–100, measured with the library's `getContrastRatio`) gave these worst cases:
 
-- **0-10**: On-colors for light surfaces
-- **20-40**: Accent and emphasis colors
-- **50**: Medium, often primary color
-- **60-80**: Containers and surfaces
-- **90-100**: Backgrounds and on-colors for dark surfaces
+| Tone difference | Lowest WCAG ratio found | Worst pair  |
+| --------------- | ----------------------- | ----------- |
+| 40              | 3.15:1                  | T60 vs T100 |
+| 50              | 4.47:1                  | T50 vs T100 |
+| 60              | 6.43:1                  | T40 vs T100 |
+| 70              | 9.13:1                  | T0 vs T70   |
 
-### Color Roles
+A 40-tone gap is enough for 3:1. A 50-tone gap is only _about_ 4.5:1 and falls just short at the light end, so check the actual pair with `check_contrast`, or let `fix_contrast` search the tone for you.
 
-HCT enables semantic color roles with guaranteed contrast:
+Pairs from the `#6750a4` primary palette, measured with `check_contrast`:
 
-```javascript
-// Primary color family
-primary: tone(40); // Main brand color
-onPrimary: tone(100); // Text on primary
-primaryContainer: tone(90); // Light container
-onPrimaryContainer: tone(10); // Text on container
+| Pair                                       | Tones      | WCAG    |
+| ------------------------------------------ | ---------- | ------- |
+| `#ffffff` on `#6750a4` (onPrimary/primary) | T100 / T40 | 6.44:1  |
+| `#22005d` on `#e9ddff` (container pair)    | T10 / T90  | 13.25:1 |
+| `#381e72` on `#cfbcff` (dark primary pair) | T20 / T80  | 7.70:1  |
 
-// Surface colors
-surface: tone(99); // Main background
-onSurface: tone(10); // Text on surface
-surfaceVariant: tone(95); // Secondary background
-onSurfaceVariant: tone(30); // Secondary text
-```
+`fix_contrast` relies on the same property: it keeps the HCT hue and chroma of the color it adjusts and binary-searches only the tone (see [Accessibility](/concepts/accessibility)).
 
-## Chroma Behavior
+## Where the tools use HCT
 
-Chroma in HCT represents color intensity, but unlike saturation in HSL, it maintains perceptual consistency:
-
-### Chroma Ranges
-
-- **0-20**: Neutral, grayscale colors
-- **20-40**: Muted, subtle colors
-- **40-60**: Moderate intensity (recommended for UI)
-- **60-80**: Vibrant colors
-- **80+**: Very vibrant (use sparingly)
-
-### Chroma and Tone Interaction
-
-Maximum achievable chroma varies by tone:
-
-```
-Tone 0-10:   Low max chroma (dark colors can't be very colorful)
-Tone 40-60:  Highest max chroma (mid-tones most colorful)
-Tone 90-100: Low max chroma (light colors can't be very colorful)
-```
-
-## Practical Applications
-
-### 1. Theme Generation
-
-Generate a complete theme from a single color:
-
-```javascript
-function generateTheme(sourceColor) {
-  const hct = toHct(sourceColor);
-
-  return {
-    primary: { ...hct, t: 40 },
-    secondary: { h: hct.h + 60, c: hct.c * 0.5, t: 40 },
-    tertiary: { h: hct.h + 120, c: hct.c * 0.7, t: 40 },
-    error: { h: 25, c: 84, t: 40 },
-    neutral: { h: hct.h, c: 4, t: 50 },
-    neutralVariant: { h: hct.h, c: 8, t: 50 },
-  };
-}
-```
-
-### 2. Accessible Color Variations
-
-Create accessible color variations:
-
-```javascript
-function createAccessiblePair(baseHct, contrastRatio = 4.5) {
-  const toneDiff = contrastRatio >= 7 ? 70 : contrastRatio >= 4.5 ? 50 : 40;
-
-  const lighter = { ...baseHct, t: Math.min(100, baseHct.t + toneDiff) };
-  const darker = { ...baseHct, t: Math.max(0, baseHct.t - toneDiff) };
-
-  return baseHct.t > 50 ? darker : lighter;
-}
-```
-
-### 3. Color Harmonization
-
-Harmonize colors to work together:
-
-```javascript
-function harmonize(color1Hct, color2Hct) {
-  // Adjust hues to be more harmonious
-  const hueDiff = Math.abs(color2Hct.h - color1Hct.h);
-
-  if (hueDiff > 180) {
-    // Colors are opposite, increase harmony
-    const targetHue = color1Hct.h + (hueDiff > 270 ? 60 : -60);
-    return { ...color2Hct, h: targetHue };
-  }
-
-  return color2Hct;
-}
-```
-
-## HCT vs Other Color Spaces
-
-### HCT vs LAB
-
-| Aspect                | HCT                     | LAB                       |
-| --------------------- | ----------------------- | ------------------------- |
-| Perceptual Uniformity | ✅ Optimized for UI     | ✅ General purpose        |
-| Contrast Prediction   | ✅ Direct tone mapping  | ❌ Requires calculation   |
-| UI Optimization       | ✅ Designed for screens | ❌ Designed for all media |
-| Impossible Colors     | ❌ None                 | ✅ Can represent          |
-
-### HCT vs HSL
-
-| Aspect                | HCT               | HSL                     |
-| --------------------- | ----------------- | ----------------------- |
-| Perceptual Uniformity | ✅ Yes            | ❌ No                   |
-| Lightness Accuracy    | ✅ Perceptual     | ❌ Mathematical         |
-| Contrast Prediction   | ✅ Built-in       | ❌ Requires calculation |
-| Designer Familiarity  | 🔶 Learning curve | ✅ Well known           |
-
-## Advanced Concepts
-
-### CAM16 Foundation
-
-HCT is built on the CAM16 color appearance model, which models how humans perceive color under different viewing conditions.
-
-### Viewing Conditions
-
-HCT assumes standard viewing conditions:
-
-- Average surround
-- Adapting luminance of 200 cd/m²
-- 20% background luminance
-- D65 white point
-
-### Gamut Mapping
-
-HCT automatically maps colors to the sRGB gamut, ensuring all colors are displayable:
-
-```javascript
-// HCT handles gamut mapping internally
-const vibrantHct = { h: 120, c: 200, t: 50 }; // Very high chroma
-const displayable = hctToRgb(vibrantHct); // Automatically in gamut
-```
-
-## Best Practices
-
-1. **Use standard tones** for consistency with Material Design
-2. **Maintain 50+ tone difference** for text on backgrounds
-3. **Keep chroma between 40-60** for most UI elements
-4. **Use lower chroma (4-16)** for neutral colors
-5. **Test with different tones** to ensure accessibility
-
-## Common Patterns
-
-### Dark/Light Theme Switching
-
-```javascript
-// Light theme
-const lightPrimary = { h: 265, c: 50, t: 40 };
-const lightSurface = { h: 265, c: 0, t: 99 };
-
-// Dark theme (invert tones)
-const darkPrimary = { h: 265, c: 50, t: 80 };
-const darkSurface = { h: 265, c: 0, t: 10 };
-```
-
-### Error States
-
-```javascript
-// Standard error colors in HCT
-const error = { h: 25, c: 84, t: 40 }; // Red-orange, high chroma
-const errorContainer = { h: 25, c: 30, t: 90 }; // Muted, light
-const onError = { h: 25, c: 0, t: 100 }; // White
-const onErrorContainer = { h: 25, c: 84, t: 10 }; // Dark red
-```
-
-## Implementation Details
-
-Coolors MCP implements HCT using Google's Material Color Utilities algorithms:
-
-1. **Color Conversion**: Accurate CAM16 to/from RGB conversion
-2. **Gamut Mapping**: Automatic sRGB gamut clipping
-3. **Tone Mapping**: Precise tone to luminance conversion
-4. **Chroma Maximization**: Finding maximum chroma for any hue/tone
+- `convert_color` (`to: "hct"`) and `hct()` input everywhere
+- `generate_tonal_palette`, `generate_material_theme`, `generate_theme_css`, `generate_theme_from_image` — tonal palettes ([Material Design](/concepts/material-design))
+- `generate_tonal_scale`, `generate_state_colors`, `generate_semantic_palette`
+- `fix_contrast` and the fix suggestion in `check_contrast` — tone search
+- `generate_palette` (`space: "hct"`, the default), `adjust_color` (`space: "hct"`), `generate_gradient` (`interpolation: "hct"`), `generate_palette_with_locks` (`colorSpace: "hct"`)
+- `match_theme_color`, `match_theme_colors_batch`, `refactor_css_with_theme` — HCT distance ([Theme Matching](/concepts/theme-matching))
+- `extract_image_colors` scoring and the disliked-color check ([Image Analysis](/concepts/image-analysis))
 
 ## See Also
 
-- [Color Spaces](./color-spaces.md) - Comparison with other color models
-- [Material Design](./material-design.md) - HCT in Material Design 3
-- [Accessibility](./accessibility.md) - Using tone for contrast
-- [Theme Matching](./theme-matching.md) - HCT-based matching algorithm
+- [Color Spaces](/concepts/color-spaces) — all spaces the tools read and write
+- [Material Design](/concepts/material-design) — core palettes and role tones
+- [Accessibility](/concepts/accessibility) — WCAG, APCA and the tone-search fix
+- [Theme Matching](/concepts/theme-matching) — HCT distance in practice

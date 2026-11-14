@@ -6,11 +6,12 @@ export default withMermaid(
     title: "Coolors MCP",
     titleTemplate: ":title | Coolors MCP Docs",
     description:
-      "Advanced color operations MCP server with Material Design 3 support, CSS theme matching, image color extraction, and accessibility compliance.",
+      "Color MCP server for AI agents: WCAG/APCA contrast, Material Design 3 (HCT) themes, palettes, CSS theme matching, color-blindness checks and DESIGN.md audits.",
     base: "/coolors-mcp/",
     lastUpdated: true,
     cleanUrls: true,
-    ignoreDeadLinks: true,
+    // Fail the build on broken internal links
+    ignoreDeadLinks: false,
 
     // Force dark mode by default
     //appearance: 'dark',
@@ -81,17 +82,23 @@ export default withMermaid(
             { text: "Theme Matching", link: "/concepts/theme-matching" },
             { text: "Image Analysis", link: "/concepts/image-analysis" },
             { text: "Accessibility", link: "/concepts/accessibility" },
+            { text: "Distance Metrics", link: "/concepts/distance-metrics" },
           ],
         },
         {
           text: "Tools Reference",
           collapsed: false,
           items: [
+            { text: "All Tools", link: "/tools/README" },
             { text: "Color Operations", link: "/tools/color-operations" },
+            { text: "Accessibility & CVD", link: "/tools/accessibility" },
+            { text: "Palettes & Gradients", link: "/tools/palettes" },
+            { text: "Visual Cohesion", link: "/tools/cohesion" },
             { text: "Material Design", link: "/tools/material-design" },
             { text: "Theme Matching", link: "/tools/theme-matching" },
             { text: "Image Extraction", link: "/tools/image-extraction" },
-            { text: "Accessibility", link: "/tools/accessibility" },
+            { text: "Agent Tools", link: "/tools/agent-tools" },
+            { text: "DESIGN.md", link: "/tools/design-md" },
           ],
         },
         {
@@ -112,17 +119,7 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: "Troubleshooting", link: "/resources/troubleshooting" },
-            { text: "FAQ", link: "/resources/faq" },
-            { text: "Contributing", link: "/contributing" },
-          ],
-        },
-        {
-          text: "Advanced",
-          collapsed: true,
-          items: [
-            { text: "Custom Palettes", link: "/advanced/custom-palettes" },
-            { text: "Batch Processing", link: "/advanced/batch-processing" },
-            { text: "Integration Patterns", link: "/advanced/integration" },
+            { text: "Changelog", link: "/changelog" },
           ],
         },
       ],

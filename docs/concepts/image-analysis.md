@@ -1,427 +1,187 @@
 # Image Color Analysis
 
-Coolors MCP provides advanced image color extraction using Google's Material Color Utilities algorithms, enabling dynamic theme generation from images.
+`extract_image_colors` and `generate_theme_from_image` use the image pipeline from Google's Material Color Utilities: **Celebi quantization** followed by Material's **Score** ranking. The code is vendored in `src/color/quantize/` and `src/color/score/`, and driven by `src/color/extract-colors.ts`. Parameters are in [Image Extraction tools](/tools/image-extraction).
 
-## Overview
+## Input
 
-Image color extraction involves:
+Both tools take raw pixels, not files or URLs:
 
-1. **Quantization** - Reducing colors to a representative set
-2. **Scoring** - Evaluating colors for UI suitability
-3. **Selection** - Choosing optimal source colors
-4. **Theme Generation** - Creating complete color schemes
-
-## The Extraction Process
-
-### 1. Quantization
-
-Quantization is a lossy compression process that selects a limited number of colors that best represent the original image.
-
-#### Celebi Algorithm
-
-Coolors MCP uses the Celebi quantizer, which combines:
-
-- **Wu's algorithm**: Fast color quantization
-- **WSMeans**: Weighted spatial color clustering
-
-```javascript
-// Extract up to 128 representative colors
-const colors = quantize(pixels, 128);
-```
-
-#### How It Works
-
-1. **Spatial clustering**: Groups similar colors that appear near each other
-2. **Color frequency**: Weights colors by how often they appear
-3. **Perceptual grouping**: Merges perceptually similar colors
-4. **Output**: Typically 5-128 distinct colors
-
-### 2. Color Scoring
-
-Not all colors are suitable for UI themes. The scoring algorithm evaluates colors based on:
-
-#### Key Metrics
-
-**Chroma Score**
-Colors closer to the target chroma of 48 receive higher scores:
-
-```javascript
-chromaScore = 1 - Math.abs(chroma - 48) / 48;
-```
-
-**Population Score**
-More frequent colors score higher:
-
-```javascript
-populationScore = pixelCount / totalPixels;
-```
-
-**Color Diversity**
-Promotes visually distinct colors:
-
-- Higher scores for well-represented hues (30° neighborhood)
-- Penalizes colors too similar to already selected ones
-- Ensures good distribution across color wheel
-
-#### Filtering Criteria
-
-Colors are filtered out if they:
-
-- Have very low chroma (<15) - too close to grayscale
-- Are extremely rare (<0.01% of pixels)
-- Fall in the "dislike zone" (dark yellow-greens)
-- Are too similar to already selected colors
-
-### 3. Source Color Selection
-
-The system selects multiple source colors for theme options:
-
-```javascript
-// Typical selection process
-1. Extract and score all colors
-2. Select top-scoring distinct colors (usually 3-5)
-3. Present as theme options to user
-4. Use selected color as source for theme generation
-```
-
-## Image Sources
-
-### Wallpapers
-
-User device wallpapers provide personalized color schemes:
-
-- Analyzed on device for privacy
-- Updates dynamically when wallpaper changes
-- Creates cohesive system-wide theming
-
-### App Content
-
-Content-based colors adapt to current context:
-
-- **Album art** → Music player theme
-- **Product images** → E-commerce theme
-- **Video thumbnails** → Media player theme
-- **Logos** → Brand-consistent theme
-
-### User Photos
-
-Personal photos for custom themes:
-
-- Profile pictures for personal spaces
-- Gallery images for creative apps
-- Artwork for design applications
-
-## Implementation
-
-### Basic Extraction
-
-```javascript
+```json
 {
-  "name": "extract_image_colors",
-  "arguments": {
-    "imageData": [/* RGBA pixel array */],
-    "maxColors": 5
-  }
-}
-
-// Returns
-{
-  "colors": [
-    { "hex": "#6366f1", "population": 0.23, "score": 0.89 },
-    { "hex": "#ec4899", "population": 0.15, "score": 0.76 },
-    { "hex": "#10b981", "population": 0.12, "score": 0.71 }
-  ]
-}
-```
-
-### Theme from Image
-
-```javascript
-{
-  "name": "generate_theme_from_image",
-  "arguments": {
-    "imageData": [/* RGBA pixel array */],
-    "variant": "tonalSpot"
-  }
-}
-
-// Returns complete Material Design theme
-{
-  "source": "#6366f1",
-  "schemes": {
-    "light": { /* light theme colors */ },
-    "dark": { /* dark theme colors */ }
+  "imageData": {
+    "width": 2,
+    "height": 1,
+    "data": [103, 80, 164, 255, 232, 163, 61, 255]
   }
 }
 ```
 
-## Advanced Features
+- `data` is a flat RGBA array of integers 0–255, and its length must equal `width × height × 4`.
+- At most **65,536 pixels** (e.g. 256 × 256). Downscale larger images before sending; the palette barely changes.
+- Violations are rejected before any work is done (`isError: true`):
 
-### Dislike Color Detection
-
-The system automatically detects and adjusts universally disliked colors:
-
-#### The "Bile Zone"
-
-Dark yellow-greens (reminiscent of biological waste) are universally disliked:
-
-- **Hue range**: 50-120° (yellow-green)
-- **Chroma**: 20-50
-- **Tone**: 20-50
-
-#### Automatic Fixing
-
-```javascript
-if (isDisliked(color)) {
-  // Shift hue away from dislike zone
-  color.hue = adjustHue(color.hue);
-  // Increase tone for lighter appearance
-  color.tone = Math.max(60, color.tone);
-}
+```text
+Invalid arguments for tool 'extract_image_colors': imageData: data length must equal width * height * 4 (RGBA)
 ```
 
-### Multi-Region Analysis
+## Pipeline
 
-For complex images, analyze different regions:
+1. **Pixels.** RGBA is converted to opaque colors. Pixels with alpha below 1% are skipped; any other alpha value is ignored.
+2. **Sampling.** If there are more pixels than the `quality` budget, every _n_-th pixel is kept:
 
-```javascript
-// Analyze specific image regions
-const regions = [
-  { x: 0, y: 0, width: 100, height: 100 }, // Top-left
-  { x: 100, y: 100, width: 200, height: 200 }, // Center
-];
+   | `quality`          | Max pixels kept | Quantizer clusters |
+   | ------------------ | --------------- | ------------------ |
+   | `low`              | 5,000           | 64                 |
+   | `medium` (default) | 10,000          | 128                |
+   | `high`             | 25,000          | 256                |
 
-regions.forEach((region) => {
-  const colors = extractFromRegion(image, region);
-  // Process regional colors
-});
+3. **Near-black / near-white filter.** Pixels whose luma (0.299 R + 0.587 G + 0.114 B) is ≤ 12.75 or ≥ 242.25 (the outer 5% at each end) are dropped.
+4. **Quantization (Celebi).** A **Wu** quantizer builds a 32 × 32 × 32 RGB histogram (5 bits per channel) and repeatedly cuts the box with the highest variance, placing each cut to maximize the variance between the two halves. The box colors seed **WSMeans**, a weighted k-means in L\*a\*b\* that de-duplicates identical pixels, uses the triangle inequality to skip comparisons, and runs at most 10 iterations. The result is a map of cluster color → pixel count.
+5. **Scoring (Material Score).** See below. Returns up to `maxColors` colors.
+6. **Report.** For each color: hex, RGB, HCT, `population` and `percentage`. The percentage is the share of the **sampled, filtered** pixels, not of the original image.
+
+## Material Score
+
+Score ranks clusters for use as a UI theme seed:
+
+1. Build a population histogram over HCT hue (1° bins). For each hue, the _excited proportion_ is the share of pixels within a 30° window around it.
+2. Drop clusters with **chroma < 5** (effectively grey) or an excited proportion **≤ 1%**.
+3. Score the rest:
+
+   ```text
+   score = 100 × excitedProportion × 0.7  +  (chroma − 48) × w
+   w = 0.1 below chroma 48, 0.3 above it
+   ```
+
+4. Pick colors in score order, skipping any whose hue is within _D_ degrees of a color already picked. _D_ starts at 90° and drops one degree at a time, down to 15°, until enough colors are found.
+5. If nothing survives the filter, Score returns the fallback **Google Blue `#4285F4`**.
+
+Step 4 means **similar hues collapse**. An image that is 50% `#1976d2`, 30% `#0d47a1` and 20% `#d32f2f` returns only two colors, because the two blues (HCT hue 259.4° and 268.7°) are less than 15° apart:
+
+```text
+# Extracted Color Palette
+
+## Color 1
+- Hex: #1976d2
+- RGB: rgb(25, 118, 210)
+- HCT: H:259.4° C:57.4 T:49.3
+- Usage: 50.0%
+
+## Color 2
+- Hex: #d32f2f
+- RGB: rgb(211, 47, 47)
+- HCT: H:23.6° C:83.3 T:47.1
+- Usage: 20.0%
 ```
 
-### Temporal Consistency
+## extract_image_colors
 
-For video or animated content:
+`extract_image_colors` runs the pipeline above with the requested `quality` and `maxColors`. A 10 × 10 test image (60% `#6750a4`, 28% `#e8a33d`, 12% `#2e7d32`) with `format: "palette"`:
 
-```javascript
-// Extract colors from multiple frames
-const frames = [0, 30, 60, 90, 120];
-const frameColors = frames.map((f) => extractFrame(video, f));
+```text
+# Extracted Color Palette
 
-// Find consistent colors across frames
-const stableColors = findStableColors(frameColors);
+## Color 1
+- Hex: #6750a4
+- RGB: rgb(103, 80, 164)
+- HCT: H:299.0° C:47.9 T:40.1
+- Usage: 60.0%
+
+## Color 2
+- Hex: #e8a33d
+- RGB: rgb(232, 163, 61)
+- HCT: H:72.9° C:47.0 T:72.0
+- Usage: 28.0%
+
+## Color 3
+- Hex: #2e7d32
+- RGB: rgb(46, 125, 50)
+- HCT: H:145.6° C:53.0 T:46.3
+- Usage: 12.0%
 ```
 
-## Color Suitability Scoring
+`format: "json"` returns the same data as an array of `{ hct, hex, percentage, population, rgb }` objects, with unrounded numbers. `format: "css"` returns `--extracted-color-N` custom properties.
 
-### UI Suitability Factors
+### Fallback for grey images
 
-| Factor        | Weight | Description                          |
-| ------------- | ------ | ------------------------------------ |
-| Chroma        | 40%    | Preference for moderate chroma (~48) |
-| Population    | 30%    | How much of image uses this color    |
-| Diversity     | 20%    | Distinctness from other colors       |
-| Accessibility | 10%    | Potential for good contrast          |
+If every scored color is the Google Blue fallback (no pixel colorful enough), `extract_image_colors` runs again **without** the near-black/near-white filter and **without** scoring, and ranks clusters by population. You get the image's real dominant colors, greys and white included. An 8 × 8 image, half `#ffffff` and half `#808080`:
 
-### Scoring Algorithm
+```text
+# Extracted Color Palette
 
-```javascript
-function scoreColor(color, population, existingColors) {
-  const chromaScore = scoreChroma(color.chroma);
-  const popScore = population / totalPopulation;
-  const diversityScore = scoreDiversity(color, existingColors);
-  const accessScore = scoreAccessibility(color);
+## Color 1
+- Hex: #808080
+- RGB: rgb(128, 128, 128)
+- HCT: H:209.5° C:1.9 T:53.6
+- Usage: 50.0%
 
-  return (
-    chromaScore * 0.4 +
-    popScore * 0.3 +
-    diversityScore * 0.2 +
-    accessScore * 0.1
-  );
-}
+## Color 2
+- Hex: #ffffff
+- RGB: rgb(255, 255, 255)
+- HCT: H:209.5° C:2.9 T:100.0
+- Usage: 50.0%
 ```
 
-## Best Practices
+`extract_image_colors` does **not** fix disliked colors: a dark yellow-green image returns its dark yellow-green.
 
-### Image Preparation
+## generate_theme_from_image
 
-#### Optimal Images
+1. Extract with `quality: "high"`, up to 8 colors, with disliked colors fixed (hue 90–111°, chroma > 16, tone < 65 → tone 70).
+2. **Primary** is the top-scored color. **Secondary** is the most hue-distant of the next three. **Tertiary** is the remaining color farthest in hue from both.
+3. If the primary is the Google Blue fallback, the tool returns an error result (`isError: true`) instead of a theme:
 
-- **Resolution**: 200-500px wide (resize larger images)
-- **Format**: RGB/RGBA
-- **Quality**: Avoid heavily compressed images
-- **Content**: Clear subject with distinct colors
+   ```text
+   The image has no sufficiently colorful pixels to seed a theme (Material's scorer fell back to #4285F4). Use a more colorful image, or call generate_material_theme with an explicit sourceColor.
+   ```
 
-#### Pre-processing
+4. A Material theme is generated from the primary only, with the same palettes and tones as `generate_material_theme` (see [Material Design](/concepts/material-design)). The theme's secondary and tertiary roles come from the primary's hue, not from the image. The image's secondary and tertiary colors are only listed under "Source Colors".
+5. Only the primary, surface and background role groups of the selected mode (`isDark`) are printed.
 
-```javascript
-// Resize for performance
-const resized = resizeImage(original, 300);
+For the three-color test image above:
 
-// Enhance contrast if needed
-const enhanced = enhanceContrast(resized, 1.2);
+```text
+# Material Design 3 Theme from Image
 
-// Extract colors
-const colors = extractColors(enhanced);
+## Source Colors
+- Primary: #6750a4 (60.0%)
+- Secondary: #2e7d32 (12.0%)
+- Tertiary: #e8a33d (28.0%)
+
+## Theme Colors (Light Mode)
+
+### Primary
+- primary: #6750a4
+- onPrimary: #ffffff
+- primaryContainer: #e9ddff
+- onPrimaryContainer: #22005d
+
+### Surface
+- surface: #fffbff
+- onSurface: #1c1b1e
+- surfaceVariant: #e7e0eb
+- onSurfaceVariant: #49454e
+
+### Background
+- background: #fffbff
+- onBackground: #1c1b1e
 ```
 
-### Performance Optimization
+::: tip Output details
 
-#### Sampling Strategies
+- `includeCustomColors: false` lists only the primary source color; with `true` (default) the secondary and tertiary picks are listed too.
+- When the primary was a fixed disliked color, its usage is that of the original cluster: an all-`#6b6b1e` image gives `Primary: #b0af5b (100.0%)`.
 
-```javascript
-// Fast: Sample every 5th pixel
-const fastColors = quantize(pixels, 128, { sampling: 5 });
-
-// Quality: Full pixel analysis
-const qualityColors = quantize(pixels, 128, { sampling: 1 });
-
-// Adaptive: Based on image size
-const sampling = pixels.length > 100000 ? 5 : 1;
-```
-
-#### Caching
-
-```javascript
-// Cache extracted colors
-const cache = new Map();
-const hash = hashImage(imageData);
-
-if (cache.has(hash)) {
-  return cache.get(hash);
-}
-
-const colors = extractColors(imageData);
-cache.set(hash, colors);
-```
-
-## Use Cases
-
-### Dynamic Theming
-
-Apps that adapt to content:
-
-- Music players matching album art
-- News readers matching article images
-- Photo galleries with ambient themes
-
-### Brand Extraction
-
-Deriving brand colors from logos:
-
-```javascript
-const logo = loadImage("logo.png");
-const brandColors = extractColors(logo, {
-  maxColors: 3,
-  minChroma: 30, // Ensure vibrant colors
-});
-```
-
-### Palette Generation
-
-Creating artist palettes from artwork:
-
-```javascript
-const artwork = loadImage("painting.jpg");
-const palette = extractColors(artwork, {
-  maxColors: 12,
-  includeNeutrals: true,
-});
-```
-
-## Integration Examples
-
-### Web Applications
-
-```javascript
-// Extract colors from uploaded image
-async function themeFromUpload(file) {
-  const image = await loadImage(file);
-  const canvas = createCanvas(image);
-  const pixels = getPixelData(canvas);
-
-  const response = await coolorsMCP.extractColors({
-    imageData: pixels,
-    maxColors: 5,
-  });
-
-  return response.colors[0]; // Use top color
-}
-```
-
-### React Component
-
-```jsx
-function ImageThemeProvider({ imageUrl, children }) {
-  const [theme, setTheme] = useState(null);
-
-  useEffect(() => {
-    extractThemeFromImage(imageUrl).then(setTheme);
-  }, [imageUrl]);
-
-  return (
-    <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
-  );
-}
-```
-
-### Node.js Server
-
-```javascript
-const sharp = require("sharp");
-
-async function extractFromBuffer(buffer) {
-  // Resize and convert to raw pixels
-  const { data, info } = await sharp(buffer)
-    .resize(300)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  // Extract colors
-  const colors = await coolorsMCP.extractColors({
-    imageData: Array.from(data),
-    width: info.width,
-    height: info.height,
-  });
-
-  return colors;
-}
-```
+:::
 
 ## Limitations
 
-### Technical Constraints
-
-- Maximum image size: ~5MB recommended
-- Color count: 128 colors maximum per extraction
-- Processing time: ~100-500ms for typical images
-
-### Accuracy Considerations
-
-- Compressed images may lose color fidelity
-- Very dark/light images provide limited options
-- Monochrome images need fallback strategies
-
-## Troubleshooting
-
-### Common Issues
-
-#### No Suitable Colors Found
-
-**Cause**: Image too monochrome or low contrast
-**Solution**: Adjust scoring thresholds or provide fallback
-
-#### Inconsistent Results
-
-**Cause**: Image compression or resizing artifacts
-**Solution**: Use higher quality source images
-
-#### Performance Problems
-
-**Cause**: Processing large images
-**Solution**: Resize before extraction
+- At most 65,536 pixels per call, and at most 25,000 of them are analyzed (`quality: "high"`).
+- Percentages are relative to the sampled pixels left after the near-black/near-white filter.
+- Hues closer than 15° are merged in scored results, so tonal variations of one hue (light/dark blue) come back as a single color.
+- Pixels near black or white never seed a scored palette; they only appear through the grey-image fallback.
 
 ## See Also
 
-- [Material Design](./material-design.md) - Theme generation from colors
-- [Color Spaces](./color-spaces.md) - Understanding color models
-- [HCT System](./hct.md) - Perceptual color space
-- [Accessibility](./accessibility.md) - Ensuring extracted colors are usable
+- [Material Design](/concepts/material-design) — what happens to the extracted primary
+- [HCT Color System](/concepts/hct) — hue and chroma used by the scorer
+- [Image Extraction tools](/tools/image-extraction) — parameters and output formats

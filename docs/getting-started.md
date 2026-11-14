@@ -1,20 +1,18 @@
 # Getting Started
 
-Get up and running with Coolors MCP in minutes. This guide covers installation, basic usage, and your first color operations.
+This guide installs Coolors MCP and walks through a few real tool calls. Every result below is the exact text the server returns (long results are trimmed with `…`).
 
-## Quick Start
+## 1. Install
 
-### 1. Install Coolors MCP
+Coolors MCP needs Node.js 20 or newer.
 
-#### For Claude Code
+**Claude Code**
 
 ```bash
 claude mcp add coolors -- npx -y @trishchuk/coolors-mcp
 ```
 
-#### For Claude Desktop
-
-Add to your configuration:
+**Claude Desktop, Cursor and other `mcpServers` clients**
 
 ```json
 {
@@ -27,351 +25,302 @@ Add to your configuration:
 }
 ```
 
-### 2. Verify Installation
+Restart the client after editing its configuration. In Claude Code, `/mcp` should list `coolors` as connected. Other setups are on the [Installation](/installation) page.
 
-Check that Coolors MCP is available:
+## 2. How you use it
 
-```
-/mcp
-```
+You talk to your assistant in plain language; it picks a tool and fills in the arguments. Each step below shows a prompt you could type, the tool call the assistant makes, and the result it reads. You can make the same calls yourself with the [MCP Inspector](/installation#from-source).
 
-You should see `coolors` in the list of available servers.
+## 3. See a color
 
-### 3. Your First Color Operation
+Models cannot see a hex code. `describe_color` tells them what it looks like.
 
-Try a simple color conversion:
+> Describe #6366f1
 
-```
-Convert #6366f1 to HSL format
+```json
+{ "colors": ["#6366f1"] }
 ```
 
-Claude will use the `convert_color` tool and return: `hsl(239, 84%, 67%)`
+```text
+# Perceptual Color Profile
 
-## Basic Color Operations
-
-### Color Conversion
-
-Convert between any supported format:
-
-```javascript
-// Hex to RGB
-"Convert #6366f1 to RGB";
-// Result: rgb(99, 102, 241)
-
-// RGB to HSL
-"Convert rgb(99, 102, 241) to HSL";
-// Result: hsl(239, 84%, 67%)
-
-// HSL to LAB
-"Convert hsl(239, 84%, 67%) to LAB";
-// Result: lab(47.9, 35.2, -65.7)
-
-// Any color to HCT
-"Convert #6366f1 to HCT";
-// Result: hct(265.8, 87.2, 47.9)
+## #6366f1 — **vibrant indigo**
+- **Appearance**: medium, vibrant, cool (temp score -74)
+- **Spaces**: `oklch(58.5% 0.2041 277.1)` | `hct(284.6, 68.0, 50.1)` | `hsl(239, 84%, 67%)` | `rgb(99, 102, 241)` | L=0.185
+- **Text on this color**: use **#ffffff** (light) — light `#ffffff`: 4.47:1 (APCA 76) vs dark `#0f0f17`: 4.27:1 (APCA 33)
+- **Best UI roles**: primary-cta-on-light, accent-highlight, focus-ring
 ```
 
-### Color Distance
+## 4. Check and fix contrast
 
-Calculate perceptual difference between colors:
+> Is #6366f1 readable as text on white?
 
-```javascript
-"What's the perceptual distance between #6366f1 and #5355d1?";
-// Uses Delta E 2000 algorithm
-// Result: 5.2 (very similar colors)
+`check_contrast`:
 
-"Compare #ff0000 and #00ff00 using Delta E";
-// Result: 86.6 (very different colors)
+```json
+{ "foreground": "#6366f1", "background": "#ffffff" }
 ```
 
-### Contrast Checking
+```text
+## WCAG 2.x luminance ratio
+Contrast Ratio: 4.47:1
+- AA (normal text):  ✗ Fail (need 4.5:1)
+- AA (large text):   ✓ Pass (need 3:1)
+- AAA (normal text): ✗ Fail (need 7:1)
+- AAA (large text):  ✗ Fail (need 4.5:1)
 
-Verify accessibility compliance:
-
-```javascript
-"Check contrast between #1f2937 and #ffffff";
-// Result: 15.74:1 - Passes AAA for all text sizes
-
-"Is #6366f1 accessible on white background?";
-// Result: 3.03:1 - Passes AA for large text only
-
-"What text color works on #6366f1 background?";
-// Result: #ffffff (white) provides 4.6:1 contrast
+## Agent Guidance
+- **Nearest AA fix (hue-preserving)**: foreground `#6365f0` on `#ffffff` → 4.52:1 (APCA Lc 70.9, ΔE=0.4)
 ```
 
-## Creating Color Palettes
+To get a fix for a specific target, use `fix_contrast`. The `target` can be `aa`, `aaa`, `aa-large`, `ui`, `apca-body`, `apca-content` or `apca-large`:
 
-### Basic Palettes
-
-Generate harmonious color sets:
-
-```javascript
-"Create a monochromatic palette from #6366f1";
-// Result: 5 shades of the same hue
-
-"Generate complementary colors for #6366f1";
-// Result: #6366f1 and its opposite
-
-"Create a triadic color scheme from #6366f1";
-// Result: 3 colors 120° apart
+```json
+{ "foreground": "#6366f1", "background": "#ffffff", "target": "aa" }
 ```
 
-### Material Design Themes
+```text
+# Accessible Contrast Solution (aa)
 
-Generate complete Material Design 3 themes:
-
-```javascript
-"Create a Material Design theme from #6366f1";
-// Generates:
-// - Primary, secondary, tertiary palettes
-// - Surface and background colors
-// - Error colors
-// - Light and dark variants
+- **Status**: ✓ Target achieved
+- **Adjusted**: foreground (ΔE2000 shift = 0.35)
+- **Before**: `#6366f1` on `#ffffff` → 4.47:1 (APCA Lc 70.6)
+- **After**:  `#6365f0` on `#ffffff` → **4.52:1** (APCA Lc **70.9**)
 ```
 
-### Custom Gradients
+`check_contrast` with `"algorithm": "both"` adds the APCA Lc next to the WCAG ratio. See [Accessibility](/tools/accessibility).
 
-Create smooth color transitions:
+## 5. Convert and compare colors
 
-```javascript
-"Create a gradient from #6366f1 to #ec4899 with 10 steps";
-// Result: 10 colors smoothly transitioning
+`convert_color` takes any [supported format](/tools/README#supported-color-formats) and outputs `hex`, `rgb`, `hsl`, `lab`, `hct`, `oklab` or `oklch`:
 
-"Generate a gradient using LAB interpolation";
-// Result: Perceptually smooth gradient
+| Arguments                                 | Result                      |
+| ----------------------------------------- | --------------------------- |
+| `{"color": "#6366f1", "to": "rgb"}`       | `rgb(99, 102, 241)`         |
+| `{"color": "#6366f1", "to": "hsl"}`       | `hsl(239, 84%, 67%)`        |
+| `{"color": "#6366f1", "to": "lab"}`       | `lab(50.10, 38.69, -70.49)` |
+| `{"color": "#6366f1", "to": "hct"}`       | `hct(284.6, 68.0, 50.1)`    |
+| `{"color": "#6366f1", "to": "oklch"}`     | `oklch(58.5% 0.2041 277.1)` |
+| `{"color": "rebeccapurple", "to": "hex"}` | `#663399`                   |
+
+`color_distance` measures how different two colors look (ΔE2000 by default; larger means more different):
+
+| Arguments                                    | Result                                        |
+| -------------------------------------------- | --------------------------------------------- |
+| `{"color1": "#6366f1", "color2": "#5355d1"}` | `Distance between #6366f1 and #5355d1: 7.37`  |
+| `{"color1": "#ff0000", "color2": "#00ff00"}` | `Distance between #ff0000 and #00ff00: 86.61` |
+
+## 6. Build colors from a brand color
+
+> Make a tonal scale from #6366f1
+
+`generate_tonal_scale` maps each stop to an HCT tone (stop 50 is tone 95, 500 is tone 50, 900 is tone 10) and keeps the seed's hue. `stops` is optional; the default is 50–950:
+
+```json
+{ "seed": "#6366f1", "name": "brand", "stops": [50, 100, 300, 500, 700, 900] }
 ```
 
-## CSS Theme Matching
+```text
+# Tonal scale for #6366f1
+Seed HCT: H=284.6° C=68.0 T=50.1
 
-### Finding Theme Variables
-
-Match colors to existing CSS variables:
-
-```javascript
-"Find the closest theme variable for #6365f0 in my CSS";
-// Analyzes your theme CSS and finds best match
-// Result: --color-primary-500 (99% confidence)
+| stop | tone | hex |
+|---|---|---|
+| 50 | 95 | #f2efff |
+| 100 | 90 | #e1e0ff |
+| 300 | 70 | #a0a3ff |
+| 500 | 50 | #6366f1 |
+| 700 | 30 | #3537a6 |
+| 900 | 10 | #090566 |
+…
 ```
 
-### Refactoring CSS
+The result also includes the scale as CSS variables (`--brand-50: #f2efff;` …).
 
-Automatically replace hardcoded colors:
+Interaction states come from `generate_state_colors` with `{"base": "#6366f1"}`:
 
-```javascript
-"Refactor this CSS to use theme variables:
-.button {
-  background: #6366f1;
-  border: 1px solid #4f46e5;
-}"
+```text
+# Interaction states for #6366f1 (light mode)
 
-// Result:
-.button {
-  background: var(--color-primary-500);
-  border: 1px solid var(--color-primary-600);
+| state | tone | hex | notes |
+|---|---|---|---|
+| base | 50 | #6366f1 | resting |
+| hover | 42 | #4e50dc | +/- 8 tone |
+| active | 34 | #393ac8 | +/- 16 tone |
+| pressed | 34 | #393ac8 | same as active, alias |
+| focus | 46 | #595be6 | +/- 4 tone, used as outline |
+| disabled | 70 | #acaab1 | low chroma, mid tone |
+| selected | 90 | #e1e0ff | alpha-blend friendly base |
+```
+
+For a complete system in one call, use `design_ui_palette` (light + dark UI tokens), `generate_semantic_palette` (primary to status colors) or `generate_material_theme` (Material 3 schemes). See [Agent Tools](/tools/agent-tools), [Visual Cohesion](/tools/cohesion) and [Material Design](/tools/material-design).
+
+## 7. Palettes and gradients
+
+> Give me a triadic palette from #6366f1
+
+`generate_palette`:
+
+```json
+{ "baseColor": "#6366f1", "type": "triadic", "count": 3 }
+```
+
+```text
+Generated triadic palette (HCT):
+1. #6366f1 — vibrant indigo (cool, tone 50, best text: #ffffff)
+2. #e56514 — vibrant orange (warm, tone 58, best text: #ffffff)
+3. #00724d — medium dark emerald (cool, tone 42, best text: #ffffff)
+…
+```
+
+`generate_gradient` returns `steps` colors in total, including every input color:
+
+```json
+{ "colors": ["#6366f1", "#ec4899"], "steps": 5, "interpolation": "oklch" }
+```
+
+```text
+Generated gradient with 5 steps:
+1. #6366f1
+2. #905ceb
+3. #b554d9
+4. #d34cbd
+5. #ec4899
+
+Interpolation: oklch
+Easing: linear
+Input colors: #6366f1 → #ec4899
+```
+
+More in [Palettes](/tools/palettes).
+
+## 8. Move CSS onto theme variables
+
+Pass your theme as `themeCSS`: any CSS with `--name: color;` custom properties.
+
+```css
+:root {
+  --color-primary: #6366f1;
+  --color-primary-dark: #4338ca;
+  --color-text: #111827;
+  --color-surface: #ffffff;
 }
 ```
 
-## Working with Images
+`refactor_css_with_theme` with that theme and this stylesheet as `css`:
 
-### Extract Colors
-
-Get dominant colors from images:
-
-```javascript
-"Extract the main colors from this image";
-// Analyzes image and returns:
-// - Top 5 dominant colors
-// - Population percentages
-// - Suitability scores
+```css
+.button {
+  background: #6365f0;
+  color: #fff;
+  border: 1px solid #4f46e5;
+}
+.card {
+  color: #1f2937;
+}
 ```
 
-### Generate Theme from Image
+returns (trimmed):
 
-Create a complete theme from an image:
+```text
+Refactoring Complete!
 
-```javascript
-"Create a Material Design theme from this album cover";
-// Extracts colors and generates:
-// - Source color selection
-// - Complete color scheme
-// - Light/dark variants
+Statistics:
+- Total colors found: 4
+- Colors replaced: 2
+- Average confidence: 99%
+- Accessibility issues: 2
+
+Refactored CSS:
+…
+.button {
+  background: /* #6365f0 */ var(--color-primary);
+  color: /* #fff */ var(--color-surface);
+  border: 1px solid #4f46e5;
+}
+.card {
+  color: #1f2937;
+}
+…
+- Low confidence match for #4f46e5: --color-primary-dark (69%)
+  Suggestion: Consider using --color-primary-dark or defining a new theme variable
+- No suitable theme variable found for #1f2937
+  Suggestion: Consider adding this color to your theme
 ```
 
-## Common Workflows
+Only matches at or above `minConfidence` (default 70) are replaced. With `"minConfidence": 60`, `#4f46e5` also becomes `var(--color-primary-dark)`; `#1f2937` stays as it is until you add a matching variable. Set `"preserveOriginal": false` to drop the `/* #… */` comments. See [Theme Matching](/tools/theme-matching).
 
-### 1. Building a Color System
+## 9. Colors from an image
 
-Start with a brand color and expand:
+The image tools take raw pixels, not files: `width`, `height` and a flat RGBA array of `width × height × 4` integers (0–255), at most 65 536 pixels. Downscale larger images first (256×256 fits).
 
-```javascript
-// Step 1: Define primary color
-"My brand color is #6366f1";
+This 4×4 image has 8 violet, 4 coral and 4 white pixels:
 
-// Step 2: Generate palette
-"Create a complete color system from this";
-
-// Step 3: Check accessibility
-"Verify all color combinations meet WCAG AA";
-
-// Step 4: Export as CSS
-"Generate CSS custom properties for this theme";
+```json
+{
+  "imageData": {
+    "width": 4,
+    "height": 4,
+    "data": [103, 80, 164, 255, 103, 80, 164, 255, …, 255, 255, 255, 255]
+  },
+  "maxColors": 3,
+  "format": "css"
+}
 ```
 
-### 2. Migrating to Theme Variables
+`extract_image_colors` returns:
 
-Convert existing CSS to use variables:
-
-```javascript
-// Step 1: Define your theme
-"Here's my theme CSS: [paste theme]";
-
-// Step 2: Analyze existing styles
-"Find all hardcoded colors in styles.css";
-
-// Step 3: Refactor automatically
-"Replace hardcoded colors with theme variables";
-
-// Step 4: Review changes
-"Show me colors that couldn't be matched";
+```text
+:root {
+  --extracted-color-1: #6750a4; /* 66.7% */
+  --extracted-color-2: #ff6b6b; /* 33.3% */
+}
+…
 ```
 
-### 3. Creating Accessible Designs
+`generate_theme_from_image` turns the same pixels into a Material 3 theme with `#6750a4` as the primary color. See [Image Extraction](/tools/image-extraction).
 
-Ensure your colors meet standards:
+## 10. Audit a DESIGN.md
 
-```javascript
-// Step 1: Test current colors
-"Check contrast for my primary colors";
+`audit_design_md` takes the full text of a [DESIGN.md](https://github.com/google-labs-code/design.md) file:
 
-// Step 2: Fix issues
-"Adjust colors to meet WCAG AA";
-
-// Step 3: Generate alternatives
-"Create high contrast version of theme";
-
-// Step 4: Validate
-"Verify all combinations are accessible";
+```json
+{
+  "designMd": "---\nname: Acme\ncolors:\n  primary: \"#cc785c\"\n  on-primary: \"#ffffff\"\n---\n"
+}
 ```
 
-## Advanced Features
+```text
+# DESIGN.md color audit
 
-### Color Harmonization
+Color tokens: 2 (2 audited, 0 not audited) · Contrast pairs: 1 (0 declared, 1 inferred) · Failing: 1 · CVD collisions: 0 · Duplicates: 0 exact, 0 near
 
-Make multiple colors work together:
+## Contrast
 
-```javascript
-"Harmonize these colors: #6366f1, #ec4899, #10b981";
-// Adjusts colors to be more harmonious while maintaining identity
+| text / element | on background | source | WCAG | needs | APCA Lc | result | suggested fix |
+|---|---|---|---|---|---|---|---|
+| `on-primary` #ffffff | `primary` #cc785c | inferred · on-X ↔ X | 3.28:1 | 4.5:1 (text) | -65.3 | ✗ | on-primary → `#262829` (4.52:1) |
+…
 ```
 
-### Dislike Detection
+See [DESIGN.md Audit](/tools/design-md).
 
-Avoid universally disliked colors:
+## When something goes wrong
 
-```javascript
-"Is #6b7c3a a good color for UI?";
-// Detects "bile zone" colors and suggests alternatives
+Bad input comes back as a tool result with `isError: true` and a readable message, so the assistant can correct itself and retry:
+
+- `convert_color` with `{"color": "nope", "to": "hex"}` returns `Invalid color format: nope`.
+- `convert_color` with `{"color": "#6750a4", "to": "cmyk"}` returns:
+
+```text
+Invalid arguments for tool 'convert_color': to: Invalid option: expected one of "hex"|"rgb"|"hsl"|"lab"|"hct"|"oklab"|"oklch"
 ```
 
-### Batch Processing
+More in [Troubleshooting](/resources/troubleshooting).
 
-Process multiple colors efficiently:
+## Next steps
 
-```javascript
-"Match all these colors to my theme: [list of colors]";
-// Processes all colors and returns best matches
-```
-
-## Tips and Tricks
-
-### Performance
-
-- **Resize images** before extraction (300px width is usually enough)
-- **Cache theme variables** when doing multiple matches
-- **Use batch operations** when processing multiple colors
-
-### Accuracy
-
-- **Use HCT** for perceptual operations
-- **Use LAB** for color matching
-- **Use RGB/Hex** for final output
-
-### Accessibility
-
-- **Always check contrast** for text/background pairs
-- **Provide high contrast options** for users who need them
-- **Don't rely on color alone** to convey information
-
-## Next Steps
-
-### Learn More
-
-- [Color Spaces](concepts/color-spaces.md) - Understand different color models
-- [HCT System](concepts/hct.md) - Google's perceptual color space
-- [Material Design](concepts/material-design.md) - Complete theming system
-- [Accessibility](concepts/accessibility.md) - WCAG compliance
-
-### Explore Tools
-
-- [Color Operations](tools/color-operations.md) - All conversion tools
-- [Material Design Tools](tools/material-design.md) - Theme generation
-- [Theme Matching](tools/theme-matching.md) - CSS refactoring
-- [Image Extraction](tools/image-extraction.md) - Working with images
-
-### See Examples
-
-- [Basic Colors](examples/basic-colors.md) - Simple operations
-- [Creating Themes](examples/creating-themes.md) - Theme generation
-- [CSS Refactoring](examples/css-refactoring.md) - Modernizing CSS
-- [Image Extraction](examples/image-extraction.md) - Image-based themes
-
-## Getting Help
-
-### Common Issues
-
-#### "Tool not found"
-
-Make sure Coolors MCP is properly installed and Claude has been restarted.
-
-#### "Invalid color format"
-
-Check that your color is in a supported format: hex (#RRGGBB), rgb(), hsl(), etc.
-
-#### "No theme matches found"
-
-Lower the confidence threshold or add more theme variables.
-
-### Support
-
-- **GitHub Issues**: [Report bugs](https://github.com/x51xxx/coolors-mcp/issues)
-- **Documentation**: [Full docs](https://x51xxx.github.io/coolors-mcp/)
-- **Examples**: [Code samples](examples/basic-colors.md)
-
-## Quick Reference
-
-### Supported Color Formats
-
-- **Hex**: `#RRGGBB` or `#RGB`
-- **RGB**: `rgb(r, g, b)` or `{r, g, b}`
-- **HSL**: `hsl(h, s%, l%)` or `{h, s, l}`
-- **LAB**: `lab(l, a, b)` or `{l, a, b}`
-- **HCT**: `hct(h, c, t)` or `{h, c, t}`
-
-### Common Tools
-
-- `convert_color` - Format conversion
-- `color_distance` - Perceptual difference
-- `check_contrast` - WCAG compliance
-- `generate_palette` - Color schemes
-- `generate_material_theme` - Material Design
-- `match_theme_color` - Find CSS variables
-- `refactor_css_with_theme` - Update CSS
-- `extract_image_colors` - Image analysis
-
-### Contrast Requirements
-
-- **Normal text**: 4.5:1 (AA), 7:1 (AAA)
-- **Large text**: 3:1 (AA), 4.5:1 (AAA)
-- **UI elements**: 3:1 (AA)
-
-Ready to start? Try your first color operation above!
+- [Tools Overview](/tools/README): all 31 tools, limits and color formats
+- [HCT](/concepts/hct): the color space behind themes, scales and fixes
+- [Accessibility](/concepts/accessibility): WCAG 2.x, APCA and color-vision deficiency
+- [Changelog](/changelog): what changed in each release

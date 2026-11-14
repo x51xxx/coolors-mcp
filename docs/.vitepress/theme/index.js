@@ -2,7 +2,6 @@ import DefaultTheme from "vitepress/theme";
 import Layout from "./Layout.vue";
 import FundingLayout from "./FundingLayout.vue";
 import DiagramModal from "../components/DiagramModal.vue";
-import CodeBlock from "../components/CodeBlock.vue";
 import ClientGrid from "../components/ClientGrid.vue";
 import "./custom.css";
 import "./custom-app.css";
@@ -12,7 +11,6 @@ export default {
   Layout: Layout,
   enhanceApp({ app, router }) {
     app.component("DiagramModal", DiagramModal);
-    app.component("CodeBlock", CodeBlock);
     app.component("ClientGrid", ClientGrid);
     app.component("FundingLayout", FundingLayout);
   },

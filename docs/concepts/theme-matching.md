@@ -1,423 +1,206 @@
 # Theme Matching Algorithm
 
-Coolors MCP provides sophisticated algorithms for matching colors to CSS theme variables, enabling automated refactoring and consistent theming across applications.
+`match_theme_color`, `match_theme_colors_batch` and `refactor_css_with_theme` map hard-coded colors to the custom properties of a theme. This page describes how they do it (`src/theme/parser.ts`, `matcher.ts`, `refactor.ts`), including where the method breaks down. Parameters are in [Theme Matching tools](/tools/theme-matching).
 
-## Overview
+## 1. Reading the theme (`themeCSS`)
 
-The theme matching system analyzes CSS variables and finds the best matches for any given color based on multiple factors:
+The parser scans the whole string for `--name: value;` declarations:
 
-- **Perceptual similarity** using HCT color space
-- **Semantic context** from variable naming
-- **Accessibility constraints** for contrast requirements
-- **Confidence scoring** for replacement decisions
+- **Selector scope is ignored.** Variables in `:root`, `.dark`, `@media` blocks and so on are all collected, so light and dark definitions are candidates side by side.
+- **Only opaque colors count**, in any [supported syntax](/concepts/color-spaces#accepted-input): hex, named colors, `rgb()`, `hsl()`, `oklch()`, `oklab()`, `hct()`. Translucent values (`rgba(0, 0, 0, 0.3)`, `#0000004d`) are skipped.
+- **Numbers are not colors.** `--z: 999999;` or `--weight: 600;` are not read as bare hex.
+- **`var()` aliases are not resolved.** `--accent: var(--color-primary);` is ignored.
+- If no color variable is found, the tool returns an error result (`isError: true`):
 
-## How It Works
-
-### 1. CSS Variable Parsing
-
-The system first extracts and analyzes CSS variables:
-
-```css
-/* Input CSS with theme variables */
-:root {
-  --color-primary-50: #eef2ff;
-  --color-primary-500: #6366f1;
-  --color-primary-900: #312e81;
-  --color-surface: #ffffff;
-  --color-text: #1f2937;
-}
+```text
+themeCSS contains no CSS custom properties with color values (expected e.g. `:root { --color-primary: #6750a4; }`).
 ```
 
-### 2. Semantic Role Detection
+Each variable is converted to HCT and gets a **semantic role** from the first substring its name contains, checked in this order:
 
-Variable names are analyzed to detect semantic roles:
+| Substring in the name | Role       |
+| --------------------- | ---------- |
+| `primary`             | primary    |
+| `secondary`           | secondary  |
+| `tertiary`            | tertiary   |
+| `error`, `danger`     | error      |
+| `neutral`, `gray`     | neutral    |
+| `surface`             | surface    |
+| `background`, `bg`    | background |
+| `outline`, `border`   | outline    |
+| `shadow`              | shadow     |
 
-| Pattern                     | Detected Role | Usage Context     |
-| --------------------------- | ------------- | ----------------- |
-| `*primary*`                 | Primary       | Main brand color  |
-| `*secondary*`               | Secondary     | Supporting color  |
-| `*surface*`, `*background*` | Surface       | Backgrounds       |
-| `*text*`, `*foreground*`    | Text          | Typography        |
-| `*border*`, `*outline*`     | Outline       | Borders, dividers |
-| `*error*`, `*danger*`       | Error         | Error states      |
-| `*success*`                 | Success       | Success states    |
-| `*warning*`                 | Warning       | Warning states    |
+First match wins, so `--color-on-primary` is a _primary_ variable and `--surface-border` a _surface_ one. There are no text, success, warning or info roles; such variables are still matched by color, just without a role.
 
-### 3. Multi-Factor Scoring
+## 2. HCT distance
 
-Each potential match is scored based on multiple factors:
+Candidates are compared with a weighted distance in [HCT](/concepts/hct), not with ΔE:
 
-#### Perceptual Distance (60% weight)
+```text
+Δh = circular hue difference (0–180°) / 180
+Δc = |chroma₁ − chroma₂| / 120
+Δt = |tone₁ − tone₂| / 100
 
-Using HCT color space for accurate perception:
-
-```javascript
-function calculatePerceptualDistance(color1, color2) {
-  const hct1 = toHct(color1);
-  const hct2 = toHct(color2);
-
-  // Weighted distance (tone weighted 2x for UI importance)
-  return Math.sqrt(
-    Math.pow(hct1.hue - hct2.hue, 2) +
-      Math.pow(hct1.chroma - hct2.chroma, 2) +
-      Math.pow((hct1.tone - hct2.tone) * 2, 2),
-  );
-}
+distance = 100 × √( Δh² + Δc² + (2·Δt)² )
 ```
 
-#### Semantic Context (20% weight)
+On this scale, 1 tone step adds 2 units, 1° of hue ≈ 0.56 and 1 chroma unit ≈ 0.83. A candidate is dropped if its distance exceeds the limit for the usage context:
 
-Matching semantic roles improves accuracy:
+| Context      | Max distance |
+| ------------ | ------------ |
+| `text`       | 10           |
+| `background` | 15           |
+| `accent`     | 15           |
+| `border`     | 20           |
+| `shadow`     | 25           |
+| `decorative` | 30           |
+| none         | 30           |
 
-```javascript
-function calculateSemanticScore(colorRole, variableRole, usage) {
-  // Perfect match
-  if (colorRole === variableRole) return 1.0;
+`match_theme_color` and `match_theme_colors_batch` take the context from the `context` parameter. `refactor_css_with_theme` infers it from each declaration's property (see below).
 
-  // Compatible roles
-  if (isCompatible(colorRole, variableRole, usage)) return 0.7;
+## 3. Score
 
-  // Incompatible
-  return 0.3;
-}
+Each remaining candidate gets a score:
+
+```text
+score = 0.6 × perceptual + 0.2 × semantic + 0.2 × accessibility
+perceptual = (100 − distance) / 100
 ```
 
-#### Accessibility Score (20% weight)
+**Semantic** — a variable without a role always scores 0.5, and so does every candidate when no context is given:
 
-Ensuring contrast requirements are met:
+| Context      | Semantic score                             |
+| ------------ | ------------------------------------------ |
+| `accent`     | 1.0 for primary/secondary, else 0.5        |
+| `background` | 1.0 for surface/background, else 0.3       |
+| `border`     | 1.0 for outline, 0.4 for neutral, else 0.2 |
+| `shadow`     | 1.0 for shadow, else 0.3                   |
+| `text`       | 0.8 for neutral/surface, else 0.5          |
+| `decorative` | 0.7 for any role                           |
 
-```javascript
-function calculateAccessibilityScore(color, background, requiredRatio) {
-  const actualRatio = getContrastRatio(color, background);
+**Accessibility** looks at the candidate's tone only: for `text`, 1.0 if tone < 30 or > 70, else 0.3; for `background`, 1.0 if tone ≥ 90 or ≤ 10, else 0.5; 0.5 for every other context.
 
-  if (actualRatio >= requiredRatio) {
-    return 1.0; // Meets requirements
-  }
+The highest score wins; up to three runners-up are listed as alternatives.
 
-  // Partial credit based on how close
-  return actualRatio / requiredRatio;
-}
+## 4. Confidence
+
+```text
+distance < 0.5  → 100
+distance < 1    → 98
+distance < 2    → 95
+otherwise       → round(( max(0, 100 − 2·distance) + 100·score ) / 2)
 ```
 
-### 4. Confidence Calculation
+Without a context this works out to about **90 − 1.3 × distance** for distances of 2 or more, so the default `minConfidence: 70` accepts distances up to roughly 15.
 
-Final confidence score determines replacement:
+Example with the theme `--color-primary: #6750a4` and no context: `#6a52a8` (HCT 299.2 / 48.6 / 41.1 against 299.0 / 47.9 / 40.1) is at distance 2.13:
 
-```javascript
-confidence =
-  (perceptualScore * 0.6 + semanticScore * 0.2 + accessibilityScore * 0.2) *
-  100;
+```text
+Best Match:
+Variable: --color-primary
+Value: #6750a4
+Distance: 2.13
+Confidence: 87%
+Semantic Role: primary
 ```
 
-## Matching Strategies
+For the `text` and `background` contexts, `match_theme_color` also prints accessibility info. This is the matched variable's highest WCAG contrast against the theme's own "typical" backgrounds (surface variables with tone ≥ 90 or ≤ 10, all background variables, neutral variables with tone ≥ 95 or ≤ 5) and "typical" foregrounds (neutral variables with tone 20–40 or 60–80, surface variables with tone 10–30). It is a heuristic about the theme, not a check of the declaration being replaced.
 
-### Exact Matching
+## 5. Refactoring CSS
 
-For colors that exactly match a theme variable:
+`refactor_css_with_theme` walks the stylesheet once and only looks at **declaration values**:
 
-- **Confidence**: 100%
-- **Action**: Direct replacement
-- **Example**: `#6366f1` → `var(--color-primary-500)`
+- It skips selectors (`#cafe {` is never touched), comments, quoted strings and `url(...)`.
+- It skips custom-property definitions (`--x: …`), so the theme itself is never rewritten into self-references.
+- It finds hex colors (3/4/6/8 digits) and `rgb()`/`rgba()`/`hsl()`/`hsla()`/`oklch()`/`oklab()` functions. **Named colors (`white`) and `hct()` in stylesheets are not rewritten.**
+- Translucent colors are left unchanged, with a warning.
 
-### Nearest Neighbor
+The context comes from the property:
 
-For colors close to theme variables:
+| Property                                                                                               | Context      |
+| ------------------------------------------------------------------------------------------------------ | ------------ |
+| `color`                                                                                                | `text`       |
+| `background`, `background-color`                                                                       | `background` |
+| `border`, `border-color`, `border-{top,right,bottom,left}-color`, `outline`, `outline-color`, `stroke` | `border`     |
+| `box-shadow`, `text-shadow`                                                                            | `shadow`     |
+| `fill`, `stop-color`                                                                                   | `decorative` |
+| anything else                                                                                          | none         |
 
-- **Confidence**: 70-99%
-- **Action**: Replace with warning
-- **Example**: `#6365f0` → `var(--color-primary-500)` (99% confidence)
+The scoring weights also change per declaration: perceptual 0.6; semantic 0.3 when a context is known (else 0.2); accessibility 0.3 for `text`/`background` (else 0.1).
 
-### Semantic Matching
+These weights add up to 1.2 for `text` and `background`, so the raw score can exceed 1; the reported confidence is clamped to 0–100%.
 
-For colors matching expected roles:
+With `preserveOriginal: true` (the default) each replacement keeps the old value as a comment, and a summary comment is added at the top. Real run:
 
-- **Confidence**: 60-90%
-- **Action**: Context-aware replacement
-- **Example**: Border color `#e5e7eb` → `var(--color-border)`
-
-### Fallback Matching
-
-When no good matches exist:
-
-- **Confidence**: <60%
-- **Action**: Keep original or create new variable
-- **Example**: `#123456` → `/* No match: #123456 */`
-
-## Usage Examples
-
-### Single Color Matching
-
-```javascript
-// Find best theme variable for a color
+```json
 {
-  "name": "match_theme_color",
-  "arguments": {
-    "color": "#6366f1",
-    "themeCSS": ":root { --color-primary: #6366f1; }",
-    "context": "background",
-    "minConfidence": 70
-  }
-}
-
-// Response
-{
-  "match": "--color-primary",
-  "confidence": 100,
-  "originalColor": "#6366f1",
-  "themeColor": "#6366f1",
-  "distance": 0
+  "themeCSS": ":root {\n  --color-primary: #6750a4;\n  --color-on-primary: #ffffff;\n  --color-surface: #fffbff;\n  --color-on-surface: #1c1b1e;\n  --color-outline: #7a757f;\n}",
+  "css": "/* #6750a4 in a comment is ignored */\n.button {\n  background: #6750a4;\n  color: #ffffff;\n  border: 1px solid #7d7880;\n  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);\n}"
 }
 ```
 
-### CSS Refactoring
+```text
+Refactoring Complete!
 
-```javascript
-// Refactor entire CSS file
-{
-  "name": "refactor_css_with_theme",
-  "arguments": {
-    "css": ".button { background: #6366f1; color: #ffffff; }",
-    "themeCSS": ":root { --primary: #6366f1; --white: #ffffff; }",
-    "minConfidence": 70,
-    "preserveOriginal": true
-  }
-}
+Statistics:
+- Total colors found: 4
+- Colors replaced: 3
+- Average confidence: 98%
+- Accessibility issues: 0
 
-// Result
+Refactored CSS:
+----------------------------------------
+/* CSS Refactored with Theme Variables
+ * Total colors found: 4
+ * Colors replaced: 3
+ * Average confidence: 98%
+ * Warnings: 1
+ */
+
+/* #6750a4 in a comment is ignored */
 .button {
-  background: var(--primary); /* was: #6366f1 */
-  color: var(--white); /* was: #ffffff */
+  background: /* #6750a4 */ var(--color-primary);
+  color: /* #ffffff */ var(--color-on-primary);
+  border: 1px solid /* #7d7880 */ var(--color-outline);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
+----------------------------------------
+
+Warnings (1):
+- Translucent color rgba(0, 0, 0, 0.3) (alpha 0.3) left unchanged — theme variables are opaque
+  Suggestion: Define a dedicated translucent token (e.g. a scrim/overlay variable) if this value repeats
 ```
 
-### Batch Processing
+With `preserveOriginal: false` the value becomes a bare `var(--…)` and no comments are added.
 
-```javascript
-// Match multiple colors at once
-{
-  "name": "match_theme_colors_batch",
-  "arguments": {
-    "colors": ["#6366f1", "#ec4899", "#10b981"],
-    "themeCSS": "/* theme variables */",
-    "context": "accent"
-  }
-}
+## 6. Batch matching
+
+`match_theme_colors_batch` runs the same matcher for up to 50 colors with one shared `context`. It has **no `minConfidence`**: any candidate within the context's max distance is reported, with its confidence. Invalid colors are reported per entry instead of failing the call (theme: `--color-on-primary: #ffffff; --color-primary: #6750a4;`):
+
+```text
+Theme Color Matches:
+
+#6750a4 → --color-primary (100%)
+#ffffff → --color-on-primary (100%)
+nope → ✗ invalid color format
+#00ff00 → No match found
+
+Summary:
+- Matched: 2/4
+- Average confidence: 100%
 ```
 
-## Advanced Features
+## Limitations
 
-### Context-Aware Matching
-
-Different contexts have different priorities:
-
-| Context      | Priority                    | Factors            |
-| ------------ | --------------------------- | ------------------ |
-| `text`       | Contrast > Semantic > Color | Readability first  |
-| `background` | Color > Semantic > Contrast | Visual accuracy    |
-| `border`     | Semantic > Color > Contrast | Structural meaning |
-| `accent`     | Color > Contrast > Semantic | Brand consistency  |
-| `decorative` | Color > Semantic > Contrast | Visual appeal      |
-
-### Threshold Configuration
-
-Fine-tune matching behavior:
-
-```javascript
-{
-  minConfidence: 70,        // Minimum confidence for replacement
-  maxDistance: 10,          // Maximum perceptual distance
-  requireAccessibility: true, // Enforce contrast requirements
-  preserveOriginal: true    // Keep original as comment
-}
-```
-
-### Smart Variable Creation
-
-When no match exists above threshold:
-
-```javascript
-// Input: #123456 with no close match
-// Output:
-:root {
-  --color-custom-1: #123456; /* Auto-generated */
-}
-
-.element {
-  color: var(--color-custom-1);
-}
-```
-
-## Implementation Details
-
-### Parser Architecture
-
-1. **Tokenization**: Break CSS into tokens
-2. **AST Building**: Create abstract syntax tree
-3. **Variable Extraction**: Find all custom properties
-4. **Color Detection**: Identify color values
-5. **Context Analysis**: Determine usage context
-
-### Matching Pipeline
-
-```
-Input Color → HCT Conversion → Distance Calculation
-                                        ↓
-Final Match ← Confidence Score ← Multi-Factor Analysis
-                                        ↑
-                              Semantic & Accessibility
-```
-
-### Performance Optimization
-
-- **Caching**: Theme variables cached after first parse
-- **Indexing**: Pre-computed HCT values for all theme colors
-- **Batching**: Process multiple colors in single pass
-- **Early Exit**: Skip processing if exact match found
-
-## Best Practices
-
-### Theme Variable Naming
-
-Use semantic, hierarchical naming:
-
-```css
-/* Good - Clear hierarchy and purpose */
---color-primary-50
---color-primary-500
---color-primary-900
---color-text-primary
---color-text-secondary
-
-/* Avoid - Ambiguous or color-specific */
---blue
---light-blue
---text-color
---col1
-```
-
-### Confidence Thresholds
-
-Recommended thresholds by use case:
-
-| Use Case            | Min Confidence | Rationale              |
-| ------------------- | -------------- | ---------------------- |
-| Production refactor | 85%            | High accuracy needed   |
-| Development assist  | 70%            | Balance speed/accuracy |
-| Exploration         | 50%            | See all possibilities  |
-| Exact only          | 100%           | No false positives     |
-
-### Handling Edge Cases
-
-#### Very Similar Colors
-
-```css
-/* Original */
-.element1 {
-  color: #6366f1;
-}
-.element2 {
-  color: #6366f0;
-}
-
-/* After matching - both map to same variable */
-.element1 {
-  color: var(--color-primary);
-}
-.element2 {
-  color: var(--color-primary);
-}
-```
-
-#### No Good Matches
-
-```css
-/* Original */
-.special {
-  background: #742a2a;
-}
-
-/* After - preserved with comment */
-.special {
-  background: #742a2a; /* No theme match (confidence: 45%) */
-}
-```
-
-## Integration Patterns
-
-### Build Tools
-
-```javascript
-// Webpack plugin example
-module.exports = {
-  plugins: [
-    new ThemeMatcherPlugin({
-      themeFile: "./theme.css",
-      minConfidence: 80,
-      generateReport: true,
-    }),
-  ],
-};
-```
-
-### CI/CD Pipeline
-
-```yaml
-# GitHub Actions example
-- name: Refactor CSS with Theme
-  run: |
-    coolors-mcp refactor \
-      --input src/styles \
-      --theme src/theme.css \
-      --confidence 85 \
-      --report
-```
-
-### IDE Extensions
-
-```javascript
-// VS Code extension config
-"coolors.themeMatching": {
-  "enabled": true,
-  "themeFile": "${workspaceFolder}/theme.css",
-  "minConfidence": 75,
-  "showInlineHints": true
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Low Confidence Scores
-
-- **Cause**: Colors too different from theme
-- **Solution**: Lower threshold or add more theme variables
-
-#### Wrong Semantic Matches
-
-- **Cause**: Ambiguous variable names
-- **Solution**: Use clearer naming conventions
-
-#### Accessibility Failures
-
-- **Cause**: Insufficient contrast with background
-- **Solution**: Adjust theme colors or use different variables
-
-### Debugging
-
-Enable detailed logging:
-
-```javascript
-{
-  "generateReport": true,
-  "verboseLogging": true,
-  "showDistanceMatrix": true
-}
-```
+- **Near-greys and the hue term.** The distance always includes the full hue term, even when chroma is close to zero and hue is meaningless. `#1f1f1f` is HCT 209.5 / 0.9 / 11.8; `--color-on-surface: #1c1b1e` is 293.5 / 3.5 / 10.0. Their ΔE2000 is only 2.76, but the 84° hue gap alone adds about 47 units, so `match_theme_color` with `context: "text"` returns `No matching theme variable found`.
+- **Roles come from names**, by first substring (`--color-on-primary` is "primary").
+- **No `var()` resolution and no selector awareness.** A color can match a dark-mode variable.
+- **Opaque colors only**, in the theme and in the CSS.
+- **Accessibility info and warnings are heuristics** about the theme's variables (see section 4), not contrast checks of the rewritten declarations.
+- **Nothing is created.** Unmatched colors are left in place with a warning; no new variables are generated.
 
 ## See Also
 
-- [Color Spaces](./color-spaces.md) - Understanding color models
-- [HCT System](./hct.md) - Perceptual color space
-- [Accessibility](./accessibility.md) - Contrast requirements
-- [Material Design](./material-design.md) - Theme generation
+- [HCT Color System](/concepts/hct) — what hue, chroma and tone mean here
+- [Distance Metrics](/concepts/distance-metrics) — ΔE metrics for comparison
+- [Theme Matching tools](/tools/theme-matching) — parameters and more examples

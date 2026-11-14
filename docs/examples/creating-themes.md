@@ -1,894 +1,386 @@
 # Creating Themes Examples
 
-Learn how to create comprehensive color themes using Material Design 3 principles and Coolors MCP's advanced theme generation tools.
+How to go from one brand color to a complete, checked color theme: Material Design 3 schemes, CSS custom properties, a light + dark UI token set, and exports. Every result is real output from the current server; long results are trimmed with `…`.
 
-## Quick Start
+## Material Design 3 Theme
 
-### Generate from a Single Color
+> "Generate a Material Design 3 theme from #6366f1."
 
-```javascript
-// Create a complete theme from one color
-"Generate a Material Design theme from #6366f1";
+Tool call: `generate_material_theme { "sourceColor": "#6366f1" }`
 
-// Result: Complete light and dark schemes with:
-// - Primary, secondary, tertiary, neutral, error palettes
-// - Surface colors with elevation levels
-// - Semantic color roles
-// - Accessible color pairs
+```text
+Material Design 3 Theme
+Source Color: #6366f1
+
+LIGHT THEME:
+  background: #fffbff
+  error: #ba1a1a
+  errorContainer: #ffdad6
+  onBackground: #1c1b1f
+  onError: #ffffff
+  onErrorContainer: #410002
+  onPrimary: #ffffff
+  onPrimaryContainer: #07006c
+  onSecondary: #ffffff
+  onSecondaryContainer: #191a2c
+  onSurface: #1c1b1f
+  onSurfaceVariant: #46464f
+  onTertiary: #ffffff
+  onTertiaryContainer: #2e1125
+  outline: #777680
+  primary: #494bd6
+  primaryContainer: #e1e0ff
+  secondary: #5d5c72
+  secondaryContainer: #e2e0f9
+  surface: #fffbff
+  surfaceVariant: #e4e1ec
+  tertiary: #795369
+  tertiaryContainer: #ffd8ec
+
+DARK THEME:
+  background: #1c1b1f
+  error: #ffb4ab
+  errorContainer: #93000a
+  onBackground: #e5e1e6
+  onError: #690005
+  onErrorContainer: #ffdad6
+  onPrimary: #1000a9
+  onPrimaryContainer: #e1e0ff
+  onSecondary: #2e2f42
+  onSecondaryContainer: #e2e0f9
+  onSurface: #e5e1e6
+  onSurfaceVariant: #c8c5d0
+  onTertiary: #46263a
+  onTertiaryContainer: #ffd8ec
+  outline: #918f9a
+  primary: #c0c1ff
+  primaryContainer: #2f2ebe
+  secondary: #c6c4dd
+  secondaryContainer: #454559
+  surface: #1c1b1f
+  surfaceVariant: #46464f
+  tertiary: #e9b9d3
+  tertiaryContainer: #5f3c51
 ```
 
-### Generate from an Image
+Things to know when reading this output:
 
-```javascript
-// Extract colors and create theme
-"Generate a theme from this logo image";
+- `primary` is **not** the source color. It is tone 40 of the source hue (`#494bd6`) in light mode and tone 80 (`#c0c1ff`) in dark mode. `#6366f1` itself is tone 50 of the same palette.
+- Secondary is the source hue at low chroma (16), tertiary is rotated 60° (chroma 24), and neutrals are lightly tinted with the source hue. See [Material Design](/concepts/material-design).
+- These are the only roles. There are no surface-container, `outlineVariant`, inverse, shadow or scrim roles, and the tool has no `variant` or `contrastLevel` options.
 
-// Process:
-// 1. Extracts dominant colors using Celebi algorithm
-// 2. Scores colors for UI suitability
-// 3. Generates harmonious Material Design theme
-// 4. Provides both light and dark modes
+Passing `"includeCustomColors": true` adds tonal palette lines at the end of the same output:
+
+```text
+…
+TONAL PALETTES:
+Primary: #000000, #07006c, #1000a9, #2f2ebe, #494bd6, #6366f1, #8083ff, #a0a3ff, #c0c1ff, #e1e0ff, #f2efff, #fffbff, #ffffff
+Secondary: #5d5c72, #c6c4dd
+Tertiary: #795369, #e9b9d3
 ```
 
-## Complete Theme Examples
+## Theme as CSS Custom Properties
 
-### Brand Theme Creation
+> "Give me the theme as CSS variables with a `theme` prefix. I only need tones 10, 40 and 90."
 
-Starting with brand colors to create a full design system:
+Tool call: `generate_theme_css { "sourceColor": "#6366f1", "prefix": "theme", "includeTones": [10, 40, 90] }`
 
-```javascript
-// Brand colors
-const brandColors = {
-  primary: "#6366f1",    // Indigo
-  secondary: "#ec4899",  // Pink
-  accent: "#10b981"      // Emerald
-};
-
-// Generate Material Design 3 theme
-const theme = generateMaterialTheme({
-  sourceColor: brandColors.primary,
-  customColors: [
-    { name: "brand", color: brandColors.primary },
-    { name: "accent", color: brandColors.accent }
-  ]
-});
-
-// Result structure
-{
-  schemes: {
-    light: {
-      // Primary colors
-      primary: "#5256c9",
-      onPrimary: "#ffffff",
-      primaryContainer: "#e0e0ff",
-      onPrimaryContainer: "#070764",
-
-      // Secondary colors
-      secondary: "#5d5d72",
-      onSecondary: "#ffffff",
-      secondaryContainer: "#e2e0f9",
-      onSecondaryContainer: "#1a1b2e",
-
-      // Tertiary colors
-      tertiary: "#79536a",
-      onTertiary: "#ffffff",
-      tertiaryContainer: "#ffd8ec",
-      onTertiaryContainer: "#2e1125",
-
-      // Surface colors
-      surface: "#fffbff",
-      onSurface: "#1b1b1f",
-      surfaceVariant: "#e4e1ec",
-      onSurfaceVariant: "#46464f",
-
-      // Additional roles
-      outline: "#777680",
-      outlineVariant: "#c7c5d0",
-      shadow: "#000000",
-      scrim: "#000000",
-      inverseSurface: "#303034",
-      inverseOnSurface: "#f2eff4",
-      inversePrimary: "#bfc1ff"
-    },
-    dark: {
-      // Dark theme colors...
-    }
-  },
-  palettes: {
-    primary: { /* Tonal palette 0-100 */ },
-    secondary: { /* Tonal palette 0-100 */ },
-    tertiary: { /* Tonal palette 0-100 */ },
-    neutral: { /* Tonal palette 0-100 */ },
-    neutralVariant: { /* Tonal palette 0-100 */ },
-    error: { /* Tonal palette 0-100 */ }
-  },
-  customColors: [
-    {
-      name: "brand",
-      light: { /* Custom color light scheme */ },
-      dark: { /* Custom color dark scheme */ }
-    }
-  ]
-}
-```
-
-### Application Themes
-
-#### SaaS Dashboard Theme
-
-```javascript
-// Professional dashboard colors
-const dashboardTheme = {
-  sourceColor: "#2563eb", // Blue
-  variant: "neutral", // Minimal color variation
-  contrastLevel: 0, // Standard contrast
-};
-
-// Generated theme emphasizes:
-// - Professional appearance
-// - High readability
-// - Clear hierarchy
-// - Subtle color usage
-
-const result = {
-  light: {
-    // Main UI
-    surface: "#fffbff",
-    surfaceContainer: "#f5f5f5",
-    surfaceContainerHigh: "#ebebeb",
-
-    // Navigation
-    primary: "#2563eb",
-    primaryContainer: "#dce4ff",
-
-    // Data visualization
-    chart1: "#2563eb",
-    chart2: "#10b981",
-    chart3: "#f59e0b",
-    chart4: "#ef4444",
-
-    // Status colors
-    success: "#10b981",
-    warning: "#f59e0b",
-    error: "#ef4444",
-    info: "#3b82f6",
-  },
-};
-```
-
-#### E-commerce Theme
-
-```javascript
-// Vibrant shopping experience
-const ecommerceTheme = {
-  sourceColor: "#ec4899", // Pink
-  variant: "vibrant", // Higher chroma
-  contrastLevel: 0.5, // Medium contrast
-};
-
-// Features:
-// - Engaging, energetic colors
-// - Clear CTAs
-// - Product emphasis
-// - Sale/promotion support
-
-const shopTheme = {
-  light: {
-    // Product cards
-    surface: "#fffbff",
-    surfaceVariant: "#ffeef6",
-
-    // CTAs
-    buyButton: "#ec4899",
-    onBuyButton: "#ffffff",
-
-    // Promotions
-    saleBadge: "#ef4444",
-    newBadge: "#10b981",
-
-    // Reviews
-    starActive: "#f59e0b",
-    starInactive: "#e5e7eb",
-  },
-};
-```
-
-#### Music Player Theme
-
-```javascript
-// Dynamic album-based theming
-async function createMusicTheme(albumArtUrl) {
-  // Extract colors from album art
-  const imageColors = await extractImageColors(albumArtUrl);
-
-  // Generate theme from dominant color
-  const theme = await generateThemeFromImage({
-    imageData: imageColors,
-    variant: "expressive", // Creative combinations
-    contrastLevel: 0,
-  });
-
-  return {
-    // Player background (dark for immersion)
-    playerBg: theme.dark.surface,
-
-    // Controls
-    playButton: theme.dark.primary,
-    controls: theme.dark.onSurface,
-
-    // Progress bar
-    progressBar: theme.dark.primary,
-    progressBg: theme.dark.surfaceVariant,
-
-    // Album info
-    artistName: theme.dark.onSurface,
-    songTitle: theme.dark.onSurfaceVariant,
-
-    // Visualizer colors
-    visualizer: [theme.dark.primary, theme.dark.secondary, theme.dark.tertiary],
-  };
-}
-```
-
-### Design System Creation
-
-#### Complete Design System
-
-```javascript
-// Foundation color
-const systemFoundation = "#6366f1";
-
-// Generate comprehensive system
-const designSystem = {
-  // Core palettes
-  palettes: generateTonalPalettes(systemFoundation),
-
-  // Semantic colors
-  semantic: {
-    // Actions
-    action: {
-      primary: "#6366f1",
-      secondary: "#8b92ff",
-      disabled: "#c7c7c7",
-    },
-
-    // Feedback
-    feedback: {
-      success: "#10b981",
-      warning: "#f59e0b",
-      error: "#ef4444",
-      info: "#3b82f6",
-    },
-
-    // Content
-    content: {
-      primary: "#1f2937",
-      secondary: "#4b5563",
-      disabled: "#9ca3af",
-      inverse: "#ffffff",
-    },
-  },
-
-  // Component tokens
-  components: {
-    button: {
-      primary: {
-        bg: "palette.primary.500",
-        text: "white",
-        hover: "palette.primary.600",
-        active: "palette.primary.700",
-      },
-      secondary: {
-        bg: "palette.primary.100",
-        text: "palette.primary.700",
-        hover: "palette.primary.200",
-        active: "palette.primary.300",
-      },
-    },
-
-    input: {
-      bg: "white",
-      border: "palette.neutral.300",
-      text: "content.primary",
-      placeholder: "content.secondary",
-      focus: "palette.primary.500",
-    },
-
-    card: {
-      bg: "white",
-      border: "palette.neutral.200",
-      shadow: "0 1px 3px rgba(0,0,0,0.1)",
-    },
-  },
-};
-```
-
-## Theme Variants
-
-### Material Design 3 Variants
-
-Each variant creates a different aesthetic:
-
-```javascript
-// TonalSpot (Default)
-// Balanced, versatile theme
-{
-  sourceColor: "#6366f1",
-  variant: "tonalSpot"
-}
-// Result: Subtle secondary/tertiary colors
-
-// Fidelity
-// Preserves brand color exactly
-{
-  sourceColor: "#ff5722",  // Brand orange
-  variant: "fidelity"
-}
-// Result: Primary palette matches brand precisely
-
-// Vibrant
-// Energetic, playful theme
-{
-  sourceColor: "#6366f1",
-  variant: "vibrant"
-}
-// Result: Higher chroma throughout
-
-// Expressive
-// Creative, unexpected combinations
-{
-  sourceColor: "#6366f1",
-  variant: "expressive"
-}
-// Result: Unique secondary/tertiary colors
-
-// Neutral
-// Professional, minimal color
-{
-  sourceColor: "#6366f1",
-  variant: "neutral"
-}
-// Result: Grayed secondary colors
-
-// Monochrome
-// Single-hue theme
-{
-  sourceColor: "#6366f1",
-  variant: "monochrome"
-}
-// Result: All colors from same hue family
-```
-
-### Contrast Levels
-
-Adjust contrast for accessibility needs:
-
-```javascript
-// Standard contrast (WCAG AA)
-const standard = {
-  sourceColor: "#6366f1",
-  contrastLevel: 0, // Default
-};
-
-// Medium contrast (Between AA and AAA)
-const medium = {
-  sourceColor: "#6366f1",
-  contrastLevel: 0.5,
-};
-
-// High contrast (WCAG AAA)
-const high = {
-  sourceColor: "#6366f1",
-  contrastLevel: 1.0,
-};
-
-// Results in different tone mappings:
-// Standard: primary on primaryContainer = 4.5:1
-// Medium: primary on primaryContainer = 7:1
-// High: primary on primaryContainer = 10:1
-```
-
-## Dynamic Theming
-
-### User Preference Based
-
-```javascript
-// Adapt to user preferences
-function createUserTheme(preferences) {
-  const {
-    favoriteColor,
-    contrastNeeds, // "normal", "high", "maximum"
-    colorBlindness, // null, "protanopia", "deuteranopia", etc.
-    darkMode,
-  } = preferences;
-
-  // Base theme
-  let theme = generateMaterialTheme({
-    sourceColor: favoriteColor,
-    contrastLevel: contrastNeeds === "high" ? 1.0 : 0,
-  });
-
-  // Adjust for color blindness
-  if (colorBlindness) {
-    theme = adjustForColorBlindness(theme, colorBlindness);
-  }
-
-  // Return appropriate scheme
-  return darkMode ? theme.schemes.dark : theme.schemes.light;
-}
-```
-
-### Time-Based Themes
-
-```javascript
-// Change theme based on time of day
-function getTimeBasedTheme() {
-  const hour = new Date().getHours();
-
-  if (hour < 6) {
-    // Night theme (very dark)
-    return {
-      sourceColor: "#1a1a2e",
-      variant: "monochrome",
-      scheme: "dark",
-    };
-  } else if (hour < 12) {
-    // Morning theme (bright, energetic)
-    return {
-      sourceColor: "#fbbf24",
-      variant: "vibrant",
-      scheme: "light",
-    };
-  } else if (hour < 18) {
-    // Afternoon theme (balanced)
-    return {
-      sourceColor: "#3b82f6",
-      variant: "tonalSpot",
-      scheme: "light",
-    };
-  } else {
-    // Evening theme (warm, relaxed)
-    return {
-      sourceColor: "#f97316",
-      variant: "neutral",
-      scheme: "dark",
-    };
-  }
-}
-```
-
-### Content-Aware Themes
-
-```javascript
-// Generate theme based on content
-async function createContentTheme(contentType, contentData) {
-  switch (contentType) {
-    case "article":
-      // Clean, readable theme
-      return {
-        sourceColor: "#1f2937",
-        variant: "neutral",
-        contrastLevel: 0.5,
-      };
-
-    case "gallery":
-      // Let images stand out
-      return {
-        sourceColor: contentData.dominantColor,
-        variant: "monochrome",
-        scheme: "dark",
-      };
-
-    case "video":
-      // Dark, immersive theme
-      return {
-        sourceColor: "#0f172a",
-        variant: "monochrome",
-        scheme: "dark",
-      };
-
-    case "product":
-      // Match product color
-      return generateThemeFromImage(contentData.productImage);
-  }
-}
-```
-
-## CSS Generation
-
-### CSS Custom Properties
-
-```javascript
-// Generate CSS variables
-const cssTheme = generateThemeCSS({
-  sourceColor: "#6366f1",
-  prefix: "theme",
-  includeTones: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100]
-});
-
-// Output:
+```text
 :root {
-  /* Primary palette */
-  --theme-primary-0: #000000;
-  --theme-primary-10: #00006e;
-  --theme-primary-20: #0001ac;
-  --theme-primary-30: #1e2bdb;
-  --theme-primary-40: #4046f4;
-  --theme-primary-50: #6366f1;
-  --theme-primary-60: #7f81ff;
-  --theme-primary-70: #9da0ff;
-  --theme-primary-80: #bcc0ff;
-  --theme-primary-90: #dee0ff;
-  --theme-primary-95: #eff0ff;
+  /* Primary Colors */
+  --theme-primary-10: #07006c;
+  --theme-primary-40: #494bd6;
+  --theme-primary-90: #e1e0ff;
   --theme-primary-99: #fffbff;
   --theme-primary-100: #ffffff;
 
-  /* Secondary, tertiary, neutral, error palettes... */
+  /* Secondary Colors */
+  --theme-secondary-10: #191a2c;
+  --theme-secondary-40: #5d5c72;
+  --theme-secondary-90: #e2e0f9;
+  --theme-secondary-99: #fffbff;
+  --theme-secondary-100: #ffffff;
+  …
+  /* Neutral Variant Colors */
+  --theme-neutral-variant-10: #1b1b23;
+  --theme-neutral-variant-40: #5e5d67;
+  --theme-neutral-variant-90: #e4e1ec;
+  --theme-neutral-variant-99: #fffbff;
+  --theme-neutral-variant-100: #ffffff;
 }
 
-/* Dark mode overrides */
+/* Semantic Color Mappings (Light Theme) */
+:root {
+  --theme-primary: var(--theme-primary-40);
+  --theme-on-primary: var(--theme-primary-100);
+  --theme-primary-container: var(--theme-primary-90);
+  --theme-on-primary-container: var(--theme-primary-10);
+  …
+  --theme-background: var(--theme-neutral-99);
+  --theme-on-background: var(--theme-neutral-10);
+  --theme-surface: var(--theme-neutral-99);
+  --theme-on-surface: var(--theme-neutral-10);
+}
+```
+
+Tones 10, 40, 90, 99 and 100 are always emitted because the semantic block refers to them. The palettes covered are primary, secondary, tertiary, error, neutral and neutral-variant. Without `includeTones` you get 0, 10, 20 … 90, 95, 99, 100.
+
+The semantic block is light mode only. For dark mode, override the same variables with the `DARK THEME` values from `generate_material_theme`. The hex values below are copied from the output above:
+
+```css
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark scheme mappings */
+    --theme-primary: #c0c1ff;
+    --theme-on-primary: #1000a9;
+    --theme-primary-container: #2f2ebe;
+    --theme-on-primary-container: #e1e0ff;
+    --theme-secondary: #c6c4dd;
+    --theme-on-secondary: #2e2f42;
+    --theme-secondary-container: #454559;
+    --theme-on-secondary-container: #e2e0f9;
+    --theme-background: #1c1b1f;
+    --theme-on-background: #e5e1e6;
+    --theme-surface: #1c1b1f;
+    --theme-on-surface: #e5e1e6;
   }
 }
 ```
 
-### Tailwind Configuration
+For any other tone, use `generate_tonal_palette`:
 
-```javascript
-// Generate Tailwind config from theme
-function generateTailwindConfig(theme) {
-  return {
-    theme: {
-      extend: {
-        colors: {
-          primary: {
-            DEFAULT: theme.primary,
-            50: theme.palettes.primary[95],
-            100: theme.palettes.primary[90],
-            200: theme.palettes.primary[80],
-            300: theme.palettes.primary[70],
-            400: theme.palettes.primary[60],
-            500: theme.palettes.primary[50],
-            600: theme.palettes.primary[40],
-            700: theme.palettes.primary[30],
-            800: theme.palettes.primary[20],
-            900: theme.palettes.primary[10],
-            950: theme.palettes.primary[0],
-          },
-          surface: {
-            DEFAULT: theme.surface,
-            container: theme.surfaceContainer,
-            variant: theme.surfaceVariant,
-          },
-        },
-      },
+Tool call: `generate_tonal_palette { "color": "#6366f1", "tones": [10, 40, 90, 99] }`
+
+```text
+Tonal Palette for #6366f1
+HCT: h=284.6°, c=68.0, t=50.1
+
+Tone 10: #07006c
+Tone 40: #494bd6
+Tone 90: #e1e0ff
+Tone 99: #fffbff
+```
+
+## A Light + Dark UI Token Set
+
+Material roles are generic. For app UI tokens (surfaces, text hierarchy, borders, states and status colors) with light and dark values whose text pairs are already contrast-checked, use `design_ui_palette`:
+
+> "Design a UI color system for brand #6366f1 and give me CSS."
+
+Tool call: `design_ui_palette { "brand": "#6366f1", "format": "css" }`
+
+```text
+:root {
+  --color-accent: #a93f8a;
+  --color-bg: #fdf9ff;
+  --color-border: #d8d5e3;
+  --color-border-strong: #868591;
+  --color-error: #ae302b;
+  …
+  --color-primary: #5e60eb;
+  --color-primary-active: #3737c5;
+  --color-primary-hover: #494bd6;
+  --color-primary-subtle: #ebe9ff;
+  --color-secondary: #31669c;
+  --color-success: #006e25;
+  …
+  --color-text-muted: #6d6c74;
+  --color-text-primary: #1f1f25;
+  --color-text-secondary: #504f57;
+  --color-warning: #7f5600;
+  --color-warning-subtle: #ffebd2;
+}
+
+[data-theme="dark"] {
+  --color-accent: #f996d4;
+  --color-bg: #17171f;
+  …
+  --color-primary: #adafff;
+  --color-primary-active: #d7d6ff;
+  --color-primary-hover: #c4c4ff;
+  …
+  --color-text-primary: #f0ecf5;
+  --color-text-secondary: #bdbac4;
+  --color-warning: #f0a818;
+  --color-warning-subtle: #412c06;
+}
+```
+
+The full output has 36 tokens per mode, including `on-*` text colors for primary, secondary, accent and each status color. The default `format: "report"` returns the same tokens as a light/dark table with the number of verified contrast checks (`Verified contrast checks: **42**` for this brand), followed by this CSS. `json` and `tokens` formats are also available. Options for `harmony` and `neutralStyle` are documented in [Agent Tools](/tools/agent-tools).
+
+## Harmonizing Existing Status Colors
+
+If you already have status colors, `harmonize_colors` rotates each color's HCT hue toward the first color by `factor` (default 0.5) times the hue difference, at most 15°. Chroma and tone stay the same, and the first color is returned unchanged:
+
+Tool call: `harmonize_colors { "colors": ["#6366f1", "#10b981", "#f59e0b", "#ef4444"] }`
+
+```text
+Harmonized Colors (harmonize):
+Original: #6366f1, #10b981, #f59e0b, #ef4444
+Result: #6366f1, #00b79d, #ff9740, #ee3e72
+```
+
+## Checking the Theme
+
+Run the generated pairs through `audit_ui_colors` before shipping. Here are the main Material pairs from above, plus the four accent colors as swatches:
+
+Tool call: `audit_ui_colors` with these arguments:
+
+```json
+{
+  "pairs": [
+    { "name": "onPrimary/primary", "fg": "#ffffff", "bg": "#494bd6" },
+    {
+      "name": "onPrimaryContainer/primaryContainer",
+      "fg": "#07006c",
+      "bg": "#e1e0ff"
     },
-  };
-}
-```
-
-### Sass/SCSS Variables
-
-```scss
-// Generate Sass variables
-$theme-primary: #6366f1;
-$theme-on-primary: #ffffff;
-$theme-primary-container: #e0e0ff;
-$theme-on-primary-container: #070764;
-
-// Mixin for component theming
-@mixin apply-theme($role: "surface") {
-  @if $role == "primary" {
-    background: $theme-primary;
-    color: $theme-on-primary;
-  } @else if $role == "primary-container" {
-    background: $theme-primary-container;
-    color: $theme-on-primary-container;
-  }
-}
-
-// Usage
-.button-primary {
-  @include apply-theme("primary");
-}
-```
-
-## Accessibility Considerations
-
-### Ensuring Contrast
-
-```javascript
-// Validate theme accessibility
-function validateThemeAccessibility(theme) {
-  const checks = [
-    // Text on backgrounds
-    { fg: theme.onSurface, bg: theme.surface, min: 4.5 },
-    { fg: theme.onPrimary, bg: theme.primary, min: 4.5 },
-    { fg: theme.onSecondary, bg: theme.secondary, min: 4.5 },
-
-    // Interactive elements
-    { fg: theme.primary, bg: theme.surface, min: 3.0 },
-    { fg: theme.outline, bg: theme.surface, min: 3.0 },
-  ];
-
-  const results = checks.map((check) => {
-    const ratio = checkContrast(check.fg, check.bg);
-    return {
-      ...check,
-      ratio,
-      passes: ratio >= check.min,
-    };
-  });
-
-  return {
-    allPass: results.every((r) => r.passes),
-    failures: results.filter((r) => !r.passes),
-  };
-}
-```
-
-### High Contrast Mode
-
-```javascript
-// Generate high contrast variant
-function createHighContrastTheme(baseTheme) {
-  return {
-    ...baseTheme,
-    // Maximize contrast
-    surface: "#ffffff",
-    onSurface: "#000000",
-
-    // Bold colors
-    primary: adjustTone(baseTheme.primary, 30),
-    onPrimary: "#ffffff",
-
-    // Strong outlines
-    outline: "#000000",
-    outlineVariant: "#424242",
-
-    // Remove subtle variations
-    surfaceVariant: "#ffffff",
-    surfaceContainer: "#ffffff",
-  };
-}
-```
-
-### Color Blindness Support
-
-```javascript
-// Adjust theme for color blindness
-function adjustForColorBlindness(theme, type) {
-  switch (type) {
-    case "protanopia": // Red-blind
-      // Shift reds toward blue
-      return shiftProblemColors(theme, ["red"], "blue");
-
-    case "deuteranopia": // Green-blind
-      // Enhance red-blue distinction
-      return enhanceColorDistinction(theme, ["red", "blue"]);
-
-    case "tritanopia": // Blue-blind
-      // Use red-green distinction
-      return shiftProblemColors(theme, ["blue"], "green");
-
-    case "achromatopsia": // Total color blindness
-      // Use only lightness variations
-      return createMonochromeTheme(theme);
-  }
-}
-```
-
-## Real-World Examples
-
-### News Website
-
-```javascript
-// Serious, trustworthy appearance
-const newsTheme = {
-  // Core colors
-  primary: "#1e40af", // Deep blue
-  secondary: "#dc2626", // Breaking news red
-  neutral: "#1f2937", // Text
-
-  // Sections
-  politics: "#1e40af",
-  business: "#059669",
-  sports: "#ea580c",
-  entertainment: "#9333ea",
-  technology: "#0891b2",
-
-  // UI elements
-  surface: "#ffffff",
-  surfaceRaised: "#f9fafb",
-  border: "#e5e7eb",
-
-  // Typography
-  headline: "#111827",
-  body: "#374151",
-  caption: "#6b7280",
-};
-```
-
-### Social Media Platform
-
-```javascript
-// Friendly, engaging theme
-const socialTheme = generateMaterialTheme({
-  sourceColor: "#3b82f6", // Facebook-like blue
-  customColors: [
-    { name: "like", color: "#ef4444" }, // Red heart
-    { name: "share", color: "#10b981" }, // Green share
-    { name: "comment", color: "#6366f1" }, // Blue comment
+    { "name": "onSurface/surface", "fg": "#1c1b1f", "bg": "#fffbff" },
+    {
+      "name": "onSurfaceVariant/surfaceVariant",
+      "fg": "#46464f",
+      "bg": "#e4e1ec"
+    },
+    {
+      "name": "outline/surface",
+      "fg": "#777680",
+      "bg": "#fffbff",
+      "role": "ui"
+    },
+    { "name": "dark onPrimary/primary", "fg": "#1000a9", "bg": "#c0c1ff" },
+    { "name": "dark onSurface/surface", "fg": "#e5e1e6", "bg": "#1c1b1f" }
   ],
-  variant: "vibrant",
-});
-
-// Additional social elements
-const socialElements = {
-  // User-generated content
-  userPost: socialTheme.surface,
-  userPostHover: socialTheme.surfaceVariant,
-
-  // Interactions
-  likeButton: "#ef4444",
-  likeButtonActive: "#dc2626",
-
-  // Status indicators
-  online: "#10b981",
-  away: "#f59e0b",
-  offline: "#6b7280",
-};
-```
-
-### Educational Platform
-
-```javascript
-// Clear, focused learning environment
-const eduTheme = {
-  // Subject colors
-  math: "#3b82f6", // Blue
-  science: "#10b981", // Green
-  literature: "#8b5cf6", // Purple
-  history: "#f59e0b", // Amber
-  arts: "#ec4899", // Pink
-
-  // Progress indicators
-  notStarted: "#e5e7eb",
-  inProgress: "#fbbf24",
-  completed: "#10b981",
-
-  // Difficulty levels
-  beginner: "#10b981",
-  intermediate: "#3b82f6",
-  advanced: "#7c3aed",
-  expert: "#dc2626",
-};
-```
-
-## Theme Testing
-
-### Visual Testing
-
-```javascript
-// Generate theme preview
-function previewTheme(theme) {
-  const preview = {
-    // Color swatches
-    swatches: Object.entries(theme).map(([name, color]) => ({
-      name,
-      color,
-      hex: color,
-      rgb: hexToRgb(color),
-      hsl: hexToHsl(color),
-    })),
-
-    // Sample components
-    components: {
-      button: generateButtonPreview(theme),
-      card: generateCardPreview(theme),
-      form: generateFormPreview(theme),
-    },
-
-    // Accessibility report
-    accessibility: validateThemeAccessibility(theme),
-
-    // Color harmony analysis
-    harmony: analyzeColorHarmony(theme),
-  };
-
-  return preview;
+  "swatches": ["#494bd6", "#5d5c72", "#795369", "#ba1a1a"]
 }
 ```
 
-### Automated Testing
+```text
+# UI Color Audit
 
-```javascript
-// Test theme generation
-describe("Theme Creation", () => {
-  test("generates accessible color pairs", () => {
-    const theme = generateMaterialTheme("#6366f1");
+## Pair Checks (7)
 
-    // Check primary colors
-    const ratio = getContrast(
-      theme.schemes.light.primary,
-      theme.schemes.light.onPrimary,
-    );
-    expect(ratio).toBeGreaterThanOrEqual(4.5);
-  });
+| Pair | Role | WCAG | APCA Lc | Status | Fix / Notes |
+|---|---|---|---|---|---|
+| onPrimary/primary (`#ffffff` on `#494bd6`) | body | 6.44:1 | -86.5 | ✓ Pass | - |
+| onPrimaryContainer/primaryContainer (`#07006c` on `#e1e0ff`) | body | 13.31:1 | 85.7 | ✓ Pass | - |
+| onSurface/surface (`#1c1b1f` on `#fffbff`) | body | 16.72:1 | 102.3 | ✓ Pass | - |
+| onSurfaceVariant/surfaceVariant (`#46464f` on `#e4e1ec`) | body | 7.24:1 | 74.8 | ✓ Pass | - |
+| outline/surface (`#777680` on `#fffbff`) | ui | 4.37:1 | 69.4 | ✓ Pass | - |
+| dark onPrimary/primary (`#1000a9` on `#c0c1ff`) | body | 7.72:1 | 64.0 | ✓ Pass | - |
+| dark onSurface/surface (`#e5e1e6` on `#1c1b1f`) | body | 13.25:1 | -87.8 | ✓ Pass | - |
 
-  test("maintains brand color fidelity", () => {
-    const brand = "#ff5722";
-    const theme = generateMaterialTheme({
-      sourceColor: brand,
-      variant: "fidelity",
-    });
+## Swatch Checks (4)
 
-    const distance = colorDistance(brand, theme.schemes.light.primary);
-    expect(distance).toBeLessThan(5);
-  });
-});
+- CVD collision (deuteranopia): `#5d5c72` ↔ `#795369` (ΔE=6.1)
+- CVD collision (protanopia): `#5d5c72` ↔ `#795369` (ΔE=2.5)
+
+**Summary**: 2 item(s) flagged above.
 ```
 
-## Export Formats
+Every text pair passes, but the muted secondary and tertiary are almost identical for protanopes and deuteranopes. Don't let those two colors be the only way to tell two things apart.
 
-### JSON Export
+## Exporting the Theme
 
-```javascript
-// Export theme as JSON
-const themeJson = {
-  version: "1.0.0",
-  name: "My Theme",
-  author: "Designer Name",
-  colors: theme,
-  metadata: {
-    created: new Date().toISOString(),
-    sourceColor: "#6366f1",
-    variant: "tonalSpot",
-    contrastLevel: 0,
-  },
-};
+`export_palette` turns any list of colors into CSS, SCSS, Tailwind, W3C design tokens, JSON or a DESIGN.md `colors:` block. `names` must have one name per color.
 
-fs.writeFileSync("theme.json", JSON.stringify(themeJson, null, 2));
+Tool call: `export_palette { "colors": ["#494bd6", "#5d5c72", "#795369"], "names": ["primary", "secondary", "tertiary"], "format": "scss" }`
+
+```text
+$primary: #494bd6;
+$secondary: #5d5c72;
+$tertiary: #795369;
 ```
 
-### Design Tokens
+Tool call: `export_palette { "colors": ["#494bd6", "#5d5c72", "#795369"], "names": ["primary", "secondary", "tertiary"], "format": "tokens" }`
 
-```javascript
-// Export as design tokens
-const tokens = {
-  color: {
-    primary: {
-      value: theme.primary,
-      type: "color",
+```text
+{
+  "color": {
+    "primary": {
+      "$type": "color",
+      "$value": "#494bd6"
     },
-    onPrimary: {
-      value: theme.onPrimary,
-      type: "color",
+    "secondary": {
+      "$type": "color",
+      "$value": "#5d5c72"
     },
-  },
-  spacing: {
-    small: { value: "8px", type: "dimension" },
-    medium: { value: "16px", type: "dimension" },
-    large: { value: "24px", type: "dimension" },
-  },
-  typography: {
-    heading: {
-      value: {
-        fontFamily: "Inter",
-        fontSize: "24px",
-        fontWeight: 600,
-      },
-      type: "typography",
-    },
-  },
-};
+    "tertiary": {
+      "$type": "color",
+      "$value": "#795369"
+    }
+  }
+}
 ```
+
+### DESIGN.md
+
+To give coding agents a persistent description of the design system, export the colors as a [DESIGN.md](https://github.com/google-labs-code/design.md) `colors:` block:
+
+Tool call: `export_palette { "colors": ["#494bd6", "#5d5c72", "#795369", "#fffbff", "#1c1b1f"], "names": ["primary", "secondary", "tertiary", "surface", "on-surface"], "format": "design-md" }`
+
+```text
+colors:
+  primary: "#494bd6"
+  secondary: "#5d5c72"
+  tertiary: "#795369"
+  surface: "#fffbff"
+  on-surface: "#1c1b1f"
+```
+
+Once the file also declares components, `audit_design_md` checks it. Given this DESIGN.md:
+
+<!-- prettier-ignore -->
+```markdown
+---
+version: alpha
+name: Acme
+colors:
+  primary: "#494bd6"
+  on-primary: "#ffffff"
+  surface: "#fffbff"
+  on-surface: "#1c1b1f"
+  success: "#10b981"
+  error: "#ef4444"
+components:
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+  badge-success:
+    backgroundColor: "{colors.success}"
+    textColor: "#ffffff"
+---
+
+# Acme design system
+```
+
+Tool call: `audit_design_md { "designMd": "<the file's full text>" }`
+
+```text
+# DESIGN.md color audit
+
+Color tokens: 6 (6 audited, 0 not audited) · Contrast pairs: 3 (2 declared, 1 inferred) · Failing: 1 · CVD collisions: 0 · Duplicates: 0 exact, 0 near
+
+## Contrast
+
+| text / element | on background | source | WCAG | needs | APCA Lc | result | suggested fix |
+|---|---|---|---|---|---|---|---|
+| `components.badge-success.textColor` #ffffff | `success` #10b981 | declared · components.badge-success | 2.54:1 | 4.5:1 (text) | -54.2 | ✗ | components.badge-success.textColor → `#383a3b` (4.51:1) |
+| `on-primary` #ffffff | `primary` #494bd6 | declared · components.button-primary | 6.44:1 | 4.5:1 (text) | -86.5 | ✓ |  |
+| `on-surface` #1c1b1f | `surface` #fffbff | inferred · on-X ↔ X | 16.72:1 | 4.5:1 (text) | 102.3 | ✓ |  |
+…
+## Color-vision collisions
+
+✓ Accent and status colors stay distinguishable (protanopia, deuteranopia, tritanopia, deuteranomaly).
+```
+
+Claude Code does not load DESIGN.md automatically. Reference it as `@DESIGN.md` from your `CLAUDE.md`. See [DESIGN.md](/tools/design-md) for the full format and audit rules.
+
+## From an Image
+
+`generate_theme_from_image` seeds the same Material theme from the most suitable color in an image. See [Image Extraction](/examples/image-extraction) for how to pass pixel data.
 
 ## Next Steps
 
-- Explore [Image Extraction](./image-extraction.md) for dynamic theme generation
-- Learn about [CSS Refactoring](./css-refactoring.md) to apply themes
-- Read [Material Design Concepts](../concepts/material-design.md) for theory
-- Check [Theme Matching Tools](../tools/theme-matching.md) for implementation
+- [CSS Refactoring](/examples/css-refactoring): apply the theme to existing stylesheets
+- [Image Extraction](/examples/image-extraction): themes from images
+- [Material Design](/tools/material-design): parameters of the Material tools
+- [Material Design Concepts](/concepts/material-design): how the palettes and roles are derived

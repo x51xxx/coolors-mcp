@@ -1,632 +1,493 @@
 # Image Extraction Tools
 
-Tools for extracting colors from images and generating themes based on image content.
+Two tools work on image pixels. Two more check colors against the "universally disliked" rule that the image tools use.
 
-## extract_image_colors
+- [`extract_image_colors`](#extract-image-colors): dominant colors of an image
+- [`generate_theme_from_image`](#generate-theme-from-image): a Material Design 3 theme seeded from an image
+- [`analyze_color_likability`](#analyze-color-likability): check one color against the dislike rule
+- [`fix_disliked_colors_batch`](#fix-disliked-colors-batch): check and fix up to 100 colors
 
-Extract dominant colors from an image using Google's Celebi quantization algorithm.
+All four return plain text. For how quantization and scoring work, see [Image Analysis](/concepts/image-analysis).
 
-### Parameters
+## Image input: `imageData`
 
-| Parameter       | Type     | Required | Description                                        |
-| --------------- | -------- | -------- | -------------------------------------------------- |
-| `imageData`     | number[] | ✅       | RGBA pixel array (flat array of values 0-255)      |
-| `maxColors`     | number   | ❌       | Maximum colors to extract (default: 5, max: 128)   |
-| `minPopulation` | number   | ❌       | Minimum pixel percentage for color (default: 0.01) |
-| `targetChroma`  | number   | ❌       | Preferred chroma for UI colors (default: 48)       |
+The server cannot open image files or URLs. The image tools take decoded pixels as JSON:
 
-### Returns
-
-```typescript
+```json
 {
-  colors: Array<{
-    hex: string; // Hex color value
-    rgb: [r, g, b]; // RGB values
-    hct: {
-      // HCT values
-      hue: number;
-      chroma: number;
-      tone: number;
-    };
-    population: number; // Percentage of image (0-1)
-    score: number; // UI suitability score (0-1)
-  }>;
-  metadata: {
-    totalPixels: number;
-    uniqueColors: number;
-    processingTime: number;
+  "imageData": {
+    "width": 2,
+    "height": 2,
+    "data": [
+      103, 80, 164, 255, 103, 80, 164, 255, 103, 80, 164, 255, 255, 193, 7, 255
+    ]
   }
 }
 ```
 
+| Field    | Type      | Rules                                                                                                                       |
+| -------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `width`  | integer   | > 0                                                                                                                         |
+| `height` | integer   | > 0                                                                                                                         |
+| `data`   | integer[] | Flat RGBA values 0–255, row by row. **Length must equal `width × height × 4`**, and at most 262 144 values (65 536 pixels). |
+
+The limit is on the total pixel count, not on each side. 256×256 and 512×128 are both accepted, and 257×256 is rejected. Violations fail schema validation:
+
+```text
+Invalid arguments for tool 'extract_image_colors': imageData: data length must equal width * height * 4 (RGBA)
+Invalid arguments for tool 'extract_image_colors': imageData.data: Too big: expected array to have <=262144 items
+Invalid arguments for tool 'extract_image_colors': imageData.data.0: Too big: expected number to be <=255
+```
+
+Pixels with alpha 0–2 are skipped as transparent. All other alpha values are ignored: the color is used as if it were opaque.
+
+### Getting pixel data as an agent
+
+An agent has to decode the image, **downscale it**, and send the RGBA array in the tool call. The payload is large, because every pixel becomes four numbers in JSON. These are the measured sizes of the arguments with random pixel values (the worst case):
+
+| Size    | Pixels | JSON size |
+| ------- | ------ | --------- |
+| 32×32   | 1 024  | ~15 KB    |
+| 64×64   | 4 096  | ~60 KB    |
+| 128×128 | 16 384 | ~240 KB   |
+| 256×256 | 65 536 | ~960 KB   |
+
+Larger inputs gain little. Extraction samples at most 5 000, 10 000 or 25 000 pixels (by `quality`), taking every n-th pixel, so 64×64 is usually enough.
+
+This Python script, using Pillow, prints the `imageData` argument for a file:
+
+```python
+import json, sys
+from PIL import Image
+
+img = Image.open(sys.argv[1]).convert("RGBA")  # always 4 channels
+img.thumbnail((64, 64), Image.Resampling.NEAREST)  # keeps aspect ratio
+w, h = img.size
+print(json.dumps({"imageData": {"width": w, "height": h, "data": list(img.tobytes())}}))
+```
+
+::: tip Resampling matters for flat graphics
+Smoothing filters, which are Pillow's default for `thumbnail`, blend colors along edges. The scorer favors chroma, so a small blended cluster can outrank the real dominant color. On a 300×200 test image (violet, teal and amber areas), the default filter made `#614caa` (0.4% of pixels) the top color instead of `#6750a4`. `NEAREST`, as in the script above, gave `#6750a4` (58.8%), `#009688` (32.8%) and `#ffc107` (8.4%).
+:::
+
+---
+
+## `extract_image_colors`
+
+Extracts the dominant colors of an image with Material Color Utilities' quantizer and scorer.
+
+### Parameters
+
+| Parameter   | Type    | Required | Default    | Description                                                     |
+| ----------- | ------- | -------- | ---------- | --------------------------------------------------------------- |
+| `imageData` | object  | Yes      | –          | `{ width, height, data }`, see [above](#image-input-imagedata). |
+| `maxColors` | integer | No       | `5`        | Upper bound on the number of colors, 1–20.                      |
+| `quality`   | string  | No       | `"medium"` | `"low"`, `"medium"` or `"high"`.                                |
+| `format`    | string  | No       | `"json"`   | `"json"`, `"css"` or `"palette"`.                               |
+
+### How colors are chosen
+
+1. **Sample.** Transparent pixels are dropped, then every n-th pixel is kept up to the quality cap: `low` 5 000 pixels and 64 clusters, `medium` 10 000 and 128, `high` 25 000 and 256.
+2. **Filter.** Near-black and near-white pixels are dropped: approximate luminance `0.299R + 0.587G + 0.114B` below 5% or above 95%.
+3. **Quantize** with Material's Celebi quantizer into at most the cluster count above.
+4. **Score** with Material's `Score`. Clusters with HCT chroma below 5 are dropped, and so are clusters whose hue neighborhood (±15°) covers 1% of pixels or less. The rest are ranked by how common their hue is and by chroma (target 48). Picked colors must be at least 15° apart in hue. Similar hues therefore collapse into one color, and you can get fewer than `maxColors`.
+5. **Fallback.** If nothing survives scoring (a grey or white image), the tool runs again without filter and scorer and returns the most common clusters. You get the image's real colors, including white and grey.
+
+`percentage` is relative to the pixels left after step 2. Disliked colors are **not** fixed here (compare [`generate_theme_from_image`](#generate-theme-from-image)).
+
+::: warning Not fully deterministic
+As in Material Color Utilities, the quantizer's k-means refinement starts from random cluster assignments. In our runs, images with a few flat colors gave the same result every time. On images with many near-identical colors, such as anti-aliased edges or photos, the minor colors and their percentages can differ slightly between calls. On the smoothed test image from the tip above, one call returned `#ffc502` and another `#ffc900`.
+:::
+
 ### Examples
 
-#### Basic Color Extraction
+The 2×2 image above (three violet pixels, one amber) with the default `json` format:
 
-```javascript
-// Extract top 5 colors from image
-{
-  "name": "extract_image_colors",
-  "arguments": {
-    "imageData": [/* RGBA pixel array */],
-    "maxColors": 5
-  }
-}
-
-// Response
-{
-  "colors": [
-    {
-      "hex": "#6366f1",
-      "rgb": [99, 102, 241],
-      "hct": { "hue": 265.8, "chroma": 87.2, "tone": 47.9 },
-      "population": 0.23,
-      "score": 0.89
+```text
+[
+  {
+    "hct": {
+      "c": 47.8565263749703,
+      "h": 298.980997210704,
+      "t": 40.08324408746242
     },
-    {
-      "hex": "#ec4899",
-      "rgb": [236, 72, 153],
-      "population": 0.15,
-      "score": 0.76
+    "hex": "#6750a4",
+    "percentage": 75,
+    "population": 3,
+    "rgb": {
+      "b": 164,
+      "g": 80,
+      "r": 103
     }
-    // ... more colors
-  ],
-  "metadata": {
-    "totalPixels": 90000,
-    "uniqueColors": 1247,
-    "processingTime": 145
-  }
-}
-```
-
-#### Extract More Colors
-
-```javascript
-// Get detailed color palette
-{
-  "name": "extract_image_colors",
-  "arguments": {
-    "imageData": [/* pixels */],
-    "maxColors": 12,
-    "minPopulation": 0.005  // Include colors with 0.5% coverage
-  }
-}
-```
-
-#### UI-Optimized Extraction
-
-```javascript
-// Extract colors suitable for UI
-{
-  "name": "extract_image_colors",
-  "arguments": {
-    "imageData": [/* pixels */],
-    "maxColors": 5,
-    "targetChroma": 48  // Prefer moderate chroma for UI
-  }
-}
-```
-
-### Image Data Preparation
-
-#### From Canvas (Browser)
-
-```javascript
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-// Convert to flat array
-const pixels = Array.from(imageData.data);
-
-// Extract colors
-const result = await extractColors({
-  imageData: pixels,
-});
-```
-
-#### From Image File (Node.js)
-
-```javascript
-const sharp = require("sharp");
-
-async function getPixelsFromImage(filepath) {
-  const { data, info } = await sharp(filepath)
-    .resize(300) // Resize for performance
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  return Array.from(data);
-}
-
-const pixels = await getPixelsFromImage("photo.jpg");
-```
-
-### Use Cases
-
-- Extracting brand colors from logos
-- Creating themes from album artwork
-- Analyzing color usage in designs
-- Generating palettes from photos
-
-## generate_theme_from_image
-
-Generate a complete Material Design 3 theme from an image.
-
-### Parameters
-
-| Parameter          | Type     | Required | Description                                                                  |
-| ------------------ | -------- | -------- | ---------------------------------------------------------------------------- |
-| `imageData`        | number[] | ✅       | RGBA pixel array                                                             |
-| `variant`          | string   | ❌       | Theme variant: tonalSpot, fidelity, vibrant, expressive, neutral, monochrome |
-| `contrastLevel`    | number   | ❌       | Contrast level: 0 (default), 0.5 (medium), 1.0 (high)                        |
-| `sourceColorIndex` | number   | ❌       | Which extracted color to use as source (default: 0)                          |
-
-### Returns
-
-```typescript
-{
-  sourceColor: string; // Selected source color
-  extractedColors: Array<{
-    hex: string;
-    score: number;
-    selected: boolean;
-  }>;
-  schemes: {
-    light: {
-      primary: string;
-      onPrimary: string;
-      primaryContainer: string;
-      onPrimaryContainer: string;
-      // ... all Material Design color roles
-    }
-    dark: {
-      // ... dark theme colors
-    }
-  }
-  palettes: {
-    primary: object;
-    secondary: object;
-    tertiary: object;
-    neutral: object;
-    error: object;
-  }
-  css: string; // Generated CSS variables
-}
-```
-
-### Examples
-
-#### Basic Theme Generation
-
-```javascript
-// Generate theme from image
-{
-  "name": "generate_theme_from_image",
-  "arguments": {
-    "imageData": [/* RGBA pixels */]
-  }
-}
-
-// Response includes complete theme
-{
-  "sourceColor": "#6366f1",
-  "schemes": {
-    "light": {
-      "primary": "#5256c9",
-      "onPrimary": "#ffffff",
-      "primaryContainer": "#e0e0ff",
-      "onPrimaryContainer": "#070764"
-      // ... more colors
-    },
-    "dark": {
-      "primary": "#bfc1ff",
-      "onPrimary": "#212599",
-      "primaryContainer": "#393cb0",
-      "onPrimaryContainer": "#e0e0ff"
-      // ... more colors
-    }
-  }
-}
-```
-
-#### With Specific Variant
-
-```javascript
-// Generate vibrant theme
-{
-  "name": "generate_theme_from_image",
-  "arguments": {
-    "imageData": [/* pixels */],
-    "variant": "vibrant",
-    "contrastLevel": 0.5  // Medium contrast
-  }
-}
-```
-
-#### Choose Different Source Color
-
-```javascript
-// Use second extracted color as source
-{
-  "name": "generate_theme_from_image",
-  "arguments": {
-    "imageData": [/* pixels */],
-    "sourceColorIndex": 1  // Use second color
-  }
-}
-
-// Shows which color was selected
-{
-  "extractedColors": [
-    { "hex": "#6366f1", "score": 0.89, "selected": false },
-    { "hex": "#ec4899", "score": 0.76, "selected": true },  // Used
-    { "hex": "#10b981", "score": 0.71, "selected": false }
-  ],
-  "sourceColor": "#ec4899"
-}
-```
-
-### Theme Variants
-
-| Variant      | Description             | Best For           |
-| ------------ | ----------------------- | ------------------ |
-| `tonalSpot`  | Default, balanced       | General use        |
-| `fidelity`   | Preserves source color  | Brand-critical     |
-| `vibrant`    | Higher chroma           | Playful, energetic |
-| `expressive` | Unexpected combinations | Creative, artistic |
-| `neutral`    | Minimal color           | Professional       |
-| `monochrome` | Single hue              | Minimalist         |
-
-### Use Cases
-
-- Dynamic theming from user photos
-- Content-aware UI adaptation
-- Brand extraction from logos
-- Seasonal theme generation
-
-## analyze_color_likability
-
-Check if a color falls in the universally disliked "bile zone" and get a fixed version.
-
-### Parameters
-
-| Parameter | Type    | Required | Description                                        |
-| --------- | ------- | -------- | -------------------------------------------------- |
-| `color`   | string  | ✅       | Color to analyze (hex, rgb, hsl)                   |
-| `autoFix` | boolean | ❌       | Automatically return fixed version (default: true) |
-
-### Returns
-
-```typescript
-{
-  original: string;      // Input color
-  isDisliked: boolean;   // Falls in dislike zone
-  reason?: string;       // Why it's disliked
-  fixed?: string;        // Improved version
-  adjustments?: {
-    hueShift: number;    // Degrees shifted
-    toneIncrease: number; // Tone adjustment
-  }
-}
-```
-
-### Examples
-
-#### Check Color Likability
-
-```javascript
-// Check if color is disliked
-{
-  "name": "analyze_color_likability",
-  "arguments": {
-    "color": "#6b7c3a"  // Dark yellow-green
-  }
-}
-
-// Response
-{
-  "original": "#6b7c3a",
-  "isDisliked": true,
-  "reason": "Falls in 'bile zone' - dark yellow-green associated with biological waste",
-  "fixed": "#7c8b4a",  // Shifted and lightened
-  "adjustments": {
-    "hueShift": 15,
-    "toneIncrease": 10
-  }
-}
-```
-
-#### Check Without Auto-Fix
-
-```javascript
-{
-  "name": "analyze_color_likability",
-  "arguments": {
-    "color": "#6b7c3a",
-    "autoFix": false
-  }
-}
-
-// Just reports the issue
-{
-  "original": "#6b7c3a",
-  "isDisliked": true,
-  "reason": "Falls in 'bile zone'"
-}
-```
-
-### The Dislike Zone
-
-Colors are universally disliked when they have:
-
-- **Hue**: 50-120° (yellow-green range)
-- **Chroma**: 20-50 (moderate saturation)
-- **Tone**: 20-50 (dark to medium)
-
-These colors resemble biological waste and are instinctively avoided.
-
-### Use Cases
-
-- Validating color choices
-- Improving generated palettes
-- Fixing extracted colors
-- Ensuring pleasant UI colors
-
-## fix_disliked_colors_batch
-
-Analyze and fix multiple colors, returning only liked versions.
-
-### Parameters
-
-| Parameter  | Type     | Required | Description                                        |
-| ---------- | -------- | -------- | -------------------------------------------------- |
-| `colors`   | string[] | ✅       | Array of colors to check                           |
-| `strategy` | string   | ❌       | Fix strategy: shift, lighten, both (default: both) |
-
-### Returns
-
-```typescript
-{
-  results: Array<{
-    original: string;
-    isDisliked: boolean;
-    fixed?: string;
-    kept: boolean;      // Whether original or fixed was kept
-  }>;
-  summary: {
-    total: number;
-    disliked: number;
-    fixed: number;
-    unchanged: number;
-  };
-  fixedColors: string[]; // Final list of all liked colors
-}
-```
-
-### Examples
-
-#### Fix Multiple Colors
-
-```javascript
-{
-  "name": "fix_disliked_colors_batch",
-  "arguments": {
-    "colors": ["#6b7c3a", "#6366f1", "#5c6b2f", "#ec4899"]
-  }
-}
-
-// Response
-{
-  "results": [
-    { "original": "#6b7c3a", "isDisliked": true, "fixed": "#7c8b4a", "kept": false },
-    { "original": "#6366f1", "isDisliked": false, "kept": true },
-    { "original": "#5c6b2f", "isDisliked": true, "fixed": "#6b7a3e", "kept": false },
-    { "original": "#ec4899", "isDisliked": false, "kept": true }
-  ],
-  "summary": {
-    "total": 4,
-    "disliked": 2,
-    "fixed": 2,
-    "unchanged": 2
   },
-  "fixedColors": ["#7c8b4a", "#6366f1", "#6b7a3e", "#ec4899"]
-}
+  {
+    "hct": {
+      "c": 60.45579561962854,
+      "h": 86.12876916046787,
+      "t": 81.5193230003677
+    },
+    "hex": "#ffc107",
+    "percentage": 25,
+    "population": 1,
+    "rgb": {
+      "b": 7,
+      "g": 193,
+      "r": 255
+    }
+  }
+]
 ```
 
-#### Different Fix Strategies
+The same image with `"format": "css"`:
 
-```javascript
-// Only shift hue, don't lighten
+```text
+:root {
+  --extracted-color-1: #6750a4; /* 75.0% */
+  --extracted-color-2: #ffc107; /* 25.0% */
+}
+
+/* Color Details */
+/* Color 1: #6750a4
+   RGB: rgb(103, 80, 164)
+   HCT: hct(299.0, 47.9, 40.1)
+   Population: 75.0%
+*/
+
+/* Color 2: #ffc107
+   RGB: rgb(255, 193, 7)
+   HCT: hct(86.1, 60.5, 81.5)
+   Population: 25.0%
+*/
+```
+
+`"format": "palette"` gives Markdown:
+
+```text
+# Extracted Color Palette
+
+## Color 1
+- Hex: #6750a4
+- RGB: rgb(103, 80, 164)
+- HCT: H:299.0° C:47.9 T:40.1
+- Usage: 75.0%
+
+## Color 2
+- Hex: #ffc107
+- RGB: rgb(255, 193, 7)
+- HCT: H:86.1° C:60.5 T:81.5
+- Usage: 25.0%
+```
+
+### Edge cases
+
+**No colorful pixels.** For three white pixels and one `#808080`, the fallback returns the real colors:
+
+```json
 {
-  "name": "fix_disliked_colors_batch",
-  "arguments": {
-    "colors": ["#6b7c3a", "#5c6b2f"],
-    "strategy": "shift"  // Only hue adjustment
-  }
+  "imageData": {
+    "width": 2,
+    "height": 2,
+    "data": [
+      255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128, 128, 128,
+      255
+    ]
+  },
+  "format": "palette"
 }
+```
 
-// Only lighten, don't shift
+```text
+# Extracted Color Palette
+
+## Color 1
+- Hex: #ffffff
+- RGB: rgb(255, 255, 255)
+- HCT: H:209.5° C:2.9 T:100.0
+- Usage: 75.0%
+
+## Color 2
+- Hex: #808080
+- RGB: rgb(128, 128, 128)
+- HCT: H:209.5° C:1.9 T:53.6
+- Usage: 25.0%
+```
+
+**Similar hues collapse.** Two `#6750a4` pixels, one `#46328c` and one white pixel return a single color. The white pixel is filtered out, both violets share a hue, and the more chromatic one wins:
+
+```text
+# Extracted Color Palette
+
+## Color 1
+- Hex: #46328c
+- RGB: rgb(70, 50, 140)
+- HCT: H:295.6° C:50.5 T:28.1
+- Usage: 33.3%
+```
+
+**Transparent pixels.** In a 2×2 image with one opaque red pixel and three pixels at alpha 0, only `#ff0000` is returned, at 100.0%.
+
+---
+
+## `generate_theme_from_image`
+
+Picks a source color from the image and builds a Material Design 3 scheme from it. The scheme uses the same core palettes and tones as [`generate_material_theme`](/tools/material-design#generate-material-theme).
+
+### Parameters
+
+| Parameter             | Type    | Required | Default | Description                                                     |
+| --------------------- | ------- | -------- | ------- | --------------------------------------------------------------- |
+| `imageData`           | object  | Yes      | –       | `{ width, height, data }`, see [above](#image-input-imagedata). |
+| `isDark`              | boolean | No       | `false` | Print the dark scheme instead of the light one.                 |
+| `includeCustomColors` | boolean | No       | `true`  | List the secondary and tertiary colors picked from the image.   |
+
+### What it does
+
+1. Extracts up to 8 colors at `high` quality with the same filter and scorer as `extract_image_colors`, but **without** the grey fallback. **Disliked colors are fixed** to tone 70 (see [the dislike rule](#analyze-color-likability)).
+2. **Primary** is the top-scored color. **Secondary** is the color among the next three whose hue differs most from the primary. **Tertiary** is the remaining color furthest in hue from both.
+3. Builds the Material scheme from the primary color.
+4. Prints the source colors with their share of the image, then **10 roles** for one mode: `primary`, `onPrimary`, `primaryContainer`, `onPrimaryContainer`, `surface`, `onSurface`, `surfaceVariant`, `onSurfaceVariant`, `background` and `onBackground`. For all 23 roles of both modes, pass the printed primary to `generate_material_theme`.
+
+With `includeCustomColors: false`, only the primary source color is listed. The secondary and tertiary picks are for information only. They do not change the scheme, which comes from the primary color alone.
+
+### Example
+
+A 4×4 image with 10 violet `#6750a4`, 4 teal `#009688` and 2 amber `#ffc107` pixels:
+
+```json
 {
-  "name": "fix_disliked_colors_batch",
-  "arguments": {
-    "colors": ["#6b7c3a", "#5c6b2f"],
-    "strategy": "lighten"  // Only tone adjustment
+  "imageData": {
+    "width": 4,
+    "height": 4,
+    "data": [
+      103, 80, 164, 255, 103, 80, 164, 255, 103, 80, 164, 255, 103, 80, 164,
+      255, 103, 80, 164, 255, 103, 80, 164, 255, 103, 80, 164, 255, 103, 80,
+      164, 255, 103, 80, 164, 255, 103, 80, 164, 255, 0, 150, 136, 255, 0, 150,
+      136, 255, 0, 150, 136, 255, 0, 150, 136, 255, 255, 193, 7, 255, 255, 193,
+      7, 255
+    ]
   }
 }
 ```
 
-### Use Cases
+```text
+# Material Design 3 Theme from Image
 
-- Cleaning up extracted color palettes
-- Validating theme colors
-- Ensuring pleasant color schemes
-- Batch color improvement
+## Source Colors
+- Primary: #6750a4 (62.5%)
+- Secondary: #ffc107 (12.5%)
+- Tertiary: #009688 (25.0%)
 
-## Best Practices
+## Theme Colors (Light Mode)
 
-### Image Preparation
+### Primary
+- primary: #6750a4
+- onPrimary: #ffffff
+- primaryContainer: #e9ddff
+- onPrimaryContainer: #22005d
 
-#### Optimal Size
+### Surface
+- surface: #fffbff
+- onSurface: #1c1b1e
+- surfaceVariant: #e7e0eb
+- onSurfaceVariant: #49454e
 
-- Resize images to 200-500px width
-- Larger images don't improve accuracy
-- Smaller images process faster
-
-```javascript
-// Resize before extraction
-const resized = await sharp(image)
-  .resize(300, null, { fit: "inside" })
-  .toBuffer();
+### Background
+- background: #fffbff
+- onBackground: #1c1b1e
 ```
 
-#### Image Quality
+Amber is listed as secondary because its hue is furthest from violet, even though teal covers more pixels. With `"isDark": true, "includeCustomColors": false`:
 
-- Use uncompressed or lightly compressed images
-- Avoid heavily filtered images
-- Ensure good color representation
+```text
+# Material Design 3 Theme from Image
 
-### Performance Optimization
+## Source Colors
+- Primary: #6750a4 (62.5%)
 
-#### Caching Results
+## Theme Colors (Dark Mode)
 
-```javascript
-const cache = new Map();
+### Primary
+- primary: #cfbcff
+- onPrimary: #381e72
+- primaryContainer: #4f378a
+- onPrimaryContainer: #e9ddff
 
-function getCachedColors(imageHash) {
-  if (cache.has(imageHash)) {
-    return cache.get(imageHash);
-  }
+### Surface
+- surface: #1c1b1e
+- onSurface: #e6e1e6
+- surfaceVariant: #49454e
+- onSurfaceVariant: #cac4cf
 
-  const colors = extractColors(image);
-  cache.set(imageHash, colors);
-  return colors;
-}
+### Background
+- background: #1c1b1e
+- onBackground: #e6e1e6
 ```
 
-#### Batch Processing
+### Edge cases
 
-```javascript
-// Process multiple images efficiently
-const images = [img1, img2, img3];
-const results = await Promise.all(images.map((img) => extractColors(img)));
+**No colorful pixels.** Unlike `extract_image_colors`, this tool has no fallback. A white or grey image returns a tool error:
+
+```text
+The image has no sufficiently colorful pixels to seed a theme (Material's scorer fell back to #4285F4). Use a more colorful image, or call generate_material_theme with an explicit sourceColor.
 ```
 
-### Color Selection
+**A disliked dominant color is fixed.** For a 2×1 image of `#7a6a1f` (a dark yellow-green), `extract_image_colors` returns `#7a6a1f`. This tool seeds the theme from the tone-70 fix:
 
-#### For UI Themes
+```text
+# Material Design 3 Theme from Image
 
-- Prefer colors with chroma 40-60
-- Avoid very dark or very light colors
-- Check for accessibility
+## Source Colors
+- Primary: #beab59 (100.0%)
 
-#### For Artistic Palettes
+## Theme Colors (Light Mode)
 
-- Include wider chroma range
-- Keep accent colors
-- Preserve unique hues
-
-## Common Patterns
-
-### Album Art Theming
-
-```javascript
-async function themeFromAlbumArt(artworkUrl) {
-  // 1. Load and prepare image
-  const pixels = await loadImage(artworkUrl);
-
-  // 2. Generate theme
-  const theme = await generateThemeFromImage({
-    imageData: pixels,
-    variant: "vibrant", // Music apps often use vibrant themes
-  });
-
-  // 3. Apply to UI
-  applyTheme(theme.schemes.dark); // Music apps often use dark themes
-}
+### Primary
+- primary: #6e5e00
+…
 ```
 
-### Logo Color Extraction
+The percentage is the share of the original color it replaces.
 
-```javascript
-async function extractBrandColors(logoPath) {
-  // 1. Load logo
-  const pixels = await loadLogo(logoPath);
+---
 
-  // 2. Extract colors
-  const extracted = await extractColors({
-    imageData: pixels,
-    maxColors: 3, // Logos typically have few colors
-    minPopulation: 0.05, // Higher threshold for logos
-  });
+## `analyze_color_likability`
 
-  // 3. Fix any disliked colors
-  const fixed = await fixDislikedColors(extracted.colors);
+Checks whether a color falls in the "universally disliked" zone and, by default, returns a fix.
 
-  return fixed;
-}
+### The dislike rule
+
+This is Material Color Utilities' `DislikeAnalyzer`, based on Palmer & Schloss (2010): people consistently dislike dark yellow-greens, which they associate with biological waste. A color is disliked when **all three** of these hold, with each value rounded to an integer first:
+
+| Value              | Condition |
+| ------------------ | --------- |
+| HCT hue (CAM16)    | 90°–111°  |
+| HCT chroma (CAM16) | > 16      |
+| HCT tone (L\*)     | < 65      |
+
+The fix keeps hue and chroma and sets **tone 70**. Chroma can shift by a fraction when the color is re-solved: `#7a6a1f` goes from chroma 34.9 to 35.1. The same rule is used by `generate_theme_from_image`, `generate_palette`, `design_ui_palette`, `audit_ui_colors` and `audit_design_md`.
+
+### Parameters
+
+| Parameter | Type    | Required | Default | Description                                         |
+| --------- | ------- | -------- | ------- | --------------------------------------------------- |
+| `color`   | string  | Yes      | –       | Color to analyze. Any supported color syntax.       |
+| `autoFix` | boolean | No       | `true`  | Include the tone-70 fix when the color is disliked. |
+
+### Examples
+
+A disliked color:
+
+```json
+{ "color": "#7a6a1f" }
 ```
 
-### Dynamic Background
+```text
+# Color Likability Analysis
 
-```javascript
-async function adaptiveBackground(imageUrl) {
-  // 1. Extract dominant color
-  const colors = await extractColors(imageUrl);
-  const dominant = colors[0];
+## Input Color: #7a6a1f
 
-  // 2. Create subtle background
-  const background = {
-    ...dominant.hct,
-    chroma: dominant.hct.chroma * 0.3, // Reduce chroma
-    tone: 95, // Very light
-  };
+### HCT Values
+- Hue: 98.2°
+- Chroma: 34.9
+- Tone: 45.0
 
-  return hctToHex(background);
-}
+### Analysis Result
+⚠️ **This color is universally disliked**
+
+This color falls in the "bile zone" - dark yellow-greens that are universally associated with biological waste and rotting food.
+
+**Reason:**
+- Hue is in yellow-green range (90-111°): 98°
+- Chroma is above threshold (>16): 35
+- Tone is dark (<65): 45
+
+### Recommended Fix
+**Fixed Color:** #beab59
+- Hue: 98.4° (preserved)
+- Chroma: 35.1 (preserved)
+- Tone: 70.0 (lightened to 70)
+
+The fix preserves the hue and saturation but lightens the color to make it more pleasant.
 ```
 
-## Troubleshooting
+With `"autoFix": false`, the output stops after **Reason**. For example, CSS `olive` is hue 111.0, chroma 49.6 and tone 51.9, so it is disliked.
 
-### No Colors Extracted
+A likable yellow-green:
 
-**Problem**: Empty result from extraction
-**Solution**:
+```json
+{ "color": "#d6d07a" }
+```
 
-- Check image data format (must be RGBA)
-- Verify pixel array is not empty
-- Lower minPopulation threshold
+```text
+…
+### Analysis Result
+✅ **This color is likable**
 
-### Poor Color Selection
+This color does not fall in the universally disliked range.
+- Although in yellow-green hue range, the light tone (82) makes it pleasant.
+```
 
-**Problem**: Extracted colors don't represent image well
-**Solution**:
+### Edge cases
 
-- Increase maxColors
-- Adjust targetChroma for different types
-- Try different quantization settings
+- **Looks olive, is not disliked.** `#6b7c3a` has hue 124.0, outside 90–111, so it is likable. Use the tool instead of guessing from the hex code.
+- **Low chroma** in the hue range is fine: `#8c8a70` (hue 109.8, chroma 13.0) gives `the low chroma (13) makes it neutral and acceptable`.
+- **Invalid input** returns a tool error: `Error: Invalid color format: bad`.
 
-### Disliked Colors in Results
+---
 
-**Problem**: Extracted colors are unpleasant
-**Solution**:
+## `fix_disliked_colors_batch`
 
-- Use `fix_disliked_colors_batch`
-- Adjust extraction to avoid bile zone
-- Post-process results
+Runs the same check on a list of colors. Each disliked color is replaced by its tone-70 fix, and all other colors are kept.
 
-### Performance Issues
+### Parameters
 
-**Problem**: Slow extraction for large images
-**Solution**:
+| Parameter         | Type     | Required | Default | Description                                         |
+| ----------------- | -------- | -------- | ------- | --------------------------------------------------- |
+| `colors`          | string[] | Yes      | –       | Colors to analyze, 1–100 items.                     |
+| `includeAnalysis` | boolean  | No       | `false` | Add HCT values for each color, rounded to integers. |
 
-- Resize images before extraction
-- Use sampling (process every nth pixel)
-- Cache results for repeated images
+### Example
 
-## See Also
+```json
+{ "colors": ["#7a6a1f", "#6750a4", "#8b8000", "#d6d07a", "nope"] }
+```
 
-- [Image Analysis Concepts](../concepts/image-analysis.md) - How extraction works
-- [Material Design Tools](./material-design.md) - Theme generation
-- [Color Operations](./color-operations.md) - Color manipulation
-- [Image Extraction Examples](../examples/image-extraction.md) - Practical examples
+```text
+# Batch Color Likability Analysis
+
+## Summary
+- Total colors: 5
+- Disliked colors found: 2
+- Percentage disliked: 40.0%
+
+## Results
+
+- **#7a6a1f** → **#beab59** (fixed)
+- **#6750a4** ✓ (already liked)
+- **#8b8000** → **#baad37** (fixed)
+- **#d6d07a** ✓ (already liked)
+- **nope**: ❌ Invalid color format
+
+## Note
+Disliked colors have been automatically fixed by lightening their tone to 70 while preserving hue and chroma. This makes them more pleasant while maintaining their essential character.
+```
+
+An invalid color is reported on its own line and does not fail the call. It still counts in `Total colors` and in the percentage.
+
+With `"includeAnalysis": true`:
+
+```text
+…
+- **#7a6a1f** → **#beab59** (fixed)
+  - Original HCT: (98°, 35, 45)
+  - Fixed HCT: (98°, 35, 70)
+- **#6750a4** ✓ (already liked)
+  - HCT: (299°, 48, 40)
+…
+```
+
+## Related
+
+- [Image Analysis concepts](/concepts/image-analysis)
+- [Material Design Tools](/tools/material-design)
+- [Agent Tools](/tools/agent-tools): `describe_color` also flags disliked colors

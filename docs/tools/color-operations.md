@@ -1,374 +1,269 @@
 # Color Operations Tools
 
-Tools for fundamental color manipulation, conversion, and analysis.
+Four building blocks for working with individual colors: convert between formats, measure how different two colors are, check a text/background pair, and adjust a color.
 
-## Tools
+| Tool                                | Purpose                                                          |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| [`convert_color`](#convert-color)   | Convert a color to hex, rgb, hsl, lab, hct, oklab or oklch       |
+| [`color_distance`](#color-distance) | Distance between two colors (ΔE2000, ΔE94, ΔE76, RGB)            |
+| [`check_contrast`](#check-contrast) | WCAG 2.x ratio and/or APCA Lc for a foreground/background pair   |
+| [`adjust_color`](#adjust-color)     | Lighten, darken, saturate, hue-shift, tint, shade, mix and so on |
 
-### `convert_color`
+Palette generation now has its own page: [Palettes & Gradients](/tools/palettes).
 
-Convert colors between different format representations.
+## Color input
 
-#### Parameters
+Every color parameter on this page accepts the same syntaxes:
 
-| Parameter | Type   | Required | Default | Description                                      |
-| --------- | ------ | -------- | ------- | ------------------------------------------------ |
-| `color`   | string | Yes      | -       | Input color (hex, rgb, hsl)                      |
-| `to`      | enum   | Yes      | -       | Target format: "hex", "rgb", "hsl", "lab", "hct" |
+| Syntax           | Examples                                                               |
+| ---------------- | ---------------------------------------------------------------------- |
+| Hex              | `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` (alpha is ignored)             |
+| Bare hex         | `6750a4` (6 or 8 digits)                                               |
+| CSS named colors | `rebeccapurple`, `teal`, …                                             |
+| `rgb()/rgba()`   | commas or spaces, decimals, percentages (clamped to 0–255)             |
+| `hsl()/hsla()`   | hue wraps; saturation and lightness are clamped                        |
+| `oklch()`        | `oklch(62.8% 0.2577 29.23)`                                            |
+| `oklab()`        | `oklab(49.6% 0.03 -0.13)`                                              |
+| `hct()`          | `hct(299.0, 47.9, 40.1)` (hue, chroma, tone; see [HCT](/concepts/hct)) |
 
-#### Returns
+`hwb()`, `lab()`, `lch()`, `color()` and `color-mix()` are **not** accepted. Invalid hex such as `#ggg` is rejected.
 
-String containing the color in the requested format.
-
-#### Examples
-
-```typescript
-// Hex to RGB
-{
-  "color": "#6750a4",
-  "to": "rgb"
-}
-// Returns: "rgb(103, 80, 164)"
-
-// RGB to HCT
-{
-  "color": "rgb(103, 80, 164)",
-  "to": "hct"
-}
-// Returns: "hct(258.1, 47.3, 41.2)"
-
-// HSL to LAB
-{
-  "color": "hsl(258, 35%, 48%)",
-  "to": "lab"
-}
-// Returns: "lab(39.4, 31.2, -42.8)"
-```
-
-#### Use Cases
-
-- Converting design tool colors to CSS formats
-- Preparing colors for perceptual calculations
-- Migrating between color systems
-- Ensuring format compatibility across tools
+::: tip Errors
+A color that cannot be parsed returns a tool result with `isError: true` and a message such as `Invalid color format: nope`. Arguments that break the schema (unknown enum value, wrong type, over a limit) also return `isError: true`, with `Invalid arguments for tool '<name>': …`.
+:::
 
 ---
 
-### `color_distance`
+## `convert_color`
 
-Calculate the perceptual difference between two colors using various metrics.
+Converts one color to another notation. The input can be any supported syntax; the output is a single string in the requested format.
 
-#### Parameters
+### Parameters
 
-| Parameter | Type   | Required | Default      | Description                                                                    |
-| --------- | ------ | -------- | ------------ | ------------------------------------------------------------------------------ |
-| `color1`  | string | Yes      | -            | First color                                                                    |
-| `color2`  | string | Yes      | -            | Second color                                                                   |
-| `metric`  | enum   | No       | "deltaE2000" | Distance metric: "euclidean", "deltaE76", "deltaE94", "deltaE2000", "weighted" |
+| Parameter | Type   | Required | Default | Limits                                                                | Description                                                                |
+| --------- | ------ | -------- | ------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `color`   | string | yes      | –       | –                                                                     | Color to convert (hex, CSS name, rgb(), hsl(), oklch(), oklab(), or hct()) |
+| `to`      | string | yes      | –       | enum: `hex` \| `rgb` \| `hsl` \| `lab` \| `hct` \| `oklab` \| `oklch` | Target format                                                              |
 
-#### Returns
+### Output formats
 
-Number representing the perceptual distance between colors.
+Real output for `{"color": "#6750a4", "to": …}`:
 
-#### Distance Metrics Explained
+| `to`    | Output                        | Notes                                                                |
+| ------- | ----------------------------- | -------------------------------------------------------------------- |
+| `hex`   | `#6750a4`                     | lowercase `#rrggbb`                                                  |
+| `rgb`   | `rgb(103, 80, 164)`           | integer channels                                                     |
+| `hsl`   | `hsl(256, 34%, 48%)`          | rounded to integers, so a round trip through HSL can shift the color |
+| `lab`   | `lab(40.08, 29.43, -42.24)`   | CIELAB with a D65 white point, 2 decimals (CSS `lab()` uses D50)     |
+| `hct`   | `hct(299.0, 47.9, 40.1)`      | hue, chroma, tone; 1 decimal                                         |
+| `oklab` | `oklab(49.6% 0.0525 -0.1194)` | L as a percentage, a/b with 4 decimals                               |
+| `oklch` | `oklch(49.6% 0.1305 293.7)`   | L as a percentage, chroma with 4 decimals, hue with 1                |
 
-- **euclidean**: Simple RGB distance, fast but not perceptually accurate
-- **deltaE76**: CIE 1976 standard, basic perceptual difference
-- **deltaE94**: Improved for graphics arts applications
-- **deltaE2000**: Most accurate perceptual metric, recommended for most uses
-- **weighted**: Custom weighting for specific use cases
+### Examples
 
-#### Interpreting Results
-
-| Delta E Value | Perception                            |
-| ------------- | ------------------------------------- |
-| < 1.0         | Not perceptible by human eyes         |
-| 1-2           | Perceptible through close observation |
-| 2-10          | Perceptible at a glance               |
-| 10-50         | Colors are more similar than opposite |
-| > 50          | Colors are more opposite than similar |
-
-#### Examples
-
-```typescript
-// Compare similar colors
-{
-  "color1": "#6750a4",
-  "color2": "#6751a5",
-  "metric": "deltaE2000"
-}
-// Returns: 0.34 (imperceptible difference)
-
-// Compare different colors
-{
-  "color1": "#ff0000",
-  "color2": "#00ff00",
-  "metric": "deltaE2000"
-}
-// Returns: 86.61 (very different)
-
-// Quick RGB comparison
-{
-  "color1": "rgb(100, 100, 100)",
-  "color2": "rgb(110, 110, 110)",
-  "metric": "euclidean"
-}
-// Returns: 17.32
+```json
+{ "color": "rebeccapurple", "to": "hex" }
 ```
 
-#### Use Cases
+```text
+#663399
+```
 
-- Determining if colors are visually distinct
-- Finding similar colors in a palette
-- Quality control for color reproduction
-- Grouping colors by similarity
+```json
+{ "color": "hct(299.0, 47.9, 40.1)", "to": "hex" }
+```
+
+```text
+#6750a4
+```
+
+```json
+{ "color": "rgb(120%, -10, 300)", "to": "rgb" }
+```
+
+```text
+rgb(255, 0, 255)
+```
+
+### Notes
+
+- The `hct`, `oklch` and `oklab` outputs above convert back to exactly `#6750a4`. The rounded `hsl` output doesn't: `hsl(256, 34%, 48%)` converts back to `#6751a4`.
+- The `lab` output can't be used as input at all, because `lab()` is not an accepted input syntax (`Invalid color format: lab(50 20 -30)`).
+- Alpha is dropped: `#6750a480` converts to `#6750a4`.
+- An unknown `to` value (for example `cmyk`) fails schema validation: `Invalid arguments for tool 'convert_color': to: Invalid option: expected one of "hex"|"rgb"|"hsl"|"lab"|"hct"|"oklab"|"oklch"`.
 
 ---
 
-### `check_contrast`
+## `color_distance`
 
-Check WCAG contrast ratio between foreground and background colors.
+Calculates the difference between two colors. The default metric is CIEDE2000 (ΔE2000), the most perceptually accurate of the five. The others are there for comparison with other tools or legacy values.
 
-#### Parameters
+### Parameters
 
-| Parameter    | Type   | Required | Default | Description           |
-| ------------ | ------ | -------- | ------- | --------------------- |
-| `foreground` | string | Yes      | -       | Text/foreground color |
-| `background` | string | Yes      | -       | Background color      |
+| Parameter | Type   | Required | Default        | Limits                                                                      | Description            |
+| --------- | ------ | -------- | -------------- | --------------------------------------------------------------------------- | ---------------------- |
+| `color1`  | string | yes      | –              | –                                                                           | First color            |
+| `color2`  | string | yes      | –              | –                                                                           | Second color           |
+| `metric`  | string | no       | `"deltaE2000"` | enum: `euclidean` \| `deltaE76` \| `deltaE94` \| `deltaE2000` \| `weighted` | Distance metric to use |
 
-#### Returns
+### Metrics
 
-Object containing contrast ratio and WCAG compliance levels.
+| Metric       | What it computes                                                    | `#ff0000` vs `#00ff00` | `#6750a4` vs `#6751a5` |
+| ------------ | ------------------------------------------------------------------- | ---------------------- | ---------------------- |
+| `deltaE2000` | CIEDE2000 on CIELAB (D65)                                           | 86.61                  | 0.35                   |
+| `deltaE94`   | CIE94, graphic-arts weights (kL = kC = kH = 1)                      | 73.43                  | 0.36                   |
+| `deltaE76`   | Straight Euclidean distance in CIELAB                               | 170.57                 | 0.46                   |
+| `euclidean`  | Euclidean distance on sRGB channels (0–255)                         | 360.62                 | 1.41                   |
+| `weighted`   | sRGB channel differences weighted 0.3 / 0.59 / 0.11, then Euclidean | 168.78                 | 0.60                   |
 
-```typescript
-{
-  "ratio": 21.0,
-  "aa": {
-    "normal": true,
-    "large": true
-  },
-  "aaa": {
-    "normal": true,
-    "large": true
-  }
-}
+`euclidean` and `weighted` are measured in 0–255 channel units, so their numbers aren't on the same scale as the ΔE metrics.
+
+### Example
+
+```json
+{ "color1": "#6750a4", "color2": "rebeccapurple" }
 ```
 
-#### WCAG Standards
-
-| Level | Normal Text | Large Text |
-| ----- | ----------- | ---------- |
-| AA    | 4.5:1       | 3:1        |
-| AAA   | 7:1         | 4.5:1      |
-
-Large text is defined as:
-
-- 18pt (24px) or larger
-- 14pt (18.66px) or larger if bold
-
-#### Examples
-
-```typescript
-// High contrast (black on white)
-{
-  "foreground": "#000000",
-  "background": "#ffffff"
-}
-// Returns:
-// Ratio: 21:1
-// AA: ✓ Pass (normal & large)
-// AAA: ✓ Pass (normal & large)
-
-// Medium contrast
-{
-  "foreground": "#6750a4",
-  "background": "#ffffff"
-}
-// Returns:
-// Ratio: 6.23:1
-// AA: ✓ Pass (normal & large)
-// AAA: ✗ Fail (normal), ✓ Pass (large)
-
-// Low contrast
-{
-  "foreground": "#aaaaaa",
-  "background": "#ffffff"
-}
-// Returns:
-// Ratio: 2.32:1
-// AA: ✗ Fail (normal), ✗ Fail (large)
-// AAA: ✗ Fail (normal & large)
+```text
+Distance between #6750a4 and rebeccapurple: 8.05
 ```
 
-#### Use Cases
+The output echoes both inputs as you wrote them and rounds the distance to 2 decimals.
 
-- Ensuring web accessibility compliance
-- Validating design system colors
-- Finding accessible color combinations
-- Automated accessibility testing
+### Reading ΔE2000
+
+As a rule of thumb, values below 1 are not perceptible, 1–2 need close inspection, 2–10 are visible at a glance, and above 10 the colors look clearly different. [`check_palette_accessibility`](/tools/accessibility#check-palette-accessibility) treats ΔE2000 < 10 as indistinguishable by default. For more detail see [Distance Metrics](/concepts/distance-metrics).
+
+### Notes
+
+- `deltaE94` is not symmetric because it uses the first color's chroma as the reference: `#ff0000` → `#00ff00` is 73.43, and `#00ff00` → `#ff0000` is 68.80. The other four metrics are symmetric.
+- An invalid color returns `isError: true` with `Invalid color format: <the bad input>`.
 
 ---
 
-### `generate_palette`
+## `check_contrast`
 
-Generate harmonious color palettes from a base color.
+Checks a foreground/background pair against WCAG 2.x, APCA, or both. When the pair has problems it also adds an "Agent Guidance" block: a hue-preserving AA fix, an optical-vibration warning, and color-blindness contrast drops. The full explanation of the thresholds and the guidance block is in [Accessibility → `check_contrast`](/tools/accessibility#check-contrast).
 
-#### Parameters
+### Parameters
 
-| Parameter   | Type   | Required | Default         | Description                                                                        |
-| ----------- | ------ | -------- | --------------- | ---------------------------------------------------------------------------------- |
-| `baseColor` | string | Yes      | -               | Starting color for palette                                                         |
-| `type`      | enum   | No       | "monochromatic" | Palette type: "monochromatic", "analogous", "complementary", "triadic", "tetradic" |
-| `count`     | number | No       | 5               | Number of colors (3-10)                                                            |
+| Parameter    | Type    | Required | Default  | Limits                           | Description                                                                          |
+| ------------ | ------- | -------- | -------- | -------------------------------- | ------------------------------------------------------------------------------------ |
+| `algorithm`  | string  | no       | `"wcag"` | enum: `wcag` \| `apca` \| `both` | `wcag` (WCAG 2.x ratio), `apca` (Lc, WCAG 3 draft), or `both`                        |
+| `background` | string  | yes      | –        | –                                | Background color                                                                     |
+| `foreground` | string  | yes      | –        | –                                | Foreground/text color                                                                |
+| `suggestFix` | boolean | no       | `true`   | –                                | Include the nearest hue-preserving AA fix and CVD/optical warnings when issues exist |
 
-#### Palette Types Explained
+### Example
 
-- **monochromatic**: Variations of a single hue with different saturation/lightness
-- **analogous**: Adjacent colors on the color wheel (harmonious)
-- **complementary**: Opposite colors on the wheel (high contrast)
-- **triadic**: Three evenly spaced colors (balanced contrast)
-- **tetradic**: Four colors in complementary pairs (rich schemes)
-
-#### Returns
-
-Array of color strings in hex format.
-
-#### Examples
-
-```typescript
-// Monochromatic palette
-{
-  "baseColor": "#6750a4",
-  "type": "monochromatic",
-  "count": 5
-}
-// Returns: ["#2a2042", "#4a3872", "#6750a4", "#9580c4", "#c4b8e4"]
-
-// Analogous palette
-{
-  "baseColor": "#3498db",
-  "type": "analogous",
-  "count": 5
-}
-// Returns: ["#34d8db", "#34b8db", "#3498db", "#3478db", "#3458db"]
-
-// Complementary palette
-{
-  "baseColor": "#ff6b6b",
-  "type": "complementary",
-  "count": 2
-}
-// Returns: ["#ff6b6b", "#6bffc9"]
-
-// Triadic palette
-{
-  "baseColor": "#e74c3c",
-  "type": "triadic",
-  "count": 3
-}
-// Returns: ["#e74c3c", "#3ce74c", "#4c3ce7"]
+```json
+{ "foreground": "#6750a4", "background": "#ffffff", "algorithm": "both" }
 ```
 
-#### Use Cases
+```text
+## WCAG 2.x luminance ratio
+Contrast Ratio: 6.44:1
+- AA (normal text):  ✓ Pass (need 4.5:1)
+- AA (large text):   ✓ Pass (need 3:1)
+- AAA (normal text): ✗ Fail (need 7:1)
+- AAA (large text):  ✓ Pass (need 4.5:1)
 
-- Creating brand color palettes
-- Generating UI color schemes
-- Finding harmonious color combinations
-- Exploring color variations
-
-## Common Patterns
-
-### Color Input Formats
-
-All color parameters accept:
-
-- **Hex**: `#rgb`, `#rrggbb` (with or without #)
-- **RGB**: `rgb(r, g, b)` where values are 0-255
-- **HSL**: `hsl(h, s%, l%)` where h is 0-360, s and l are 0-100
-
-### Error Handling
-
-Invalid colors return descriptive errors:
-
-```
-"Error: Invalid color format: xyz123"
-"Error: Color values out of range"
+## APCA (WCAG 3 draft)
+Lc: 81.8 (dark text on light bg)
+- Body text (|Lc| ≥ 75):    ✓ Pass
+- Content text (|Lc| ≥ 60): ✓ Pass
+- Large text (|Lc| ≥ 45):   ✓ Pass
+- Spot / non-content (|Lc| ≥ 30): ✓ Pass
 ```
 
-### Performance Considerations
+To find a passing color instead of only checking one, use [`fix_contrast`](/tools/agent-tools).
 
-- `convert_color`: O(1) - Direct calculation
-- `color_distance`: O(1) - Direct calculation
-- `check_contrast`: O(1) - Direct calculation
-- `generate_palette`: O(n) - Linear with count
+---
 
-## Integration Examples
+## `adjust_color`
 
-### Accessibility Checker
+Applies one adjustment to a color and returns the result as a hex string. Lightness, saturation and hue changes can run in OKLCH (the default), HCT, or classic HSL. The perceptual spaces keep hue steady and avoid muddy mixes.
 
-```typescript
-async function checkAccessibility(colors) {
-  const results = [];
-  for (const fg of colors.foregrounds) {
-    for (const bg of colors.backgrounds) {
-      const contrast = await checkContrast(fg, bg);
-      if (contrast.aa.normal) {
-        results.push({ fg, bg, ratio: contrast.ratio });
-      }
-    }
-  }
-  return results;
-}
+### Parameters
+
+| Parameter   | Type   | Required | Default   | Limits                                                                                                                            | Description                                                                                                                                                                                                    |
+| ----------- | ------ | -------- | --------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `amount`    | number | no       | –         | –                                                                                                                                 | Amount of change: percent (0–100) for lighten/darken/saturate/desaturate/tint/shade, degrees (−360..360) for hue-shift, or the 0–1 weight of the first color for mix. Per-operation defaults are listed below. |
+| `color`     | string | yes      | –         | –                                                                                                                                 | Color to adjust                                                                                                                                                                                                |
+| `operation` | string | yes      | –         | enum: `lighten` \| `darken` \| `saturate` \| `desaturate` \| `hue-shift` \| `tint` \| `shade` \| `grayscale` \| `invert` \| `mix` | Adjustment operation                                                                                                                                                                                           |
+| `space`     | string | no       | `"oklch"` | enum: `oklch` \| `hct` \| `hsl`                                                                                                   | Color space for the adjustment                                                                                                                                                                                 |
+| `with`      | string | no       | –         | –                                                                                                                                 | Second color (only for `mix`)                                                                                                                                                                                  |
+
+### Operations and `amount`
+
+| Operation    | `amount` meaning                       | Default | `oklch`                                     | `hct`                     | `hsl`                      |
+| ------------ | -------------------------------------- | ------- | ------------------------------------------- | ------------------------- | -------------------------- |
+| `lighten`    | lightness points                       | 10      | L + amount / 100                            | tone + amount             | HSL L + amount             |
+| `darken`     | lightness points                       | 10      | L − amount / 100                            | tone − amount             | HSL L − amount             |
+| `saturate`   | percent                                | 10      | chroma × (1 + amount/100)                   | chroma × (1 + amount/100) | HSL S + amount             |
+| `desaturate` | percent                                | 10      | chroma × (1 − amount/100)                   | chroma × (1 − amount/100) | HSL S − amount             |
+| `hue-shift`  | degrees (negative = counter-clockwise) | 30      | rotate OKLCH hue                            | rotate HCT hue            | same as `oklch`            |
+| `tint`       | percent of white, clamped 0–100        | **20**  | mix with white in OKLab                     | same                      | same                       |
+| `shade`      | percent of black, clamped 0–100        | **20**  | mix with black in OKLab                     | same                      | same                       |
+| `grayscale`  | ignored                                | –       | Rec. 601 luma (0.299 R + 0.587 G + 0.114 B) | same                      | same                       |
+| `invert`     | ignored                                | –       | 255 − each sRGB channel                     | same                      | same                       |
+| `mix`        | weight of `color`, 0–1                 | 0.5     | interpolate in OKLab                        | interpolate in OKLab      | plain sRGB channel average |
+
+Out-of-gamut results are brought back into sRGB by reducing chroma: OKLCH keeps lightness and hue, and HCT keeps hue and tone.
+
+::: warning Defaults
+The schema description says "Default 10 / 30 / 0.5". `tint` and `shade` actually default to **20** (`tint` with no `amount` gives `#8272b7`, the same as `amount: 20`).
+:::
+
+### Examples
+
+`lighten` with the default amount (10) in each space, for `#6750a4`:
+
+| `space` | Result    |
+| ------- | --------- |
+| `oklch` | `#846ec5` |
+| `hct`   | `#8069bf` |
+| `hsl`   | `#836eb9` |
+
+Mixing blue and yellow 50/50:
+
+```json
+{ "color": "#0000ff", "operation": "mix", "with": "#ffff00" }
 ```
 
-### Palette Generator
-
-```typescript
-async function createBrandPalette(brandColor) {
-  const monochromatic = await generatePalette({
-    baseColor: brandColor,
-    type: "monochromatic",
-    count: 5,
-  });
-
-  const accent = await generatePalette({
-    baseColor: brandColor,
-    type: "complementary",
-    count: 2,
-  });
-
-  return {
-    primary: monochromatic,
-    accent: accent[1],
-  };
-}
+```text
+#6cabc7
 ```
 
-### Format Converter
+The same call with `"space": "hsl"` averages the sRGB channels and returns `#808080` (grey).
 
-```typescript
-async function normalizeColors(colors) {
-  const normalized = [];
-  for (const color of colors) {
-    const hex = await convertColor(color, "hex");
-    const rgb = await convertColor(color, "rgb");
-    const hsl = await convertColor(color, "hsl");
-    normalized.push({ original: color, hex, rgb, hsl });
-  }
-  return normalized;
-}
+`amount` for `mix` is the weight of `color`, so `1` returns `color` unchanged and `0` returns `with`:
+
+```json
+{ "color": "#6750a4", "operation": "mix", "with": "#ffcc00", "amount": 0.8 }
 ```
 
-## Best Practices
+```text
+#816c9a
+```
 
-1. **Use deltaE2000** for most perceptual comparisons
-2. **Always check contrast** for text/background combinations
-3. **Convert to HCT or LAB** before perceptual operations
-4. **Use monochromatic palettes** for consistent UI elements
-5. **Validate accessibility** early in design process
+### Errors and edge cases
 
-## Related Documentation
+| Input                             | Result (`isError: true`)                                  |
+| --------------------------------- | --------------------------------------------------------- |
+| `mix` without `with`              | `Error: 'with' is required for mix operation`             |
+| `mix` with `amount: 50`           | `Error: mix amount must be between 0 and 1`               |
+| `mix` with an unparsable `with`   | `Invalid color format: zzz`                               |
+| unknown `operation` (e.g. `blur`) | `Invalid arguments for tool 'adjust_color': operation: …` |
 
-- [HCT Color Space](../concepts/hct-color-space.md)
-- [Distance Metrics](../concepts/distance-metrics.md)
-- [Accessibility Compliance](../examples/accessibility-compliance.md)
-- [API Reference](../api/README.md#color-operations)
+- `mix` is the only operation that validates `amount`. For the others, large values saturate: `lighten` by 100 or `tint` by 150 gives `#ffffff`.
+- `space` only affects `lighten`, `darken`, `saturate`, `desaturate`, `hue-shift` and `mix`. For `hue-shift`, `hsl` behaves like `oklch`. For `mix`, `hct` behaves like `oklch`.
+
+---
+
+## Related
+
+- [Accessibility & CVD](/tools/accessibility): contrast details, color-blindness simulation, palette audits
+- [Palettes & Gradients](/tools/palettes): harmonies, locked palettes, gradients, export
+- [Agent Tools](/tools/agent-tools): `describe_color`, `fix_contrast` and other higher-level helpers
+- [Color Spaces](/concepts/color-spaces), [HCT](/concepts/hct), [Distance Metrics](/concepts/distance-metrics)

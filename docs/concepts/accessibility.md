@@ -1,485 +1,180 @@
 # Accessibility
 
-Coolors MCP ensures color choices meet accessibility standards through comprehensive contrast checking and automatic adjustments based on WCAG guidelines.
+Coolors MCP measures contrast with **WCAG 2.x** (the ratio that conformance is judged by today) and **APCA** (the perceptual contrast method drafted for WCAG 3), simulates **color-vision deficiency (CVD)**, and fixes failing pairs by searching **HCT tone**. Tools: `check_contrast`, `fix_contrast`, `audit_ui_colors`, `simulate_color_blindness`, `check_palette_accessibility` (parameters in [Accessibility tools](/tools/accessibility)).
 
-## Contrast Standards
+## WCAG 2.x contrast ratio
 
-### WCAG Overview
-
-The Web Content Accessibility Guidelines (WCAG) define contrast requirements for readable content:
-
-| Level   | Normal Text | Large Text | Non-Text |
-| ------- | ----------- | ---------- | -------- |
-| **AA**  | 4.5:1       | 3:1        | 3:1      |
-| **AAA** | 7:1         | 4.5:1      | N/A      |
-
-**Large text** is defined as:
-
-- 18pt (24px) or larger
-- 14pt (18.5px) or larger if bold
-
-### Contrast Ratio Calculation
-
-Contrast ratio is based on relative luminance:
-
-```javascript
-// Relative luminance calculation
-function getLuminance(rgb) {
-  const [r, g, b] = rgb.map((val) => {
-    val = val / 255;
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-// Contrast ratio
-function getContrastRatio(color1, color2) {
-  const l1 = getLuminance(color1);
-  const l2 = getLuminance(color2);
-
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-
-  return (lighter + 0.05) / (darker + 0.05);
-}
+```text
+channel c = value / 255
+linear    = c ≤ 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055)^2.4
+L         = 0.2126·R + 0.7152·G + 0.0722·B          (relative luminance)
+ratio     = (L_lighter + 0.05) / (L_darker + 0.05)   (1:1 … 21:1)
 ```
 
-### Understanding Contrast Ratios
+The code uses the WCAG 2.x threshold 0.03928. The sRGB spec's 0.04045 gives identical results for 8-bit colors, because no 8-bit value lies between the two (10/255 = 0.0392, 11/255 = 0.0431).
 
-- **1:1** - No contrast (same color)
-- **4.5:1** - Minimum for normal text (AA)
-- **7:1** - Enhanced contrast (AAA)
-- **21:1** - Maximum (black on white)
+| Target                    | Ratio | `fix_contrast` `target` |
+| ------------------------- | ----- | ----------------------- |
+| AA, normal text           | 4.5:1 | `aa` (default)          |
+| AA, large text            | 3:1   | `aa-large`              |
+| AAA, normal text          | 7:1   | `aaa`                   |
+| AAA, large text           | 4.5:1 | —                       |
+| Non-text UI (WCAG 1.4.11) | 3:1   | `ui`                    |
 
-## HCT and Accessibility
+Large text means at least 18pt (24px), or 14pt (≈18.7px) bold.
 
-### Tone-Based Contrast
+## APCA (WCAG 3 draft)
 
-HCT's tone component directly correlates with contrast:
+APCA returns a lightness contrast **Lc**, roughly −108 to +106. The implementation (`src/color/apca.ts`) follows **apca-w3 0.1.9** (SA98G constants):
 
-| Tone Difference | Approximate Contrast | Use Case                |
-| --------------- | -------------------- | ----------------------- |
-| 40              | ~3:1                 | Large text, UI elements |
-| 50              | ~4.5:1               | Normal text (AA)        |
-| 70              | ~7:1                 | Enhanced (AAA)          |
-| 90              | ~15:1                | Maximum readability     |
+| Constant                   | Value                                                         |
+| -------------------------- | ------------------------------------------------------------- |
+| Screen luminance           | `(c/255)^2.4`, coefficients 0.2126729 / 0.7151522 / 0.0721750 |
+| Black soft clamp           | threshold 0.022, exponent 1.414                               |
+| Normal polarity exponents  | background 0.56, text 0.57                                    |
+| Reverse polarity exponents | background 0.65, text 0.62                                    |
+| Scale (both polarities)    | 1.14                                                          |
+| Low clip / offset          | 0.1 / 0.027                                                   |
+| Minimum ΔY                 | 0.0005 (below it Lc = 0)                                      |
 
-### Predictable Relationships
+**Sign convention:** positive Lc = dark text on a light background; negative Lc = light text on a dark background. Thresholds compare **|Lc|**:
 
-```javascript
-// Guaranteed accessible pairs in HCT
-const background = { h: 200, c: 20, t: 95 }; // Light surface
-const text = { h: 200, c: 20, t: 20 }; // Dark text
-// Tone difference: 75 = guaranteed 7:1+ contrast
+| \|Lc\| ≥ | Use (APCA Bronze simple levels) | `fix_contrast` `target` |
+| -------- | ------------------------------- | ----------------------- |
+| 75       | Body text                       | `apca-body`             |
+| 60       | Content text                    | `apca-content`          |
+| 45       | Large / headline text           | `apca-large`            |
+| 30       | Spot / non-content text         | —                       |
+
+APCA is not symmetric. Swapping text and background changes the value, which the WCAG ratio never does:
+
+| Text on background     | Lc     |
+| ---------------------- | ------ |
+| `#000000` on `#ffffff` | 106.0  |
+| `#ffffff` on `#000000` | -107.9 |
+| `#888888` on `#ffffff` | 63.1   |
+| `#ffffff` on `#888888` | -68.5  |
+| `#000000` on `#aaaaaa` | 58.1   |
+| `#aaaaaa` on `#000000` | -56.2  |
+
+::: warning APCA is a draft
+APCA is still a draft and is not required for WCAG 2.x conformance. Use it as a second opinion; the two methods can disagree sharply on light-on-dark pairs (see the `fix_contrast` example below).
+:::
+
+### Example
+
+`check_contrast` with `{"foreground": "#888888", "background": "#ffffff", "algorithm": "both"}`:
+
+```text
+## WCAG 2.x luminance ratio
+Contrast Ratio: 3.54:1
+- AA (normal text):  ✗ Fail (need 4.5:1)
+- AA (large text):   ✓ Pass (need 3:1)
+- AAA (normal text): ✗ Fail (need 7:1)
+- AAA (large text):  ✗ Fail (need 4.5:1)
+
+## APCA (WCAG 3 draft)
+Lc: 63.1 (dark text on light bg)
+- Body text (|Lc| ≥ 75):    ✗ Fail
+- Content text (|Lc| ≥ 60): ✓ Pass
+- Large text (|Lc| ≥ 45):   ✓ Pass
+- Spot / non-content (|Lc| ≥ 30): ✓ Pass
+
+## Agent Guidance
+- **Nearest AA fix (hue-preserving)**: foreground `#767677` on `#ffffff` → 4.54:1 (APCA Lc 71.5, ΔE=6.9)
 ```
 
-## Checking Contrast
+## Fixing contrast by tone search
 
-### Basic Contrast Check
+`fix_contrast`, and the suggestion in `check_contrast`, change only the **HCT tone** of one color and keep its HCT hue and chroma. Since tone is L\* and WCAG luminance depends only on L\* (see [HCT](/concepts/hct#why-tone-matters-for-contrast)), tone is the one dimension that moves contrast.
 
-```javascript
-{
-  "name": "check_contrast",
-  "arguments": {
-    "foreground": "#1f2937",
-    "background": "#ffffff"
-  }
-}
+1. If the pair already meets the target, it is returned unchanged.
+2. For each allowed direction, darker (toward tone 0) or lighter (toward 100), check that the end tone can reach the target at all. If it can, binary-search (24 steps) for the tone closest to the original that still meets the target.
+3. `adjust` chooses what may move: `foreground` (default), `background`, or `auto` (both are tried). `prefer: "minimal"` (default) tries both directions; `darker`/`lighter` try one and fall back to the other if it fails.
+4. The candidate with the smallest **ΔE2000** from the original color wins.
+5. If no tone works, the color becomes black or white, whichever gives more contrast.
 
-// Returns
-{
-  "ratio": 15.74,
-  "passes": {
-    "AA": { "normal": true, "large": true },
-    "AAA": { "normal": true, "large": true }
-  },
-  "recommendation": "Excellent contrast for all uses"
-}
+The suggestion in `check_contrast` always targets AA (4.5:1) and moves the foreground.
+
+WCAG and APCA can disagree. Fixing `#6750a4` on `#1c1b1e` for AA:
+
+```text
+# Accessible Contrast Solution (aa)
+
+- **Status**: ✓ Target achieved
+- **Adjusted**: foreground (ΔE2000 shift = 14.32)
+- **Before**: `#6750a4` on `#1c1b1e` → 2.66:1 (APCA Lc -18.6)
+- **After**:  `#8c75cb` on `#1c1b1e` → **4.51:1** (APCA Lc **-34.7**)
+
+## Remaining Notes
+- Low APCA readability (|Lc|=34.7, aim for ≥60 content / ≥75 body).
 ```
 
-### Context-Aware Checking
+Targeting APCA instead (`#9a83db` on `#ffffff`, `target: "apca-body"`) lands at `#7660b5`: 5.11:1 and Lc 75.1.
 
-```javascript
-// Check with specific requirements
-{
-  "name": "check_contrast",
-  "arguments": {
-    "foreground": "#6366f1",
-    "background": "#f3f4f6",
-    "fontSize": 14,
-    "fontWeight": 400
-  }
-}
+## Color-vision deficiency simulation
+
+`simulate_color_blindness` and the CVD checks use the **Machado, Oliveira & Fernandes (2009)** model:
+
+```text
+sRGB → linear sRGB → 3×3 Machado matrix → sRGB (rounded, clamped 0–255)
 ```
 
-## Material Design Contrast Levels
+| Type            | Model                                                                | Prevalence used in reports |
+| --------------- | -------------------------------------------------------------------- | -------------------------- |
+| `protanopia`    | Machado matrix, severity 1.0                                         | ~1%                        |
+| `deuteranopia`  | Machado matrix, severity 1.0                                         | ~1%                        |
+| `tritanopia`    | Machado matrix, severity 1.0                                         | ~0.003%                    |
+| `protanomaly`   | Machado matrix, severity 0.6                                         | ~1%                        |
+| `deuteranomaly` | Machado matrix, severity 0.6                                         | ~5%                        |
+| `tritanomaly`   | Machado matrix, severity 0.6                                         | ~0.01%                     |
+| `achromatopsia` | Grey with the same relative luminance (BT.709 weights on linear RGB) | ~0.003%                    |
 
-### Default Contrast (0.0)
+The anomalous forms (-omaly) use one fixed severity of 0.6; there is no severity parameter.
 
-Meets AA accessibility:
+```text
+# Color Blindness Simulation
 
-- **Guaranteed minimums**:
-  - 4.5:1 for all text and icons
-  - 3:1 for required non-text elements
-- **Targets**:
-  - 7:1 for high emphasis text
+| Original | protanopia | deuteranopia | tritanopia | protanomaly | deuteranomaly | tritanomaly | achromatopsia |
+|---|---|---|---|---|---|---|---|
+| #ff0000 (#ff0000) | #6d5f00 | #a39000 | #ff000f | #a75900 | #bb7d00 | #ff0004 | #7f7f7f |
+| #2e7d32 (#2e7d32) | #7f722a | #756b38 | #1e7a6d | #70742f | #6b7036 | #257c53 | #6e6e6e |
 
-### Medium Contrast (+0.5)
-
-Exceeds AA requirements:
-
-- **Guaranteed minimums**:
-  - 4.5:1 for all text
-  - 3:1 for all non-text elements
-- **Targets**:
-  - 7:1 for normal text
-  - 11:1 for high emphasis
-
-### High Contrast (+1.0)
-
-Meets AAA accessibility:
-
-- **Guaranteed minimums**:
-  - 7:1 for all text and icons
-  - 4.5:1 for all non-text elements
-- **Targets**:
-  - 11:1 for normal text
-  - 21:1 for high emphasis
-
-## Automatic Adjustments
-
-### Tone Adjustment Algorithm
-
-When colors don't meet contrast requirements:
-
-```javascript
-function adjustForContrast(foreground, background, targetRatio) {
-  const currentRatio = getContrastRatio(foreground, background);
-
-  if (currentRatio >= targetRatio) {
-    return foreground; // Already accessible
-  }
-
-  // Convert to HCT for tone adjustment
-  const fgHct = toHct(foreground);
-  const bgHct = toHct(background);
-
-  // Determine adjustment direction
-  const lighten = bgHct.tone < 50;
-
-  // Binary search for optimal tone
-  let low = lighten ? bgHct.tone : 0;
-  let high = lighten ? 100 : bgHct.tone;
-
-  while (high - low > 1) {
-    const mid = (low + high) / 2;
-    const testColor = { ...fgHct, tone: mid };
-    const ratio = getContrastRatio(toRgb(testColor), background);
-
-    if (ratio >= targetRatio) {
-      if (lighten) high = mid;
-      else low = mid;
-    } else {
-      if (lighten) low = mid;
-      else high = mid;
-    }
-  }
-
-  return toRgb({ ...fgHct, tone: lighten ? high : low });
-}
+## Population prevalence
+…
 ```
 
-### Contrast Libraries
+### Where the simulation is used
 
-Pre-calculated adjustments for common scenarios:
+- **`check_contrast` / `audit_ui_colors` pairs:** both colors are simulated for protanopia, deuteranopia and tritanopia. A warning is raised if the simulated WCAG ratio drops below 3.5:1 (2.5:1 for large-text and UI pairs).
+- **`check_palette_accessibility`:** every pair of colors is simulated and compared with ΔE2000. Pairs below `indistinguishableThreshold` (default 10) are flagged:
 
-```javascript
-// Ensure text is readable on any background
-function getAccessibleTextColor(background) {
-  const bgLuminance = getLuminance(background);
+  ```text
+  …
+  ## deuteranopia (~1% of population)
+  ⚠ 1 indistinguishable pair:
+    - #d32f2f ↔ #388e3c: ΔE=5.0 (sim: #8b7c28 vs #867a42)
+  …
+  ```
 
-  // Use white or black based on background
-  if (bgLuminance > 0.5) {
-    return "#000000"; // Dark text on light background
-  } else {
-    return "#ffffff"; // Light text on dark background
-  }
-}
-```
+- **`audit_ui_colors` swatches:** CVD collisions are flagged below ΔE2000 8. **`audit_design_md`** uses `cvdThreshold` (default 10). **`generate_categorical_palette`** maximizes the smallest ΔE2000 under normal vision and the three dichromacies.
 
-## Color Roles and Accessibility
+### Optical vibration
 
-### Guaranteed Accessible Pairs
+`check_contrast` and `audit_ui_colors` also flag **chromostereopsis** (vivid opposing hues that appear to vibrate). The test: both colors have OKLCH chroma > 0.14, their hues differ by at least 95°, and their OKLCH lightness differs by less than 0.35.
 
-Material Design ensures these pairs always meet contrast requirements:
+## Material roles
 
-| Background       | Foreground         | Min Contrast | Use Case        |
-| ---------------- | ------------------ | ------------ | --------------- |
-| surface          | onSurface          | 4.5:1        | Main content    |
-| primary          | onPrimary          | 4.5:1        | Primary actions |
-| primaryContainer | onPrimaryContainer | 4.5:1        | Containers      |
-| error            | onError            | 4.5:1        | Error states    |
-
-### Role-Based Adjustments
-
-```javascript
-// Automatic role assignment with contrast guarantee
-function assignColorRoles(sourceColor, contrastLevel = 0) {
-  const palette = generateTonalPalette(sourceColor);
-
-  // Adjust tone mappings based on contrast level
-  const toneMap = {
-    primary: 40 - contrastLevel * 10,
-    onPrimary: 100,
-    primaryContainer: 90 + contrastLevel * 5,
-    onPrimaryContainer: 10 - contrastLevel * 5,
-  };
-
-  // Ensure minimum contrast
-  return Object.entries(toneMap).map(([role, tone]) => ({
-    role,
-    color: palette[tone],
-    meetsContrast: true,
-  }));
-}
-```
-
-## Best Practices
-
-### Design Guidelines
-
-#### DO's
-
-- ✅ Test all color combinations for contrast
-- ✅ Provide high contrast mode options
-- ✅ Use semantic color roles consistently
-- ✅ Consider different types of color blindness
-- ✅ Test with real content, not just color swatches
-
-#### DON'Ts
-
-- ❌ Rely on color alone to convey information
-- ❌ Use low contrast for aesthetic reasons
-- ❌ Assume large text allows poor contrast
-- ❌ Ignore user preference for high contrast
-- ❌ Use pure black on pure white (too harsh)
-
-### Testing Strategies
-
-#### Automated Testing
-
-```javascript
-// Test all color combinations in theme
-function testThemeAccessibility(theme) {
-  const results = [];
-
-  // Test each foreground/background pair
-  theme.pairs.forEach(({ fg, bg, context }) => {
-    const ratio = getContrastRatio(fg, bg);
-    const required = getRequiredRatio(context);
-
-    results.push({
-      pair: `${fg} on ${bg}`,
-      context,
-      ratio,
-      passes: ratio >= required,
-      recommendation: getRecommendation(ratio, context),
-    });
-  });
-
-  return results;
-}
-```
-
-#### Manual Testing
-
-1. **Blur test**: Blur your vision - can you still read it?
-2. **Grayscale test**: Convert to grayscale - still distinguishable?
-3. **Sunlight test**: View in bright light conditions
-4. **Distance test**: Step back from screen
-5. **Squint test**: Squint eyes - text still readable?
-
-## Special Considerations
-
-### Color Blindness
-
-Approximately 8% of men and 0.5% of women have color vision deficiency:
-
-| Type         | Frequency | Description     | Design Impact         |
-| ------------ | --------- | --------------- | --------------------- |
-| Protanopia   | 1.3%      | No red cones    | Red/green confusion   |
-| Deuteranopia | 1.2%      | No green cones  | Red/green confusion   |
-| Tritanopia   | 0.001%    | No blue cones   | Blue/yellow confusion |
-| Monochromacy | Rare      | No color vision | Rely on contrast only |
-
-#### Design Strategies
-
-```javascript
-// Ensure information isn't conveyed by color alone
-✓ Error: "❌ Invalid input" (icon + text)
-✗ Error: Red border only
-
-// Use patterns or icons
-✓ Status: "🟢 Active" / "🔴 Inactive"
-✗ Status: Green/Red backgrounds only
-
-// Provide sufficient contrast
-✓ Different tones for different states
-✗ Same tone, different hues only
-```
-
-### Dark Mode Considerations
-
-Dark themes require special attention:
-
-```javascript
-// Light theme
-const lightTheme = {
-  surface: { tone: 99 }, // Very light
-  onSurface: { tone: 10 }, // Very dark
-  // Contrast: ~15:1
-};
-
-// Dark theme - NOT just inverted
-const darkTheme = {
-  surface: { tone: 10 }, // Very dark
-  onSurface: { tone: 90 }, // Light, not white
-  // Contrast: ~13:1 (slightly less harsh)
-};
-```
-
-### Transparency and Overlays
-
-Colors with transparency need special handling:
-
-```javascript
-function getEffectiveColor(foreground, background, alpha) {
-  // Composite the colors
-  const composite = blendColors(foreground, background, alpha);
-
-  // Check contrast of composite
-  return getContrastRatio(composite, background);
-}
-
-// Ensure minimum opacity for text
-const minOpacity = {
-  normalText: 0.87, // ~87% opacity minimum
-  secondaryText: 0.6, // ~60% for secondary
-  disabledText: 0.38, // ~38% for disabled
-};
-```
-
-## Implementation Examples
-
-### React Component
-
-```jsx
-function AccessibleButton({ color, children }) {
-  const [textColor, setTextColor] = useState("#ffffff");
-
-  useEffect(() => {
-    // Automatically choose accessible text color
-    const accessible = getAccessibleTextColor(color);
-    setTextColor(accessible);
-  }, [color]);
-
-  return (
-    <button
-      style={{
-        backgroundColor: color,
-        color: textColor,
-      }}
-      aria-label={children}
-    >
-      {children}
-    </button>
-  );
-}
-```
-
-### CSS Custom Properties
-
-```css
-:root {
-  /* Define with guaranteed contrast */
-  --color-background: hsl(0, 0%, 98%);
-  --color-text: hsl(0, 0%, 13%);
-  /* Contrast ratio: 15.3:1 ✓ */
-
-  --color-primary: hsl(239, 84%, 67%);
-  --color-on-primary: hsl(0, 0%, 100%);
-  /* Contrast ratio: 4.6:1 ✓ */
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  :root {
-    --color-background: hsl(0, 0%, 100%);
-    --color-text: hsl(0, 0%, 0%);
-    /* Contrast ratio: 21:1 ✓ */
-  }
-}
-```
-
-### Validation Tool
-
-```javascript
-class AccessibilityValidator {
-  constructor(minRatio = 4.5) {
-    this.minRatio = minRatio;
-  }
-
-  validate(theme) {
-    const issues = [];
-
-    Object.entries(theme).forEach(([role, color]) => {
-      const background = this.getBackground(role, theme);
-      const ratio = getContrastRatio(color, background);
-
-      if (ratio < this.minRatio) {
-        issues.push({
-          role,
-          color,
-          background,
-          ratio,
-          required: this.minRatio,
-          suggestion: this.suggestFix(color, background),
-        });
-      }
-    });
-
-    return {
-      valid: issues.length === 0,
-      issues,
-    };
-  }
-
-  suggestFix(fg, bg) {
-    return adjustForContrast(fg, bg, this.minRatio);
-  }
-}
-```
+Material's role pairs are tone pairs with known contrast. For example onPrimary on primary (tones 100/40) is 6.44:1 for `#6750a4`. See the measured table in [Material Design](/concepts/material-design#contrast-of-the-role-pairs).
 
 ## Resources
 
-### Testing Tools
-
-- Chrome DevTools (Lighthouse)
-- Firefox Accessibility Inspector
-- axe DevTools
-- WAVE (WebAIM)
-- Stark (Figma/Sketch plugin)
-
-### Guidelines
-
-- [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/)
-- [Material Design Accessibility](https://m3.material.io/foundations/accessible-design)
-- [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
+- [WCAG 2.2 — Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
+- [APCA / SAPC reference implementation](https://github.com/Myndex/SAPC-APCA)
+- Machado, Oliveira & Fernandes (2009), _A Physiologically-based Model for Simulation of Color Vision Deficiency_
 
 ## See Also
 
-- [HCT System](./hct.md) - Tone-based contrast
-- [Material Design](./material-design.md) - Contrast levels
-- [Theme Matching](./theme-matching.md) - Accessibility scoring
-- [Color Spaces](./color-spaces.md) - Understanding luminance
+- [HCT Color System](/concepts/hct) — why tone controls contrast
+- [Distance Metrics](/concepts/distance-metrics) — ΔE2000 used by the CVD audits
+- [Accessibility tools](/tools/accessibility) — parameters and outputs

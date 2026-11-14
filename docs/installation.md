@@ -1,17 +1,36 @@
 # Installation
 
-Multiple ways to install the Coolors MCP server, depending on your needs.
+Coolors MCP is a stdio MCP server published on npm as [`@trishchuk/coolors-mcp`](https://www.npmjs.com/package/@trishchuk/coolors-mcp). Your MCP client starts it with `npx`, so there is nothing to install by hand.
 
-## Prerequisites
+## Requirements
 
-- Node.js v18.0.0 or higher
-- Claude Desktop or Claude Code with MCP support
+- **Node.js 20 or newer.** Check with `node --version`.
+- An MCP client that can launch stdio servers: Claude Code, Claude Desktop, Cursor and others.
 
-## Method 1: NPX (Recommended)
+The server needs no API keys, accounts, environment variables or configuration options. All 31 tools run locally and never use the network.
 
-No installation needed - runs directly:
+## Claude Code
 
-### Claude Desktop Configuration
+```bash
+claude mcp add coolors -- npx -y @trishchuk/coolors-mcp
+```
+
+The server is added to the current project by default. Add `--scope user` to make it available in all your projects:
+
+```bash
+claude mcp add --scope user coolors -- npx -y @trishchuk/coolors-mcp
+```
+
+Run `claude mcp list` in a terminal, or `/mcp` inside Claude Code, to check that `coolors` is connected.
+
+## Claude Desktop
+
+Open the configuration file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add the server and restart Claude Desktop:
 
 ```json
 {
@@ -24,21 +43,36 @@ No installation needed - runs directly:
 }
 ```
 
-### Claude Code Configuration
+## Cursor and other clients
 
-```bash
-claude mcp add coolors --npm-package @trishchuk/coolors-mcp
+Clients that use the `mcpServers` format take the same entry. For Cursor, put it in `.cursor/mcp.json` in your project or in `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "coolors": {
+      "command": "npx",
+      "args": ["-y", "@trishchuk/coolors-mcp"]
+    }
+  }
+}
 ```
 
-## Method 2: Global Installation
+For any other client, configure a stdio server with the command `npx` and the arguments `-y @trishchuk/coolors-mcp`.
 
-### Install globally
+## Global install
+
+If you prefer not to go through `npx` on every start:
 
 ```bash
 npm install -g @trishchuk/coolors-mcp
 ```
 
-### Claude Desktop Configuration
+This installs a `coolors-mcp` command that starts the server.
+
+```bash
+claude mcp add coolors -- coolors-mcp
+```
 
 ```json
 {
@@ -50,122 +84,79 @@ npm install -g @trishchuk/coolors-mcp
 }
 ```
 
-### Claude Code Configuration
+## From source
+
+The project uses [pnpm](https://pnpm.io) (`npm i -g pnpm` or `corepack enable`):
 
 ```bash
-claude mcp add coolors --command coolors-mcp
-```
-
-## Method 3: Local Development
-
-For development or local testing:
-
-```bash
-# Clone the repository
 git clone https://github.com/x51xxx/coolors-mcp.git
 cd coolors-mcp
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Test locally
-node dist/bin/server.js
+pnpm install
+pnpm run build
 ```
 
-### Claude Desktop Configuration (Local)
+The server is built to `dist/bin/server.js`. Point your client at it with an absolute path:
 
 ```json
 {
   "mcpServers": {
     "coolors-dev": {
       "command": "node",
-      "args": ["/path/to/coolors-mcp/dist/bin/server.js"]
+      "args": ["/absolute/path/to/coolors-mcp/dist/bin/server.js"]
     }
   }
 }
 ```
 
-## Verification
+To call the tools by hand in a browser UI, run the built server under the MCP Inspector:
 
-Test your installation with a simple color conversion:
+```bash
+npx @modelcontextprotocol/inspector node dist/bin/server.js
+```
+
+## Verify the installation
+
+Ask your assistant:
+
+```
+Convert #6366f1 to HSL
+```
+
+It calls `convert_color` with `{"color": "#6366f1", "to": "hsl"}` and gets back:
+
+```
+hsl(239, 84%, 67%)
+```
+
+Running `npx -y @trishchuk/coolors-mcp` in a terminal prints nothing: the server waits for MCP messages on stdin. Press `Ctrl+C` to stop it.
+
+## Updating
+
+`npx` reuses the version in its cache. To pick up a new release, ask for `@latest` in the arguments:
 
 ```json
 {
-  "name": "convert_color",
-  "arguments": {
-    "color": "#6366F1",
-    "to": "hsl"
+  "mcpServers": {
+    "coolors": {
+      "command": "npx",
+      "args": ["-y", "@trishchuk/coolors-mcp@latest"]
+    }
   }
 }
 ```
 
-Expected response: `"hsl(239, 84%, 67%)"`
-
-## Available Tools
-
-Once installed, you'll have access to these tools:
-
-### Color Operations
-
-- `convert_color` - Convert between color formats
-- `color_distance` - Calculate perceptual distance
-- `check_contrast` - WCAG contrast checking
-- `generate_palette` - Create color palettes
-- `generate_gradient` - Create smooth gradients
-
-### Material Design
-
-- `generate_material_theme` - Full Material Design 3 theme
-- `harmonize_colors` - Harmonize multiple colors
-- `generate_tonal_palette` - Material tonal palette
-- `analyze_color_likability` - Check for disliked colors
-
-### CSS Theme Matching
-
-- `match_theme_color` - Find closest theme variable
-- `refactor_css_with_theme` - Automated CSS refactoring
-- `match_theme_colors_batch` - Batch color matching
-- `generate_theme_css` - Generate CSS custom properties
-
-### Image Processing
-
-- `extract_image_colors` - Extract dominant colors
-- `generate_theme_from_image` - Create theme from image
+For a global install, run `npm install -g @trishchuk/coolors-mcp` again. Release notes are in the [Changelog](/changelog).
 
 ## Troubleshooting
 
-Common issues:
+- **The server does not start:** check that `node --version` is 20 or newer, and restart the client after editing its configuration.
+- **An old version keeps running:** use `@trishchuk/coolors-mcp@latest`, or clear the npx cache.
+- **A tool returns `Invalid color format`:** the color syntax is not supported. See the [supported color formats](/tools/README#supported-color-formats).
 
-- **Node.js version**: Ensure you have Node.js ≥18.0.0 (`node --version`)
-- **Permission errors**: Try running with appropriate permissions
-- **MCP connection issues**: Restart your Claude client after configuration changes
-- **Module not found**: Ensure npm packages are properly installed
+More cases and the exact error messages: [Troubleshooting](/resources/troubleshooting).
 
-For more help, see the [FAQ](resources/faq) or [Troubleshooting Guide](resources/troubleshooting).
+## Next steps
 
-## Support
-
-Need help with installation or setup? Here's how to get assistance:
-
-### 🤝 Get Help
-
-- **GitHub Issues**: [Report bugs or request features](https://github.com/x51xxx/coolors-mcp/issues)
-- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/x51xxx/coolors-mcp/discussions)
-- **Email**: [taras@trishchuk.com](mailto:taras@trishchuk.com) for direct support
-
-### 📖 Documentation
-
-- **[Getting Started Guide](getting-started)** - Complete setup and configuration
-- **[Tools Reference](tools/README)** - Detailed tool documentation
-- **[Examples](examples/basic-colors)** - Practical usage patterns
-
-### 🚀 Contributing
-
-Interested in contributing? Check out our [Contributing Guide](https://github.com/x51xxx/coolors-mcp/blob/main/CONTRIBUTING.md) or reach out directly!
-
----
-
-**Developed by [Taras Trishchuk](https://github.com/x51xxx)** | Licensed under MIT
+- [Getting Started](/getting-started): first calls with real output
+- [Tools Overview](/tools/README): all 31 tools
+- [GitHub Issues](https://github.com/x51xxx/coolors-mcp/issues): report a bug or request a feature

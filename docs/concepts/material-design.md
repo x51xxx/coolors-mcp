@@ -1,332 +1,160 @@
 # Material Design 3 Color System
 
-Material Design 3 introduces a revolutionary approach to color through dynamic color schemes that adapt to user preferences and content while maintaining accessibility and visual harmony.
+Material Design 3 builds a whole color scheme from one **source color**: it derives a handful of tonal palettes in [HCT](/concepts/hct), then assigns every UI role (primary, onPrimary, surface…) a fixed tone from one of those palettes. Coolors MCP implements the classic Material 3 core palette and tone mapping. It does not implement scheme variants or contrast levels.
 
-## Dynamic Color Overview
+## What is implemented
 
-Dynamic color is the heart of Material Design 3, enabling personalized experiences through:
+| Implemented                                                             | Not implemented                                                                |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Core palette with Material's default ("tonal spot") chroma constants    | Scheme variants (vibrant, expressive, fidelity, content, monochrome, neutral…) |
+| 23 color roles for light and dark                                       | Contrast levels (medium / high)                                                |
+| Tonal palettes at any tone 0–100                                        | Surface-container roles, `outlineVariant`, `shadow`, `scrim`, inverse roles    |
+| Hue harmonization, HCT blending, temperature shift (`harmonize_colors`) | Elevation, shape or typography tokens                                          |
 
-- **User-generated color**: Extracted from wallpapers or user preferences
-- **Content-based color**: Derived from app content like album art or logos
-- **Systematic generation**: Creating complete themes from a single source color
+Tools: `generate_material_theme`, `generate_theme_css`, `generate_tonal_palette`, `harmonize_colors`, and `generate_theme_from_image` (see [Image Analysis](/concepts/image-analysis)). Parameters are listed in [Material Design tools](/tools/material-design).
 
-## Color Roles
+## Core palettes
 
-Material Design 3 defines semantic color roles that map to UI elements consistently:
+Six tonal palettes are derived from the source color's HCT hue _h_ and chroma _c_ (`corePaletteFromRgb` in `src/color/hct/tonal-palette.ts`, same constants as Material Color Utilities' `CorePalette.of`):
 
-### Primary Colors
+| Palette         | Hue       | Chroma       |
+| --------------- | --------- | ------------ |
+| Primary         | _h_       | max(48, _c_) |
+| Secondary       | _h_       | 16           |
+| Tertiary        | _h_ + 60° | 24           |
+| Neutral         | _h_       | 4            |
+| Neutral variant | _h_       | 8            |
+| Error           | 25°       | 84           |
 
-- **primary**: Main brand or theme color (tone 40 in light, 80 in dark)
-- **onPrimary**: Text/icons on primary color (tone 100 in light, 20 in dark)
-- **primaryContainer**: Light container variant (tone 90 in light, 30 in dark)
-- **onPrimaryContainer**: Text on primary container (tone 10 in light, 90 in dark)
+Because primary chroma is at least 48, even a grey source produces a colorful primary. `#808080` has HCT hue 209.5° and chroma 1.9, so its light-theme primary is `#006874` (a teal).
 
-### Secondary Colors
+Each palette is a fixed hue and chroma; a tone is resolved on request. If the chroma cannot be reached at that tone, it is reduced and the tone is kept (see [HCT](/concepts/hct#out-of-gamut-chroma-is-reduced-never-tone)).
 
-- **secondary**: Supporting brand color
-- **onSecondary**: Text/icons on secondary
-- **secondaryContainer**: Light container variant
-- **onSecondaryContainer**: Text on secondary container
+### Standard tones
 
-### Tertiary Colors
-
-- **tertiary**: Accent for special emphasis
-- **onTertiary**: Text/icons on tertiary
-- **tertiaryContainer**: Light container variant
-- **onTertiaryContainer**: Text on tertiary container
-
-### Surface Colors
-
-- **surface**: Main background color (tone 99 in light, 10 in dark)
-- **onSurface**: Primary text color (tone 10 in light, 90 in dark)
-- **surfaceVariant**: Secondary background (tone 95 in light, 30 in dark)
-- **onSurfaceVariant**: Secondary text (tone 30 in light, 80 in dark)
-
-### Additional Roles
-
-- **error**: Error states (hue ~25, chroma 84)
-- **outline**: Borders and dividers
-- **shadow**: Shadow colors
-- **scrim**: Modal overlays
-- **inverseSurface**: Inverted surface for emphasis
-- **inverseOnSurface**: Text on inverted surface
-- **inversePrimary**: Primary color on inverted surface
-
-## Tonal Palettes
-
-Material Design 3 uses 13 standard tones for each color palette:
-
-```
-[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100]
+```text
+0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100
 ```
 
-### Tone Usage Guidelines
+These are the defaults of `generate_tonal_palette` (`tones`) and `generate_theme_css` (`includeTones`). Both accept any tone from 0 to 100.
 
-| Tone Range | Light Theme Usage             | Dark Theme Usage     |
-| ---------- | ----------------------------- | -------------------- |
-| 0-10       | On-colors, high emphasis text | Surfaces, containers |
-| 20-40      | Primary actions, emphasis     | On-colors, text      |
-| 50         | Neutral midpoint              | Neutral midpoint     |
-| 60-80      | Containers, surfaces          | Primary actions      |
-| 90-100     | Backgrounds, surfaces         | On-colors, text      |
+::: warning generate_tonal_palette is not the theme's primary palette
+`generate_tonal_palette` keeps the seed's own hue and chroma, without the 48-chroma floor. For `#6750a4` (chroma 47.9) its tone 70 is `#b69df7`, while the theme's primary palette (chroma 48) gives `#b69df8`.
+:::
 
-## Key Colors
+## Role → tone mapping
 
-From a single source color, Material Design generates five key colors:
+`generate_material_theme` output for `sourceColor: "#6750a4"`:
 
-1. **Primary**: Directly from source color
-2. **Secondary**: Complementary color (hue shift ~60°, chroma × 0.5)
-3. **Tertiary**: Triadic color (hue shift ~120°, chroma × 0.7)
-4. **Error**: Standardized error color (hue 25, chroma 84)
-5. **Neutral**: Grayscale derived from source (chroma 4-8)
+| Role                 | Palette         | Light tone | Light     | Dark tone | Dark      |
+| -------------------- | --------------- | ---------- | --------- | --------- | --------- |
+| primary              | primary         | 40         | `#6750a4` | 80        | `#cfbcff` |
+| onPrimary            | primary         | 100        | `#ffffff` | 20        | `#381e72` |
+| primaryContainer     | primary         | 90         | `#e9ddff` | 30        | `#4f378a` |
+| onPrimaryContainer   | primary         | 10         | `#22005d` | 90        | `#e9ddff` |
+| secondary            | secondary       | 40         | `#625b71` | 80        | `#cbc2db` |
+| onSecondary          | secondary       | 100        | `#ffffff` | 20        | `#332d41` |
+| secondaryContainer   | secondary       | 90         | `#e8def8` | 30        | `#4a4458` |
+| onSecondaryContainer | secondary       | 10         | `#1e192b` | 90        | `#e8def8` |
+| tertiary             | tertiary        | 40         | `#7e5260` | 80        | `#efb8c8` |
+| onTertiary           | tertiary        | 100        | `#ffffff` | 20        | `#4a2532` |
+| tertiaryContainer    | tertiary        | 90         | `#ffd9e3` | 30        | `#633b48` |
+| onTertiaryContainer  | tertiary        | 10         | `#31101d` | 90        | `#ffd9e3` |
+| error                | error           | 40         | `#ba1a1a` | 80        | `#ffb4ab` |
+| onError              | error           | 100        | `#ffffff` | 20        | `#690005` |
+| errorContainer       | error           | 90         | `#ffdad6` | 30        | `#93000a` |
+| onErrorContainer     | error           | 10         | `#410002` | 90        | `#ffdad6` |
+| background           | neutral         | 99         | `#fffbff` | 10        | `#1c1b1e` |
+| onBackground         | neutral         | 10         | `#1c1b1e` | 90        | `#e6e1e6` |
+| surface              | neutral         | 99         | `#fffbff` | 10        | `#1c1b1e` |
+| onSurface            | neutral         | 10         | `#1c1b1e` | 90        | `#e6e1e6` |
+| surfaceVariant       | neutral variant | 90         | `#e7e0eb` | 30        | `#49454e` |
+| onSurfaceVariant     | neutral variant | 30         | `#49454e` | 80        | `#cac4cf` |
+| outline              | neutral variant | 50         | `#7a757f` | 60        | `#948f99` |
 
-## Scheme Variants
+Compared with Material Color Utilities 0.3.0 (`Scheme.light` / `Scheme.dark` for the same source), 45 of the 46 values are identical. The exception is dark `onErrorContainer`: this server uses error tone 90 (`#ffdad6`), as Material's current dynamic colors do, while the legacy `Scheme.dark` uses tone 80 (`#ffb4ab`).
 
-Material Design 3 offers multiple scheme variants for different moods:
+### Contrast of the role pairs
 
-### Tonal Spot (Default)
+Because roles are tone pairs, their contrast is predictable. Measured with `check_contrast` (`algorithm: "both"`) on the `#6750a4` theme:
 
-- Balanced use of primary color
-- Secondary and tertiary are complementary
-- Most versatile for general use
+| Pair (foreground on background)    | Tones       | WCAG    | APCA Lc |
+| ---------------------------------- | ----------- | ------- | ------- |
+| onPrimary on primary (light)       | 100 / 40    | 6.44:1  | -86.9   |
+| onPrimaryContainer on container    | 10 / 90     | 13.25:1 | 85.9    |
+| onSurface on surface (light)       | N10 / N99   | 16.73:1 | 102.3   |
+| onSurfaceVariant on surfaceVariant | NV30 / NV90 | 7.24:1  | 74.7    |
+| outline on surface (light)         | NV50 / N99  | 4.38:1  | 69.5    |
+| onError on error (light)           | 100 / 40    | 6.46:1  | -85.3   |
+| onPrimary on primary (dark)        | 20 / 80     | 7.70:1  | 66.1    |
+| onSurface on surface (dark)        | N90 / N10   | 13.29:1 | -87.9   |
+| outline on surface (dark)          | NV60 / N10  | 5.43:1  | -41.5   |
 
-### Fidelity
+`outline` is a non-text role; its target is 3:1.
 
-- Preserves source color's exact appearance
-- Adjusts tones to maintain chroma
-- Best for brand-critical applications
+## Theme CSS
 
-### Vibrant
+`generate_theme_css` writes every core palette at the requested tones (`--{prefix}-{palette}-{tone}`) and a **light-only** block of semantic aliases. Tones 10, 40, 90, 99 and 100 are always included because the aliases point at them. Excerpt for `{"sourceColor": "#6750a4", "prefix": "md", "includeTones": [40]}`:
 
-- Higher chroma across all colors
-- More colorful, energetic appearance
-- Good for creative, playful apps
-
-### Expressive
-
-- Unexpected color combinations
-- Creative hue rotations
-- For bold, artistic interfaces
-
-### Neutral
-
-- Minimal color, maximum elegance
-- Reduced chroma values
-- Professional, understated look
-
-### Monochrome
-
-- Single hue, varying tones
-- Ultimate minimalism
-- Focus on content over color
-
-## Contrast Levels
-
-Material Design 3 supports three contrast levels:
-
-### Default (0.0)
-
-- WCAG AA compliant
-- 4.5:1 for normal text
-- 3:1 for large text
-
-### Medium (+0.5)
-
-- Enhanced readability
-- ~6:1 for normal text
-- Better for outdoor/bright conditions
-
-### High (+1.0)
-
-- WCAG AAA compliant
-- 7:1 for normal text
-- Maximum accessibility
-
-## Implementation with Coolors MCP
-
-### Generate Material Theme
-
-```javascript
-// From a source color
-{
-  "name": "generate_material_theme",
-  "arguments": {
-    "sourceColor": "#6366F1"
-  }
-}
-```
-
-### Create Tonal Palette
-
-```javascript
-// Generate standard Material tones
-{
-  "name": "generate_tonal_palette",
-  "arguments": {
-    "color": "#6366F1",
-    "tones": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100]
-  }
-}
-```
-
-### Generate Theme CSS
-
-```javascript
-// Create CSS custom properties
-{
-  "name": "generate_theme_css",
-  "arguments": {
-    "sourceColor": "#6366F1",
-    "prefix": "md"
-  }
-}
-```
-
-## Color Harmonization
-
-Material Design uses harmonization to ensure colors work together:
-
-### Harmonization Algorithm
-
-1. Analyze hue relationships
-2. Adjust hues toward harmony angles (0°, 60°, 120°, 180°, 240°, 300°)
-3. Maintain original chroma and tone
-4. Blend based on harmonization strength
-
-### Example
-
-```javascript
-{
-  "name": "harmonize_colors",
-  "arguments": {
-    "colors": ["#6366F1", "#EC4899", "#10B981"],
-    "factor": 0.5
-  }
-}
-```
-
-## Design Tokens
-
-Material Design 3 uses design tokens for consistent application:
-
-### Token Structure
-
-```css
-/* Color tokens */
---md-sys-color-primary: #6366f1;
---md-sys-color-on-primary: #ffffff;
---md-sys-color-primary-container: #e0e2ff;
---md-sys-color-on-primary-container: #000747;
-
-/* Elevation tokens */
---md-sys-elevation-level0: 0px;
---md-sys-elevation-level1: 1px;
---md-sys-elevation-level2: 3px;
-
-/* Shape tokens */
---md-sys-shape-corner-small: 4px;
---md-sys-shape-corner-medium: 8px;
---md-sys-shape-corner-large: 16px;
-```
-
-## Accessibility Considerations
-
-Material Design 3 ensures accessibility through:
-
-1. **Guaranteed Contrast**: Tone relationships ensure WCAG compliance
-2. **Color Independence**: Information not conveyed by color alone
-3. **Predictable Patterns**: Consistent color role usage
-4. **Adjustable Contrast**: Support for user preferences
-
-## Dynamic Color Algorithm
-
-The complete process for generating a Material theme:
-
-1. **Extract source color** from image or user input
-2. **Generate key colors** through hue/chroma manipulation
-3. **Create tonal palettes** for each key color
-4. **Map tones to roles** based on scheme variant
-5. **Adjust for contrast** requirements
-6. **Apply fidelity corrections** if needed
-7. **Output theme** as usable color values
-
-## Best Practices
-
-### Do's
-
-- ✅ Use semantic color roles consistently
-- ✅ Test with all three contrast levels
-- ✅ Validate color combinations for accessibility
-- ✅ Consider both light and dark themes
-- ✅ Use harmonization for multiple brand colors
-
-### Don'ts
-
-- ❌ Override tone assignments arbitrarily
-- ❌ Use colors outside the tonal palettes
-- ❌ Ignore contrast requirements
-- ❌ Mix scheme variants in one interface
-- ❌ Use extreme chroma values for large surfaces
-
-## Integration Examples
-
-### React/CSS
-
-```css
+```text
 :root {
-  --md-sys-color-primary: rgb(99, 102, 241);
-  --md-sys-color-surface: rgb(252, 252, 255);
+  /* Primary Colors */
+  --md-primary-10: #22005d;
+  --md-primary-40: #6750a4;
+  --md-primary-90: #e9ddff;
+  --md-primary-99: #fffbff;
+  --md-primary-100: #ffffff;
+  …
 }
 
-.button-primary {
-  background: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+/* Semantic Color Mappings (Light Theme) */
+:root {
+  --md-primary: var(--md-primary-40);
+  --md-on-primary: var(--md-primary-100);
+  --md-primary-container: var(--md-primary-90);
+  --md-on-primary-container: var(--md-primary-10);
+  …
+  --md-surface: var(--md-neutral-99);
+  --md-on-surface: var(--md-neutral-10);
 }
 ```
 
-### Tailwind CSS
+The aliases cover primary, secondary, background and surface only. For dark-theme values, use `generate_material_theme`.
 
-```javascript
-// tailwind.config.js
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        "md-primary": "var(--md-sys-color-primary)",
-        "md-surface": "var(--md-sys-color-surface)",
-      },
-    },
-  },
-};
+## Disliked source colors
+
+Material's dislike rule flags dark yellow-greens: HCT hue 90–111°, chroma > 16, tone < 65. The fix keeps hue and chroma and sets the tone to 70 (`#6b6b1e` → `#b0af5b`).
+
+- `generate_material_theme` and `generate_theme_css` use the source color **as given**.
+- `generate_theme_from_image` fixes a disliked source before building the theme.
+- `analyze_color_likability` and `fix_disliked_colors_batch` apply the rule on demand.
+
+## Harmonization
+
+`harmonize_colors` has three methods:
+
+| Method                | What it does                                                                                                                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `harmonize` (default) | Keeps the first color. Rotates each other color's HCT hue toward it by at most 15°; below that cap the rotation is _difference × factor_ (Material's `Blend.harmonize` uses 0.5). Chroma and tone are unchanged. |
+| `blend`               | Interpolates hue (shortest way), chroma and tone by `factor`, folding all colors into **one** result color (`#6750a4, #ff0000, #00ff00` → `#ef8b00`).                                                            |
+| `temperature`         | Shifts every hue toward 30° (warmer, `factor` > 0.5) or 210° (cooler, `factor` < 0.5); `factor` 0.5 leaves colors unchanged (`#6750a4, #ff0000` → `#6750a4, #ff0000`).                                           |
+
+```json
+{ "colors": ["#6750a4", "#ff0000", "#00ff00"] }
 ```
 
-## Advanced Features
+```text
+Harmonized Colors (harmonize):
+Original: #6750a4, #ff0000, #00ff00
+Result: #6750a4, #fb0057, #00fc94
+```
 
-### Dislike Prevention
-
-Material Design automatically detects and adjusts universally disliked colors (dark yellow-greens that resemble biological waste) by shifting their hue and increasing tone.
-
-### Content-Based Schemes
-
-Generate schemes that adapt to content:
-
-- Album artwork → Music player theme
-- Product images → E-commerce theme
-- User photos → Gallery theme
-
-### Cross-Platform Consistency
-
-The same source color produces identical themes across:
-
-- Android (Material You)
-- Web (Material Web)
-- Flutter
-- Coolors MCP
+Hue differences are measured the short way around the circle, so colors on either side of 0°/360° work as expected (the implementation is identical to Material's `Blend.harmonize`). With `["hct(350, 60, 50)", "hct(10, 60, 50)"]` the two hues are 20° apart, so the second color rotates 10° toward the first: `#c44d7b`, hue 359.8°.
 
 ## See Also
 
-- [HCT Color System](./hct.md) - Understanding the HCT color space
-- [Color Spaces](./color-spaces.md) - Color space comparisons
-- [Accessibility](./accessibility.md) - Contrast and accessibility
-- [Image Analysis](./image-analysis.md) - Extracting colors from images
-- [Material Design Guidelines](https://m3.material.io) - Official documentation
+- [HCT Color System](/concepts/hct) — tone, chroma and gamut
+- [Accessibility](/concepts/accessibility) — WCAG and APCA in detail
+- [Image Analysis](/concepts/image-analysis) — seeding a theme from an image
+- [Material Design tools](/tools/material-design) — parameters and full outputs
+- [Material Design 3 color guidance](https://m3.material.io/styles/color/overview)
