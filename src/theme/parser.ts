@@ -14,11 +14,14 @@ import { rgbToHct } from "../color/hct/hct-solver.js";
 export function parseThemeVariables(css: string): ThemeVariables {
   const variables: ThemeVariable[] = [];
 
-  // Match CSS custom properties
-  const varRegex = /--([\w-]+):\s*([^;]+);/g;
+  // Match CSS custom properties. The last declaration in a block may omit
+  // its `;` (`:root { --a: #fff }`), so a value ends at `;`, `{` or `}`.
+  // Comments are stripped first so `--a: #fff /* note */;` still parses.
+  const source = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const varRegex = /--([\w-]+)\s*:\s*([^;{}]+)/g;
   let match;
 
-  while ((match = varRegex.exec(css)) !== null) {
+  while ((match = varRegex.exec(source)) !== null) {
     const [, name, value] = match;
     const fullName = `--${name}`;
     const trimmedValue = value.trim();

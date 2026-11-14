@@ -103,6 +103,8 @@ export function extractColors(
   // Convert to output format
   return selectedColors.map((argb) => {
     const isFallback = !quantized.has(argb);
+    // Population belongs to the quantized color, even if it is adjusted below
+    const population = quantized.get(argb) || 0;
     let hct = Hct.fromInt(argb);
 
     // Fix disliked colors if requested
@@ -114,7 +116,6 @@ export function extractColors(
     const r = utils.redFromArgb(argb);
     const g = utils.greenFromArgb(argb);
     const b = utils.blueFromArgb(argb);
-    const population = quantized.get(argb) || 0;
 
     return {
       hct: { c: hct.chroma, h: hct.hue, t: hct.tone },

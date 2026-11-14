@@ -146,3 +146,21 @@ describe("Theme Parser", () => {
     });
   });
 });
+
+describe("parseThemeVariables declaration endings", () => {
+  it("reads the last custom property of a block without a trailing semicolon", () => {
+    const vars = parseThemeVariables(
+      ":root { --color-primary: #6750a4; --color-surface: #fffbfe }",
+    );
+    const json = JSON.stringify(vars);
+    expect(json).toContain("--color-primary");
+    expect(json).toContain("--color-surface");
+  });
+
+  it("ignores comments inside values", () => {
+    const vars = parseThemeVariables(
+      ":root{--color-primary:#6750a4 /* brand */;}",
+    );
+    expect(JSON.stringify(vars)).toContain('"value":"#6750a4"');
+  });
+});

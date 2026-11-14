@@ -105,6 +105,10 @@ handling and input limits changed — see **Changed**.
   - an unsafe `prefix` produced invalid output;
   - non-ASCII names became `---n-code`;
   - names that collided after normalization were silently merged.
+- The theme parser dropped a custom property without a trailing `;`
+  (`:root { --a: #fff }`, valid CSS) and failed on comments inside values.
+- `generate_theme_from_image` showed 0% coverage for a seed adjusted away from
+  a disliked color, and ignored `includeCustomColors`.
 - `match_theme_color` reported invalid colors as "no match", and theme CSS
   without color variables is now an error.
 - `package.json` `main` pointed to a missing file, and the `jsr.json` export

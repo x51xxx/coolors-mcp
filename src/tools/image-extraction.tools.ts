@@ -186,10 +186,11 @@ export const generateThemeFromImageTool = {
       output += `## Source Colors\n`;
       output += `- Primary: ${palette.primary.hex} (${palette.primary.percentage.toFixed(1)}%)\n`;
 
-      if (palette.secondary) {
+      // includeCustomColors: also report the image's secondary/tertiary picks
+      if (includeCustomColors && palette.secondary) {
         output += `- Secondary: ${palette.secondary.hex} (${palette.secondary.percentage.toFixed(1)}%)\n`;
       }
-      if (palette.tertiary) {
+      if (includeCustomColors && palette.tertiary) {
         output += `- Tertiary: ${palette.tertiary.hex} (${palette.tertiary.percentage.toFixed(1)}%)\n`;
       }
 
