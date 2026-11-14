@@ -29,8 +29,9 @@ const SA98G = {
   // Polarity exponents/factors
   normBG: 0.56,
   normTXT: 0.57,
-  revBG: 0.62,
-  revTXT: 0.65,
+  // apca-w3 0.1.9 SA98G: revTXT 0.62, revBG 0.65
+  revBG: 0.65,
+  revTXT: 0.62,
   // Soft-clip and scale
   scaleBoW: 1.14,
   scaleWoB: 1.14,

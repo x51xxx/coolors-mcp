@@ -40,7 +40,6 @@ jobs:
 
       - name: Run tests
         run: pnpm test
-        continue-on-error: true
 
       - name: Verify build output
         run: |

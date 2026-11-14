@@ -17,6 +17,10 @@ import {
   parseColor,
   rgbToHex,
 } from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
+
+// Keep responses bounded: list at most this many colliding pairs per CVD type.
+const MAX_LISTED_COLLISIONS = 20;
 
 const CVD_TYPES = [
   "protanopia",
@@ -29,6 +33,7 @@ const CVD_TYPES = [
 ] as const satisfies readonly CvdType[];
 
 export const simulateColorBlindnessTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Simulate how one or more colors appear to viewers with color vision deficiency (protanopia, deuteranopia, tritanopia, their milder anomaly forms, or achromatopsia).",
   execute: async (args: { colors: string[]; types?: CvdType[] }) => {
@@ -37,7 +42,9 @@ export const simulateColorBlindnessTool = {
     const parsed = args.colors.map((c) => ({ input: c, rgb: parseColor(c) }));
     const invalid = parsed.filter((p) => !p.rgb);
     if (invalid.length) {
-      return `Invalid color format: ${invalid.map((p) => p.input).join(", ")}`;
+      throw new ToolInputError(
+        `Invalid color format: ${invalid.map((p) => p.input).join(", ")}`,
+      );
     }
 
     let output = `# Color Blindness Simulation\n\n`;
@@ -61,7 +68,8 @@ export const simulateColorBlindnessTool = {
     colors: z
       .array(z.string())
       .min(1)
-      .describe("Colors to simulate (hex, rgb, hsl)"),
+      .max(64)
+      .describe("Colors to simulate (hex, rgb, hsl), up to 64"),
     types: z
       .array(z.enum(CVD_TYPES))
       .optional()
@@ -72,6 +80,7 @@ export const simulateColorBlindnessTool = {
 };
 
 export const checkPaletteAccessibilityTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Audit a color palette for color-blind accessibility. For each pair of colors, reports the perceptual distance (Delta E 2000) under each CVD type and flags pairs that become indistinguishable.",
   execute: async (args: {
@@ -85,7 +94,9 @@ export const checkPaletteAccessibilityTool = {
     const parsed = args.colors.map((c) => ({ input: c, rgb: parseColor(c) }));
     const invalid = parsed.filter((p) => !p.rgb);
     if (invalid.length) {
-      return `Invalid color format: ${invalid.map((p) => p.input).join(", ")}`;
+      throw new ToolInputError(
+        `Invalid color format: ${invalid.map((p) => p.input).join(", ")}`,
+      );
     }
 
     const colors = parsed.map((p) => p.rgb!);
@@ -120,7 +131,12 @@ export const checkPaletteAccessibilityTool = {
         output += `✓ All ${colors.length} colors remain distinguishable\n\n`;
       } else {
         output += `⚠ ${collisions.length} indistinguishable pair${collisions.length === 1 ? "" : "s"}:\n`;
-        output += collisions.join("\n") + "\n\n";
+        const shown = collisions.slice(0, MAX_LISTED_COLLISIONS);
+        output += shown.join("\n") + "\n";
+        if (collisions.length > shown.length) {
+          output += `  - … and ${collisions.length - shown.length} more\n`;
+        }
+        output += "\n";
         problems.push(type);
       }
     }
@@ -150,7 +166,8 @@ export const checkPaletteAccessibilityTool = {
     colors: z
       .array(z.string())
       .min(2)
-      .describe("Palette colors to audit (at least 2)"),
+      .max(64)
+      .describe("Palette colors to audit (2-64)"),
     indistinguishableThreshold: z
       .number()
       .min(1)

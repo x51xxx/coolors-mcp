@@ -14,6 +14,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write # OIDC login to the official MCP Registry
 
 jobs:
   publish:
@@ -50,7 +51,7 @@ jobs:
         run: |
           pnpm run lint
           pnpm run build
-          pnpm test || true
+          pnpm test
 
       - name: Verify build output
         run: |
@@ -99,3 +100,35 @@ jobs:
             - 📦 [NPM Package](https://www.npmjs.com/package/@trishchuk/coolors-mcp)
             - 📖 [Documentation](https://x51xxx.github.io/coolors-mcp/)
             - 🐛 [Report Issues](https://github.com/x51xxx/coolors-mcp/issues)
+
+      # --- Official MCP Registry (registry.modelcontextprotocol.io) ---------
+      # Runs after npm: the registry checks that the published npm version's
+      # package.json has "mcpName" equal to server.json "name".
+      - name: Sync server.json version with package.json
+        run: |
+          V=$(node -p "require('./package.json').version")
+          jq --arg v "$V" '.version=$v | .packages[0].version=$v' server.json > server.json.tmp
+          mv server.json.tmp server.json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Install mcp-publisher (signature-verified)
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.9
+        run: |
+          set -euo pipefail
+          asset=mcp-publisher_linux_amd64.tar.gz
+          base=https://github.com/modelcontextprotocol/registry/releases/download/$MCP_PUBLISHER_VERSION
+          curl -fsSLO "$base/$asset"
+          curl -fsSLO "$base/$asset.sigstore.json"
+          cosign verify-blob --bundle "$asset.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/$MCP_PUBLISHER_VERSION" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "$asset"
+          tar xzf "$asset" mcp-publisher
+
+      - name: Publish to MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

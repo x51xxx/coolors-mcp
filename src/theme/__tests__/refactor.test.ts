@@ -222,3 +222,91 @@ describe("CSS Refactoring", () => {
     });
   });
 });
+
+describe("refactorCss regression (audit c6b9091)", () => {
+  const theme = parseThemeVariables(
+    `:root{--color-primary:#6750a4;--color-surface:#fffbfe;}`,
+  );
+
+  it("replaces several colors on one line without corrupting it", () => {
+    const result = refactorCss(
+      `.a { color: #6750a4; background: #fffbfe; }`,
+      theme,
+      { addComments: false, preserveOriginal: false },
+    );
+    expect(result.refactored).toBe(
+      `.a { color: var(--color-primary); background: var(--color-surface); }`,
+    );
+    expect(result.statistics.replacedColors).toBe(2);
+  });
+
+  it("keeps original-value comments well-formed on one line", () => {
+    const result = refactorCss(
+      `.a { color: #6750a4; background: #fffbfe; }`,
+      theme,
+    );
+    expect(result.refactored).toContain(
+      `.a { color: /* #6750a4 */ var(--color-primary); background: /* #fffbfe */ var(--color-surface); }`,
+    );
+  });
+
+  it("never rewrites url(), strings, comments, selectors or custom properties", () => {
+    const css = [
+      `.a {`,
+      `  background: url("img#6750a4.png");`,
+      `}`,
+      `/* brand is #6750a4 */`,
+      `#cafe { content: "#6750a4"; color: #6750a4; }`,
+      `:root { --brand: #6750a4; }`,
+      `@media (min-width: 1px) { a:hover { color: #6750a4; } }`,
+    ].join("\n");
+    const result = refactorCss(css, theme, {
+      addComments: false,
+      preserveOriginal: false,
+    });
+    expect(result.refactored).toContain(`url("img#6750a4.png")`);
+    expect(result.refactored).toContain(`/* brand is #6750a4 */`);
+    expect(result.refactored).toContain(
+      `#cafe { content: "#6750a4"; color: var(--color-primary); }`,
+    );
+    expect(result.refactored).toContain(`:root { --brand: #6750a4; }`);
+    expect(result.refactored).toContain(
+      `a:hover { color: var(--color-primary); }`,
+    );
+    expect(result.statistics.replacedColors).toBe(2);
+  });
+
+  it("still replaces a declaration that follows a comment", () => {
+    const result = refactorCss(
+      `.a {\n  /* brand */\n  color: #6750a4;\n}`,
+      theme,
+      { addComments: false, preserveOriginal: false },
+    );
+    expect(result.refactored).toBe(
+      `.a {\n  /* brand */\n  color: var(--color-primary);\n}`,
+    );
+  });
+
+  it("does not read numeric custom properties as hex colors", () => {
+    const numeric = parseThemeVariables(
+      `:root{--z-toast: 999999; --color-primary:#6750a4;}`,
+    );
+    expect(JSON.stringify(numeric)).not.toContain("--z-toast");
+  });
+
+  it("detects the property per declaration on single-line rules", () => {
+    const result = refactorCss(
+      `.a { border-color: #6750a4; color: #fffbfe; }`,
+      theme,
+      { addComments: false, preserveOriginal: false },
+    );
+    expect(result.replacements.map((r) => r.property)).toEqual([
+      "border-color",
+      "color",
+    ]);
+    expect(result.replacements.map((r) => r.context)).toEqual([
+      "border",
+      "text",
+    ]);
+  });
+});

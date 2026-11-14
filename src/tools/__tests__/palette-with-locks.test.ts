@@ -57,36 +57,36 @@ describe("paletteWithLocksTool", () => {
   });
 
   it("should error when locked colors >= total colors", async () => {
-    const result = await paletteWithLocksTool.execute({
-      colorSpace: "hsl",
-      lockedColors: ["#ff0000", "#00ff00", "#0000ff"],
-      mode: "harmony",
-      totalColors: 3,
-    });
-
-    expect(result).toContain("Error: Number of locked colors");
+    await expect(
+      paletteWithLocksTool.execute({
+        colorSpace: "hsl",
+        lockedColors: ["#ff0000", "#00ff00", "#0000ff"],
+        mode: "harmony",
+        totalColors: 3,
+      }),
+    ).rejects.toThrow("Error: Number of locked colors");
   });
 
   it("should error on invalid color format", async () => {
-    const result = await paletteWithLocksTool.execute({
-      colorSpace: "hsl",
-      lockedColors: ["invalid", "#00ff00"],
-      mode: "harmony",
-      totalColors: 5,
-    });
-
-    expect(result).toContain("Invalid color format: invalid");
+    await expect(
+      paletteWithLocksTool.execute({
+        colorSpace: "hsl",
+        lockedColors: ["invalid", "#00ff00"],
+        mode: "harmony",
+        totalColors: 5,
+      }),
+    ).rejects.toThrow("Invalid color format: invalid");
   });
 
   it("should error in gradient mode with only one locked color", async () => {
-    const result = await paletteWithLocksTool.execute({
-      colorSpace: "hsl",
-      lockedColors: ["#ff0000"],
-      mode: "gradient",
-      totalColors: 5,
-    });
-
-    expect(result).toContain("Gradient mode requires at least 2 locked colors");
+    await expect(
+      paletteWithLocksTool.execute({
+        colorSpace: "hsl",
+        lockedColors: ["#ff0000"],
+        mode: "gradient",
+        totalColors: 5,
+      }),
+    ).rejects.toThrow("Gradient mode requires at least 2 locked colors");
   });
 
   it("should generate harmonious colors with multiple locked colors", async () => {
@@ -105,5 +105,38 @@ describe("paletteWithLocksTool", () => {
     const lines = result.split("\n");
     const colorLines = lines.filter((line) => /^\d+\./.test(line));
     expect(colorLines).toHaveLength(6);
+  });
+});
+
+describe("paletteWithLocksTool regressions (audit c6b9091)", () => {
+  const entries = (out: string) =>
+    out
+      .split("\n")
+      .filter((l) => /^\d+\. /.test(l))
+      .map((l) => l.replace(/^\d+\. /, ""));
+
+  it("gradient mode returns stops in gradient order with exact count", async () => {
+    const out = await paletteWithLocksTool.execute({
+      colorSpace: "hsl",
+      lockedColors: ["#ff0000", "#00ff00", "#0000ff"],
+      mode: "gradient",
+      totalColors: 6,
+    });
+    const list = entries(out);
+    expect(list).toHaveLength(6);
+    expect(list[0]).toBe("#ff0000 (locked)");
+    expect(list[list.length - 1]).toBe("#0000ff (locked)");
+    expect(list.indexOf("#00ff00 (locked)")).toBeGreaterThan(0);
+    expect(list.indexOf("#00ff00 (locked)")).toBeLessThan(5);
+  });
+
+  it("harmony mode always fills every slot", async () => {
+    const out = await paletteWithLocksTool.execute({
+      colorSpace: "oklch",
+      lockedColors: ["#ff0000"],
+      mode: "harmony",
+      totalColors: 20,
+    });
+    expect(entries(out)).toHaveLength(20);
   });
 });

@@ -30,8 +30,9 @@ describe("generateTonalScaleTool", () => {
   });
 
   it("rejects invalid colors", async () => {
-    const result = await generateTonalScaleTool.execute({ seed: "nope" });
-    expect(result).toMatch(/Invalid color format/);
+    await expect(
+      generateTonalScaleTool.execute({ seed: "nope" }),
+    ).rejects.toThrow(/Invalid color format/);
   });
 });
 
@@ -70,10 +71,11 @@ describe("analyzePaletteConsistencyTool", () => {
   });
 
   it("requires at least 2 colors", async () => {
-    const result = await analyzePaletteConsistencyTool.execute({
-      colors: ["#6750a4"],
-    });
-    expect(result).toMatch(/at least 2/i);
+    await expect(
+      analyzePaletteConsistencyTool.execute({
+        colors: ["#6750a4"],
+      }),
+    ).rejects.toThrow(/at least 2/i);
   });
 });
 

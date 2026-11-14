@@ -13,7 +13,7 @@ import type {
   ThemeVariables,
 } from "./types.js";
 
-import { hexToRgb } from "../color/conversions.js";
+import { parseColor } from "../color/conversions.js";
 import { rgbToHct } from "../color/hct/hct-solver.js";
 import { getContrastRatio } from "../color/utils.js";
 
@@ -368,28 +368,10 @@ function flattenThemeVariables(theme: ThemeVariables): ThemeVariable[] {
 }
 
 /**
- * Parse color string to RGB
+ * Parse color to 0-255 RGB using the shared color parser
  */
 function parseColorToRgb(color: string): { b: number; g: number; r: number } {
-  // Remove whitespace
-  color = color.trim();
-
-  // Hex color
-  if (color.startsWith("#")) {
-    return hexToRgb(color);
-  }
-
-  // RGB/RGBA
-  if (color.startsWith("rgb")) {
-    const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-    if (match) {
-      return {
-        b: parseInt(match[3], 10) / 255,
-        g: parseInt(match[2], 10) / 255,
-        r: parseInt(match[1], 10) / 255,
-      };
-    }
-  }
-
-  throw new Error(`Unable to parse color: ${color}`);
+  const rgb = parseColor(color.trim());
+  if (!rgb) throw new Error(`Unable to parse color: ${color}`);
+  return rgb;
 }

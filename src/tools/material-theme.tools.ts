@@ -16,11 +16,13 @@ import {
   rgbToHex,
   TonalPalette,
 } from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
 
 /**
  * Generate Material Design 3 Theme
  */
 export const generateMaterialThemeTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Generate a complete Material Design 3 color theme from a source color",
   execute: async (args: {
@@ -29,7 +31,7 @@ export const generateMaterialThemeTool = {
   }) => {
     const source = parseColor(args.sourceColor);
     if (!source) {
-      return `Invalid color format: ${args.sourceColor}`;
+      throw new ToolInputError(`Invalid color format: ${args.sourceColor}`);
     }
 
     const corePalette = corePaletteFromRgb(source);
@@ -137,6 +139,7 @@ Tertiary: ${[40, 80].map((t) => rgbToHex(corePalette.tertiary.tone(t))).join(", 
  * Harmonize Colors Tool
  */
 export const harmonizeColorsTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Harmonize colors to work better together using Material Design algorithms",
   execute: async (args: {
@@ -146,12 +149,12 @@ export const harmonizeColorsTool = {
   }) => {
     const colors = args.colors.map((c) => parseColor(c));
     if (colors.some((c) => c === null)) {
-      return "One or more invalid color formats";
+      throw new ToolInputError("One or more invalid color formats");
     }
 
     const validColors = colors as RGB[];
     const method = args.method || "harmonize";
-    const factor = args.factor || 0.5;
+    const factor = args.factor ?? 0.5;
     const results: string[] = [];
 
     switch (method) {
@@ -216,11 +219,12 @@ Result: ${results.join(", ")}`;
  * Generate Tonal Palette Tool
  */
 export const generateTonalPaletteTool = {
+  annotations: READ_ONLY_TOOL,
   description: "Generate a Material Design tonal palette from a color",
   execute: async (args: { color: string; tones?: number[] }) => {
     const rgb = parseColor(args.color);
     if (!rgb) {
-      return `Invalid color format: ${args.color}`;
+      throw new ToolInputError(`Invalid color format: ${args.color}`);
     }
 
     const palette = TonalPalette.fromRgb(rgb);
@@ -243,8 +247,9 @@ ${colors.map(({ hex, tone }) => `Tone ${tone}: ${hex}`).join("\n")}`;
   parameters: z.object({
     color: z.string().describe("Base color for palette"),
     tones: z
-      .array(z.number())
+      .array(z.number().min(0).max(100))
+      .max(32)
       .optional()
-      .describe("Custom tone values (default: Material standard tones)"),
+      .describe("Custom tone values 0-100 (default: Material standard tones)"),
   }),
 };

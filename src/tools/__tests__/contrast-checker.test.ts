@@ -18,9 +18,17 @@ describe("apcaContrast", () => {
     expect(lc).toBeCloseTo(106.04, 1);
   });
 
-  it("matches reference: #fff on #000 ≈ -107", () => {
+  it("matches apca-w3 0.1.9: #fff on #000 = -107.88", () => {
     const lc = apcaContrast({ b: 255, g: 255, r: 255 }, { b: 0, g: 0, r: 0 });
-    expect(lc).toBeCloseTo(-107.28, 1);
+    expect(lc).toBeCloseTo(-107.88, 1);
+  });
+
+  it("matches apca-w3 0.1.9 reverse polarity: #fff on #666 = -84.00", () => {
+    const lc = apcaContrast(
+      { b: 255, g: 255, r: 255 },
+      { b: 102, g: 102, r: 102 },
+    );
+    expect(lc).toBeCloseTo(-84.0, 1);
   });
 });
 

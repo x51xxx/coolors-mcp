@@ -147,32 +147,14 @@ export function complementaryPalette(
 export function corePaletteFromRgb(source: RGB): CorePalette {
   const sourceHct = rgbToHct(source);
 
-  // Primary uses the source color
+  // Chroma constants follow Material Color Utilities' CorePalette.of
+  // (the Material 3 "tonal spot" defaults).
   const primary = new TonalPalette(sourceHct.h, Math.max(48, sourceHct.c));
-
-  // Secondary is shifted in hue and reduced chroma
-  const secondary = new TonalPalette(
-    sourceHct.h,
-    Math.max(16, sourceHct.c / 3),
-  );
-
-  // Tertiary shifts hue by 60 degrees
-  const tertiary = new TonalPalette(
-    (sourceHct.h + 60) % 360,
-    Math.max(24, sourceHct.c / 2),
-  );
-
-  // Error is always red-ish
+  const secondary = new TonalPalette(sourceHct.h, 16);
+  const tertiary = new TonalPalette((sourceHct.h + 60) % 360, 24);
   const error = new TonalPalette(25, 84);
-
-  // Neutral has very low chroma
-  const neutral = new TonalPalette(sourceHct.h, Math.min(4, sourceHct.c / 12));
-
-  // Neutral variant has slightly more chroma
-  const neutralVariant = new TonalPalette(
-    sourceHct.h,
-    Math.min(8, sourceHct.c / 6),
-  );
+  const neutral = new TonalPalette(sourceHct.h, 4);
+  const neutralVariant = new TonalPalette(sourceHct.h, 8);
 
   return {
     error,

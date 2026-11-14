@@ -1,6 +1,14 @@
 // Tool Registry Index - Export all tools
 
 export { adjustColorTool } from "./adjust-color.tool.js";
+// Agent-compensating color intelligence
+export {
+  auditUiColorsTool,
+  describeColorTool,
+  designUiPaletteTool,
+  fixContrastTool,
+  generateCategoricalPaletteTool,
+} from "./agent-color.tools.js";
 // Visual cohesion: tonal scales, state colors, palette consistency
 export {
   analyzePaletteConsistencyTool,
@@ -17,6 +25,9 @@ export {
 export { colorConversionTool } from "./color-conversion.tool.js";
 export { colorDistanceTool } from "./color-distance.tool.js";
 export { contrastCheckerTool } from "./contrast-checker.tool.js";
+
+// DESIGN.md audit
+export { auditDesignMdTool } from "./design-md.tool.js";
 
 // Dislike analyzer tools
 export {

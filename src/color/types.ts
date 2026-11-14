@@ -10,6 +10,8 @@ export enum ColorFormat {
   HSL = "hsl",
   HSV = "hsv",
   LAB = "lab",
+  OKLAB = "oklab",
+  OKLCH = "oklch",
   RGB = "rgb",
   XYZ = "xyz",
 }
@@ -45,7 +47,7 @@ export interface ColorDistanceOptions {
 /**
  * Color input type that can be parsed
  */
-export type ColorInput = HSL | HSV | LAB | RGB | string | XYZ;
+export type ColorInput = HSL | HSV | LAB | OKLAB | OKLCH | RGB | string | XYZ;
 
 /**
  * HCT (Hue, Chroma, Tone) color representation
@@ -99,11 +101,35 @@ export interface LAB {
 }
 
 /**
+ * OKLab color space (perceptually uniform, Björn Ottosson)
+ * l: [0, 1] lightness
+ * a: [-0.4, 0.4] green-red axis
+ * b: [-0.4, 0.4] blue-yellow axis
+ */
+export interface OKLAB {
+  a: number;
+  b: number;
+  l: number;
+}
+
+/**
+ * OKLCH color space (cylindrical OKLab)
+ * l: [0, 1] lightness
+ * c: [0, ~0.4] chroma
+ * h: [0, 360) hue in degrees
+ */
+export interface OKLCH {
+  c: number;
+  h: number;
+  l: number;
+}
+
+/**
  * Color parsing result
  */
 export interface ParsedColor {
   format: ColorFormat;
-  value: HSL | HSV | LAB | RGB | XYZ;
+  value: HSL | HSV | LAB | OKLAB | OKLCH | RGB | XYZ;
 }
 
 /**

@@ -8,11 +8,13 @@ import { z } from "zod";
 import { DislikeAnalyzer } from "../color/dislike/dislike-analyzer.js";
 import { Hct } from "../color/hct/hct-class.js";
 import { parseColor, rgbToArgb } from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
 
 /**
  * Analyze if a color is universally disliked
  */
 export const analyzeColorLikabilityTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Check if a color is universally disliked (dark yellow-green associated with biological waste) and get a fixed version if needed",
   execute: async (args: { autoFix?: boolean; color: string }) => {
@@ -22,7 +24,7 @@ export const analyzeColorLikabilityTool = {
       // Parse the input color
       const rgb = parseColor(color);
       if (!rgb) {
-        return `Error: Invalid color format: ${color}`;
+        throw new ToolInputError(`Error: Invalid color format: ${color}`);
       }
 
       // Convert to HCT for analysis
@@ -87,7 +89,10 @@ export const analyzeColorLikabilityTool = {
 
       return output;
     } catch (error) {
-      return `Error analyzing color: ${error instanceof Error ? error.message : String(error)}`;
+      if (error instanceof ToolInputError) throw error;
+      throw new ToolInputError(
+        `Error analyzing color: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   },
   name: "analyze_color_likability",
@@ -112,6 +117,7 @@ type BatchHct =
     };
 
 export const fixDislikedColorsBatchTool = {
+  annotations: READ_ONLY_TOOL,
   description: "Analyze and fix multiple colors, returning only liked versions",
   execute: async (args: { colors: string[]; includeAnalysis?: boolean }) => {
     const { colors, includeAnalysis = false } = args;
@@ -216,7 +222,10 @@ export const fixDislikedColorsBatchTool = {
 
       return output;
     } catch (error) {
-      return `Error processing colors: ${error instanceof Error ? error.message : String(error)}`;
+      if (error instanceof ToolInputError) throw error;
+      throw new ToolInputError(
+        `Error processing colors: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   },
   name: "fix_disliked_colors_batch",
@@ -224,7 +233,8 @@ export const fixDislikedColorsBatchTool = {
     colors: z
       .array(z.string())
       .min(1)
-      .describe("Array of colors to analyze (hex, rgb, hsl, etc.)"),
+      .max(100)
+      .describe("Array of colors to analyze (hex, rgb, hsl, etc.), up to 100"),
     includeAnalysis: z
       .boolean()
       .optional()

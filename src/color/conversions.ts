@@ -4,6 +4,9 @@
 
 import type { HEX, HSL, HSV, LAB, RGB, XYZ } from "./types.js";
 
+import { CSS_NAMED_COLORS } from "./css-colors.js";
+import { hctToRgb } from "./hct/hct-solver.js";
+import { oklabToRgb, oklchToRgb } from "./oklch.js";
 import { ColorConstants } from "./types.js";
 
 /**
@@ -17,20 +20,61 @@ export function argbToRgb(argb: number): RGB {
 }
 
 /**
+ * Alpha channel of a CSS color string (#rgba, #rrggbbaa, rgba()/hsla(),
+ * `/ alpha` syntax), or undefined when the color has no alpha component.
+ * `parseColor` ignores alpha, so callers that care about translucency
+ * check it here.
+ */
+export function getColorAlpha(value: string): number | undefined {
+  const v = value.trim().toLowerCase();
+  const hex = v.match(/^#([0-9a-f]{4}|[0-9a-f]{8})$/);
+  if (hex) {
+    const a = hex[1].length === 4 ? hex[1][3].repeat(2) : hex[1].slice(6);
+    return parseInt(a, 16) / 255;
+  }
+  const fn = v.match(/^[a-z]+\((.*)\)$/);
+  if (fn) {
+    const slash = fn[1].split("/");
+    const parts = fn[1].split(",");
+    const raw =
+      slash.length === 2
+        ? slash[1].trim()
+        : parts.length === 4
+          ? parts[3].trim()
+          : undefined;
+    if (raw !== undefined) {
+      const n = parseFloat(raw);
+      if (!Number.isNaN(n)) return raw.endsWith("%") ? n / 100 : n;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Convert hexadecimal to RGB color
  */
 export function hexToRgb(hex: HEX): RGB {
-  // Remove # if present
-  const cleanHex = hex.replace("#", "");
+  // Remove a single leading # if present
+  const cleanHex = hex.trim().replace(/^#/, "");
 
-  // Handle 3-digit hex
-  const fullHex =
-    cleanHex.length === 3
-      ? cleanHex
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : cleanHex;
+  // Only #rgb, #rgba, #rrggbb and #rrggbbaa are valid CSS hex colors
+  if (
+    !/^(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(cleanHex)
+  ) {
+    throw new Error(`Invalid hex color: ${hex}`);
+  }
+
+  // Handle 3-digit or 4-digit hex (ignore alpha channel in 4/8-digit hex)
+  let fullHex = cleanHex;
+  if (cleanHex.length === 3 || cleanHex.length === 4) {
+    fullHex = cleanHex
+      .slice(0, 3)
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  } else if (cleanHex.length === 8) {
+    fullHex = cleanHex.slice(0, 6);
+  }
 
   const num = parseInt(fullHex, 16);
 
@@ -172,13 +216,23 @@ export function labToXyz(lab: LAB): XYZ {
 
 /**
  * Parse color string to RGB
- * Supports: hex (#fff, #ffffff), rgb(r,g,b), hsl(h,s,l)
+ * Supports: hex (#fff, #ffffff, #rrggbbaa), CSS named colors, rgb()/rgba(),
+ * hsl()/hsla() (comma or space-separated CSS Color 4), oklch(), and oklab().
  */
 export function parseColor(color: string): null | RGB {
   const trimmed = color.trim().toLowerCase();
 
-  // Hex color
-  if (trimmed.startsWith("#")) {
+  // Named CSS color
+  const namedHex = CSS_NAMED_COLORS[trimmed];
+  if (namedHex) {
+    return hexToRgb(namedHex);
+  }
+
+  // Hex color (a bare 6/8-digit hex without "#" is accepted too)
+  if (
+    trimmed.startsWith("#") ||
+    /^(?:[0-9a-f]{6}|[0-9a-f]{8})$/.test(trimmed)
+  ) {
     try {
       return hexToRgb(trimmed);
     } catch {
@@ -186,23 +240,73 @@ export function parseColor(color: string): null | RGB {
     }
   }
 
-  // RGB color
-  const rgbMatch = trimmed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  // RGB color (comma or space separated, integers, floats, or percentages)
+  const rgbMatch = trimmed.match(
+    /^rgba?\(\s*([+-]?\d*\.?\d+%?)[,\s]+([+-]?\d*\.?\d+%?)[,\s]+([+-]?\d*\.?\d+%?)(?:\s*[,/]\s*([+-]?\d*\.?\d+%?))?\s*\)$/,
+  );
   if (rgbMatch) {
+    // CSS clamps out-of-range channels to [0, 255]
+    const parseChannel = (token: string): number =>
+      Math.max(
+        0,
+        Math.min(
+          255,
+          token.endsWith("%")
+            ? Math.round((parseFloat(token) / 100) * 255)
+            : Math.round(parseFloat(token)),
+        ),
+      );
     return {
-      b: parseInt(rgbMatch[3], 10),
-      g: parseInt(rgbMatch[2], 10),
-      r: parseInt(rgbMatch[1], 10),
+      b: parseChannel(rgbMatch[3]),
+      g: parseChannel(rgbMatch[2]),
+      r: parseChannel(rgbMatch[1]),
     };
   }
 
-  // HSL color
-  const hslMatch = trimmed.match(/^hsla?\((\d+),\s*(\d+)%,\s*(\d+)%/);
+  // HSL color (comma or space separated, optional deg unit)
+  const hslMatch = trimmed.match(
+    /^hsla?\(\s*([+-]?\d*\.?\d+)(?:deg)?[,\s]+([+-]?\d*\.?\d+)%[,\s]+([+-]?\d*\.?\d+)%(?:\s*[,/]\s*([+-]?\d*\.?\d+%?))?\s*\)$/,
+  );
   if (hslMatch) {
-    return hslToRgb({
-      h: parseInt(hslMatch[1], 10),
-      l: parseInt(hslMatch[3], 10),
-      s: parseInt(hslMatch[2], 10),
+    const h = ((parseFloat(hslMatch[1]) % 360) + 360) % 360;
+    const s = Math.max(0, Math.min(100, parseFloat(hslMatch[2])));
+    const l = Math.max(0, Math.min(100, parseFloat(hslMatch[3])));
+    return hslToRgb({ h, l, s });
+  }
+
+  // OKLCH color: oklch(L C H [/ alpha]) where L is 0..1 or 0%..100%
+  const oklchMatch = trimmed.match(
+    /^oklch\(\s*([+-]?\d*\.?\d+%?)[,\s]+([+-]?\d*\.?\d+)[,\s]+([+-]?\d*\.?\d+)(?:deg)?(?:\s*[,/]\s*([+-]?\d*\.?\d+%?))?\s*\)$/,
+  );
+  if (oklchMatch) {
+    const rawL = oklchMatch[1];
+    const l = rawL.endsWith("%") ? parseFloat(rawL) / 100 : parseFloat(rawL);
+    const c = Math.max(0, parseFloat(oklchMatch[2]));
+    const h = ((parseFloat(oklchMatch[3]) % 360) + 360) % 360;
+    return oklchToRgb({ c, h, l: Math.max(0, Math.min(1, l)) });
+  }
+
+  // OKLab color: oklab(L a b [/ alpha])
+  const oklabMatch = trimmed.match(
+    /^oklab\(\s*([+-]?\d*\.?\d+%?)[,\s]+([+-]?\d*\.?\d+)[,\s]+([+-]?\d*\.?\d+)(?:\s*[,/]\s*([+-]?\d*\.?\d+%?))?\s*\)$/,
+  );
+  if (oklabMatch) {
+    const rawL = oklabMatch[1];
+    const l = rawL.endsWith("%") ? parseFloat(rawL) / 100 : parseFloat(rawL);
+    const a = parseFloat(oklabMatch[2]);
+    const b = parseFloat(oklabMatch[3]);
+    return oklabToRgb({ a, b, l: Math.max(0, Math.min(1, l)) });
+  }
+
+  // HCT color: hct(H, C, T) or hct(H C T)
+  const hctMatch = trimmed.match(
+    /^hct\(\s*([+-]?\d*\.?\d+)(?:deg)?[,\s]+([+-]?\d*\.?\d+)[,\s]+([+-]?\d*\.?\d+)\s*\)$/,
+  );
+  if (hctMatch) {
+    return hctToRgb({
+      c: Math.max(0, parseFloat(hctMatch[2])),
+      h: ((parseFloat(hctMatch[1]) % 360) + 360) % 360,
+      t: Math.max(0, Math.min(100, parseFloat(hctMatch[3]))),
     });
   }
 

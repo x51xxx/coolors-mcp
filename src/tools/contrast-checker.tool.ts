@@ -1,30 +1,41 @@
 /**
  * Contrast Checker Tool
  * Check contrast between two colors using WCAG 2.x luminance ratio,
- * APCA (WCAG 3 draft), or both.
+ * APCA (WCAG 3 draft), or both — plus automatic fix & CVD contrast notes.
  */
 
 import { z } from "zod";
 
 import { apcaContrast, apcaLevel } from "../color/apca.js";
-import { getContrastRatio, parseColor } from "../color/index.js";
+import {
+  auditColorPair,
+  getContrastRatio,
+  parseColor,
+  rgbToHex,
+} from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
 
 export const contrastCheckerTool = {
+  annotations: READ_ONLY_TOOL,
   description:
-    "Check contrast between two colors. Supports WCAG 2.x luminance ratio (default), APCA Lc (WCAG 3 draft), or both algorithms side-by-side.",
+    "Check contrast between two colors using WCAG 2.x luminance ratio, APCA Lc (WCAG 3 draft), or both. Also checks color-blindness contrast drops and suggests an exact hue-preserving fix if contrast fails.",
   execute: async (args: {
     algorithm?: "apca" | "both" | "wcag";
     background: string;
     foreground: string;
+    suggestFix?: boolean;
   }) => {
     const fg = parseColor(args.foreground);
     const bg = parseColor(args.background);
 
     if (!fg || !bg) {
-      return `Invalid color format: ${!fg ? args.foreground : args.background}`;
+      throw new ToolInputError(
+        `Invalid color format: ${!fg ? args.foreground : args.background}`,
+      );
     }
 
     const algorithm = args.algorithm ?? "wcag";
+    const suggestFix = args.suggestFix ?? true;
 
     const wcagBlock = () => {
       const ratio = getContrastRatio(fg, bg);
@@ -57,9 +68,39 @@ Lc: ${lc.toFixed(1)} (${polarity})
 - Spot / non-content (|Lc| ≥ 30): ${level.spot ? "✓ Pass" : "✗ Fail"}`;
     };
 
-    if (algorithm === "wcag") return wcagBlock();
-    if (algorithm === "apca") return apcaBlock();
-    return `${wcagBlock()}\n\n${apcaBlock()}`;
+    let body: string;
+    if (algorithm === "wcag") body = wcagBlock();
+    else if (algorithm === "apca") body = apcaBlock();
+    else body = `${wcagBlock()}\n\n${apcaBlock()}`;
+
+    if (suggestFix) {
+      const audit = auditColorPair(fg, bg, "body");
+      const extra: string[] = [];
+      if (audit.fixSuggestion && audit.fixSuggestion.achieved) {
+        const fx = audit.fixSuggestion;
+        extra.push(
+          `- **Nearest AA fix (hue-preserving)**: foreground \`${rgbToHex(fx.foregroundAfter)}\` on \`${rgbToHex(fx.backgroundAfter)}\` → ${fx.wcagAfter.toFixed(2)}:1 (APCA Lc ${fx.apcaLcAfter.toFixed(1)}, ΔE=${fx.deltaE.toFixed(1)})`,
+        );
+      }
+      if (audit.chromostereopsisRisk) {
+        extra.push(
+          "- **Optical vibration warning**: High-chroma opposing hues may vibrate visually; soften chroma of bg or fg.",
+        );
+      }
+      if (audit.cvdIssues.length > 0) {
+        const list = audit.cvdIssues
+          .map((i) => `${i.type}: ${i.simulatedWcag.toFixed(2)}:1`)
+          .join(", ");
+        extra.push(
+          `- **Color-blindness warning**: Contrast drops under ${list}.`,
+        );
+      }
+      if (extra.length > 0) {
+        body += `\n\n## Agent Guidance\n${extra.join("\n")}`;
+      }
+    }
+
+    return body;
   },
   name: "check_contrast",
   parameters: z.object({
@@ -72,5 +113,12 @@ Lc: ${lc.toFixed(1)} (${polarity})
       ),
     background: z.string().describe("Background color"),
     foreground: z.string().describe("Foreground/text color"),
+    suggestFix: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe(
+        "Include nearest hue-preserving AA fix and CVD/optical warnings when issues exist",
+      ),
   }),
 };

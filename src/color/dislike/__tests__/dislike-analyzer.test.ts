@@ -90,7 +90,8 @@ describe("DislikeAnalyzer", () => {
         expect(DislikeAnalyzer.isDisliked(fixed)).toBe(false);
 
         // Check that fix preserves hue and chroma, only changes tone
-        expect(fixed.hue).toBeCloseTo(hct.hue, 0);
+        // 8-bit rounding at the new tone shifts CAM16 hue by up to ~0.8° (same in MCU)
+        expect(Math.abs(fixed.hue - hct.hue)).toBeLessThan(1);
         expect(fixed.chroma).toBeCloseTo(hct.chroma, 0);
         expect(fixed.tone).toBeCloseTo(70, 0); // Within 1 unit
       }

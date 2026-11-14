@@ -16,16 +16,31 @@
  * and Material Color Utilities algorithms for professional-grade results.
  */
 
+import { createRequire } from "node:module";
+
 import { CoolorsMcp } from "../coolors-mcp.js";
 import * as tools from "../tools/index.js";
+
+// src/bin/server.ts and dist/bin/server.js both sit two levels below the
+// package root, so the version always comes from the shipped package.json.
+const packageJson = createRequire(import.meta.url)("../../package.json") as {
+  version: string;
+};
 
 // Create the MCP server
 const server = new CoolorsMcp({
   instructions:
-    "Advanced color operations server with Material Design 3 support, CSS theme matching, image extraction, and accessibility compliance. Uses HCT color space for perceptually accurate operations.",
+    "Advanced perceptual color theory & UI design server. Compensates for agent hex blindness: use describe_color to 'see' any hex/CSS color, fix_contrast to solve WCAG/APCA contrast without guessing, design_ui_palette for verified 60-30-10 Light/Dark UI tokens, audit_ui_colors for one-shot pair & CVD checks, and generate_categorical_palette for color-blind-safe chart/tag palettes. Supports hex, CSS named colors, rgb(), hsl(), oklch(), oklab(), and hct().",
   name: "coolors-mcp",
-  version: "1.1.0",
+  version: packageJson.version as `${number}.${number}.${number}`,
 });
+
+// Agent-compensating color intelligence
+server.addTool(tools.describeColorTool);
+server.addTool(tools.fixContrastTool);
+server.addTool(tools.designUiPaletteTool);
+server.addTool(tools.auditUiColorsTool);
+server.addTool(tools.generateCategoricalPaletteTool);
 
 // Core color operations: conversion, distance metrics, accessibility
 server.addTool(tools.colorConversionTool);
@@ -61,6 +76,9 @@ server.addTool(tools.generateThemeCssTool);
 // Image analysis: color extraction, theme generation from photos
 server.addTool(tools.extractImageColorsTool);
 server.addTool(tools.generateThemeFromImageTool);
+
+// DESIGN.md: audit design-system color tokens
+server.addTool(tools.auditDesignMdTool);
 
 // Color psychology: detect and fix universally disliked colors
 server.addTool(tools.analyzeColorLikabilityTool);

@@ -5,7 +5,7 @@
 
 import type { SemanticRole, ThemeVariable, ThemeVariables } from "./types.js";
 
-import { hexToRgb } from "../color/conversions.js";
+import { getColorAlpha, parseColor, rgbToHex } from "../color/conversions.js";
 import { rgbToHct } from "../color/hct/hct-solver.js";
 
 /**
@@ -105,157 +105,18 @@ function detectSemanticRole(name: string): SemanticRole | undefined {
 }
 
 /**
- * HSL to RGB helper
- */
-function hslToRgb(
-  h: number,
-  s: number,
-  l: number,
-): { b: number; g: number; r: number } {
-  let b, g, r;
-
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const hue2rgb = (p: number, q: number, t: number) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-
-  return { b, g, r };
-}
-
-/**
- * Check if a value is a color
+ * Check if a value is a color the shared parser understands
+ * (hex, CSS named colors, rgb()/hsl(), oklch()/oklab(), hct()).
  */
 function isColorValue(value: string): boolean {
-  const trimmed = value.trim();
-
-  // Hex colors
-  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) return true;
-
-  // RGB/RGBA
-  if (/^rgba?\(/.test(trimmed)) return true;
-
-  // HSL/HSLA
-  if (/^hsla?\(/.test(trimmed)) return true;
-
-  // Named colors (basic check)
-  if (/^[a-z]+$/i.test(trimmed)) {
-    return isNamedColor(trimmed);
-  }
-
-  return false;
+  return parseCssColor(value) !== null;
 }
-
 /**
- * Check if string is a named color
- */
-function isNamedColor(name: string): boolean {
-  const namedColors = [
-    "black",
-    "white",
-    "red",
-    "green",
-    "blue",
-    "yellow",
-    "cyan",
-    "magenta",
-    "gray",
-    "grey",
-    "orange",
-    "purple",
-    "brown",
-    "pink",
-    "lime",
-    "navy",
-    "teal",
-    "silver",
-    "gold",
-    "indigo",
-    "violet",
-    "turquoise",
-    "coral",
-  ];
-  return namedColors.includes(name.toLowerCase());
-}
-
-/**
- * Convert named color to hex (simplified)
- */
-function namedColorToHex(name: string): string {
-  const colors: Record<string, string> = {
-    black: "#000000",
-    blue: "#0000ff",
-    brown: "#a52a2a",
-    coral: "#ff7f50",
-    cyan: "#00ffff",
-    gold: "#ffd700",
-    gray: "#808080",
-    green: "#008000",
-    grey: "#808080",
-    indigo: "#4b0082",
-    lime: "#00ff00",
-    magenta: "#ff00ff",
-    navy: "#000080",
-    orange: "#ffa500",
-    pink: "#ffc0cb",
-    purple: "#800080",
-    red: "#ff0000",
-    silver: "#c0c0c0",
-    teal: "#008080",
-    turquoise: "#40e0d0",
-    violet: "#ee82ee",
-    white: "#ffffff",
-    yellow: "#ffff00",
-  };
-  return colors[name.toLowerCase()] || "#000000";
-}
-
-/**
- * Normalize color value to a standard format
+ * Normalize a color value to lowercase #rrggbb
  */
 function normalizeColorValue(value: string): null | string {
-  const trimmed = value.trim();
-
-  // Already in a good format
-  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  // Short hex
-  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
-    const [, r, g, b] = trimmed.match(/#(.)(.)(.)/)!;
-    return `#${r}${r}${g}${g}${b}${b}`;
-  }
-
-  // RGB/RGBA
-  if (/^rgba?\(/.test(trimmed)) {
-    return parseRgbString(trimmed);
-  }
-
-  // HSL/HSLA
-  if (/^hsla?\(/.test(trimmed)) {
-    return parseHslString(trimmed);
-  }
-
-  // Named colors
-  if (isNamedColor(trimmed)) {
-    return namedColorToHex(trimmed);
-  }
-
-  return null;
+  const rgb = parseCssColor(value);
+  return rgb ? rgbToHex(rgb) : null;
 }
 
 /**
@@ -333,60 +194,23 @@ function organizeByRole(variables: ThemeVariable[]): ThemeVariables {
 }
 
 /**
- * Parse color to RGB
+ * Parse color to 0-255 RGB using the shared color parser
  */
 function parseColorToRgb(color: string): { b: number; g: number; r: number } {
-  // Hex color
-  if (color.startsWith("#")) {
-    return hexToRgb(color);
-  }
-
-  // RGB string
-  if (color.startsWith("rgb")) {
-    const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-    if (match) {
-      return {
-        b: parseInt(match[3], 10) / 255,
-        g: parseInt(match[2], 10) / 255,
-        r: parseInt(match[1], 10) / 255,
-      };
-    }
-  }
-
-  throw new Error(`Unable to parse color: ${color}`);
+  const rgb = parseColor(color);
+  if (!rgb) throw new Error(`Unable to parse color: ${color}`);
+  return rgb;
 }
 
 /**
- * Parse HSL/HSLA string to hex
+ * Strict CSS color parse: unlike tool inputs, stylesheet values never treat a
+ * bare number such as `999999` (z-index, weight…) as hex.
  */
-function parseHslString(hsl: string): null | string {
-  const match = hsl.match(/hsla?\((\d+),\s*(\d+)%,\s*(\d+)%/);
-  if (match) {
-    const h = parseInt(match[1], 10) / 360;
-    const s = parseInt(match[2], 10) / 100;
-    const l = parseInt(match[3], 10) / 100;
-
-    // HSL to RGB conversion
-    const rgb = hslToRgb(h, s, l);
-    const r = Math.round(rgb.r * 255);
-    const g = Math.round(rgb.g * 255);
-    const b = Math.round(rgb.b * 255);
-
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  }
-  return null;
-}
-
-/**
- * Parse RGB/RGBA string to hex
- */
-function parseRgbString(rgb: string): null | string {
-  const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (match) {
-    const r = parseInt(match[1], 10);
-    const g = parseInt(match[2], 10);
-    const b = parseInt(match[3], 10);
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  }
-  return null;
+function parseCssColor(value: string) {
+  const v = value.trim();
+  if (/^[0-9a-f]+$/i.test(v)) return null;
+  // Translucent values (scrims, overlays) are not opaque match targets
+  const alpha = getColorAlpha(v);
+  if (alpha !== undefined && alpha < 1) return null;
+  return parseColor(v);
 }

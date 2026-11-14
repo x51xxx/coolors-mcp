@@ -41,6 +41,38 @@ export {
   weightedRgbDistance,
 } from "./metrics.js";
 
+// Export OKLab / OKLCH conversions
+export {
+  formatOklch,
+  oklabToOklch,
+  oklabToRgb,
+  oklchToOklab,
+  oklchToRgb,
+  rgbToOklab,
+  rgbToOklch,
+} from "./oklch.js";
+
+// Export color theory & agent-compensation engine
+export {
+  auditColorPair,
+  type ColorProfile,
+  type ContrastSolveResult,
+  type ContrastTarget,
+  designUiPalette,
+  generateCategoricalPalette,
+  generateHarmonyPalette,
+  type HarmonyScheme,
+  type HarmonySpace,
+  type NeutralStyle,
+  type PairAuditResult,
+  profileColor,
+  rgbHueToRyb,
+  rybHueToRgb,
+  solveAccessibleContrast,
+  type UiDesignSystem,
+  type UiModeTokens,
+} from "./theory.js";
+
 // Export all types
 export type {
   ColorDistanceOptions,
@@ -50,6 +82,8 @@ export type {
   HSL,
   HSV,
   LAB,
+  OKLAB,
+  OKLCH,
   ParsedColor,
   RGB,
   XYZ,

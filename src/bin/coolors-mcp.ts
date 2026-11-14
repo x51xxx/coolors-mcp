@@ -34,9 +34,16 @@ await yargs(hideBin(process.argv))
 
     async (argv) => {
       try {
-        const command = argv.watch
-          ? `npx @wong2/mcp-cli npx tsx --watch ${argv.file}`
-          : `npx @wong2/mcp-cli npx tsx ${argv.file}`;
+        // Arguments are passed as an argv array (no shell), so a file path
+        // can never be interpreted as shell syntax.
+        const args = [
+          "@wong2/mcp-cli",
+          "npx",
+          "tsx",
+          ...(argv.watch ? ["--watch"] : []),
+          argv.file,
+        ];
+        const command = `npx ${args.join(" ")}`;
 
         if (argv.verbose) {
           console.log(`[CoolorsMCP] Starting server: ${command}`);
@@ -46,11 +53,10 @@ await yargs(hideBin(process.argv))
           );
         }
 
-        const { stdout } = await execa({
-          shell: true,
+        const { stdout } = await execa("npx", args, {
           stderr: "inherit",
           stdin: "inherit",
-        })`${command}`;
+        });
 
         console.log(stdout);
       } catch (error) {
@@ -128,16 +134,12 @@ await yargs(hideBin(process.argv))
 
         console.log(`[CoolorsMCP] Validating server file: ${filePath}`);
 
-        const command = argv.strict
-          ? `npx tsc --noEmit --strict ${filePath}`
-          : `npx tsc --noEmit ${filePath}`;
-
         try {
-          await execa({
-            shell: true,
-            stderr: "pipe",
-            stdout: "pipe",
-          })`${command}`;
+          await execa(
+            "npx",
+            ["tsc", "--noEmit", ...(argv.strict ? ["--strict"] : []), filePath],
+            { stderr: "pipe", stdout: "pipe" },
+          );
 
           console.log("[CoolorsMCP] ✓ TypeScript compilation successful");
         } catch (tsError) {
@@ -151,22 +153,25 @@ await yargs(hideBin(process.argv))
         }
 
         try {
-          await execa({
-            shell: true,
-            stderr: "pipe",
-            stdout: "pipe",
-          })`node -e "
-            (async () => {
-              try {
-                const { CoolorsMCP } = await import('coolors-mcp');
-                await import('file://${filePath}');
-                console.log('[CoolorsMCP] ✓ Server structure validation passed');
-              } catch (error) {
-                console.error('[CoolorsMCP] ✗ Server structure validation failed:', error.message);
-                process.exit(1);
-              }
-            })();
-          "`;
+          // The file URL is passed via the environment, never spliced into code.
+          const { pathToFileURL } = await import("url");
+          await execa(
+            "node",
+            [
+              "-e",
+              `import(process.env.COOLORS_SERVER_FILE)
+                .then(() => console.log("[CoolorsMCP] ✓ Server structure validation passed"))
+                .catch((error) => {
+                  console.error("[CoolorsMCP] ✗ Server structure validation failed:", error.message);
+                  process.exit(1);
+                });`,
+            ],
+            {
+              env: { COOLORS_SERVER_FILE: pathToFileURL(filePath).href },
+              stderr: "pipe",
+              stdout: "pipe",
+            },
+          );
         } catch {
           console.error("[CoolorsMCP] ✗ Server structure validation failed");
           console.error(

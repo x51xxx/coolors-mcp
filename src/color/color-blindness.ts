@@ -5,7 +5,8 @@
  * (2009), "A Physiologically-based Model for Simulation of Color Vision
  * Deficiency". Severity 1.0 matrices are used for the dichromatic forms
  * (protanopia/deuteranopia/tritanopia); severity 0.6 matrices are used for the
- * milder anomaly forms. Achromatopsia uses ITU-R BT.709 luminance.
+ * milder anomaly forms. Achromatopsia maps to a grey of equal relative
+ * luminance (BT.709 weights on linear RGB).
  *
  * Pipeline: sRGB → linear sRGB → matrix → sRGB.
  */
@@ -21,35 +22,40 @@ export type CvdType =
   | "tritanomaly"
   | "tritanopia";
 
-// Confusion-line matrices applied in linear sRGB space (Machado et al. 2009
-// linear approximation, common in libraries like color-blind / colorjs.io).
-// Each matrix maps linear-sRGB to the visible linear-sRGB for the given CVD.
+// Machado et al. (2009) linear-sRGB matrices, copied from the authors'
+// precomputed table (also used by the `colorspace` R package and culori):
+// severity 1.0 for the dichromacies (-opia), severity 0.6 for the anomalous
+// trichromacies (-omaly).
 const CVD_MATRICES: Record<
   Exclude<CvdType, "achromatopsia">,
   [number, number, number, number, number, number, number, number, number]
 > = {
+  // severity 0.6
   deuteranomaly: [
-    0.547494, 0.607765, -0.155259, 0.181692, 0.781742, 0.036566, -0.01041,
-    0.027275, 0.983136,
+    0.498864, 0.674741, -0.173604, 0.205199, 0.754872, 0.039929, -0.011131,
+    0.030969, 0.980162,
   ],
+  // severity 1.0
   deuteranopia: [
     0.367322, 0.860646, -0.227968, 0.280085, 0.672501, 0.047413, -0.01182,
     0.04294, 0.968881,
   ],
-  // Mild forms (-omaly: severity ~0.6, Machado severity 0.6 table)
+  // severity 0.6
   protanomaly: [
-    0.458064, 0.679578, -0.137642, 0.092785, 0.846313, 0.060902, -0.007494,
-    -0.016807, 1.024301,
+    0.38545, 0.769005, -0.154455, 0.100526, 0.829802, 0.069673, -0.007442,
+    -0.02219, 1.029632,
   ],
-  // Strong forms (-opia: full dichromacy, severity 1.0)
+  // severity 1.0
   protanopia: [
     0.152286, 1.052583, -0.204868, 0.114503, 0.786281, 0.099216, -0.003882,
     -0.048116, 1.051998,
   ],
+  // severity 0.6
   tritanomaly: [
-    1.193214, -0.109812, -0.083402, 0.058694, 0.901185, 0.040121, -0.005978,
-    0.401901, 0.604077,
+    1.104996, -0.046633, -0.058363, -0.032137, 0.971635, 0.060503, 0.001336,
+    0.317922, 0.680742,
   ],
+  // severity 1.0
   tritanopia: [
     1.255528, -0.076749, -0.178779, -0.078411, 0.930809, 0.147602, 0.004733,
     0.691367, 0.3039,
@@ -62,9 +68,13 @@ const CVD_MATRICES: Record<
  */
 export function simulateCvd(rgb: RGB, type: CvdType): RGB {
   if (type === "achromatopsia") {
-    // ITU-R BT.709 luminance (Rec. 709) — perceived brightness.
-    const y = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
-    const g = Math.max(0, Math.min(255, Math.round(y)));
+    // Rod monochromacy: a grey with the same relative luminance
+    // (Rec. 709 / sRGB coefficients applied to *linear* RGB).
+    const y =
+      0.2126 * srgbToLinear(rgb.r) +
+      0.7152 * srgbToLinear(rgb.g) +
+      0.0722 * srgbToLinear(rgb.b);
+    const g = linearToSrgb(y);
     return { b: g, g, r: g };
   }
 

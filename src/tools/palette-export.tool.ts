@@ -7,8 +7,16 @@
 import { z } from "zod";
 
 import { parseColor, rgbToHex, rgbToHsl } from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
 
-const FORMATS = ["css", "scss", "tailwind", "tokens", "json"] as const;
+const FORMATS = [
+  "css",
+  "scss",
+  "tailwind",
+  "tokens",
+  "json",
+  "design-md",
+] as const;
 
 type ExportFormat = (typeof FORMATS)[number];
 
@@ -20,6 +28,19 @@ interface NamedColor {
 function asCss(items: NamedColor[]): string {
   const body = items.map(({ hex, name }) => `  --${name}: ${hex};`).join("\n");
   return `:root {\n${body}\n}\n`;
+}
+
+/**
+ * `colors:` token group for a DESIGN.md file (Google Labs format): paste into
+ * the YAML front matter. Values are quoted so `#` is not read as a comment.
+ */
+function asDesignMd(items: NamedColor[]): string {
+  const body = items
+    .map(
+      ({ hex, name }) => `  ${/^\d/.test(name) ? `"${name}"` : name}: "${hex}"`,
+    )
+    .join("\n");
+  return `colors:\n${body}\n`;
 }
 
 function asJson(items: NamedColor[]): string {
@@ -106,42 +127,77 @@ function resolveNames(
   names?: string[],
   prefix?: string,
 ): NamedColor[] {
-  return colors.map((c, i) => {
+  const items = colors.map((c, i) => {
     const parsed = parseColor(c);
-    if (!parsed) throw new Error(`Invalid color: ${c}`);
+    if (!parsed) throw new ToolInputError(`Invalid color: ${c}`);
     const hex = rgbToHex(parsed);
-    const raw = names?.[i] ?? defaultName(i);
-    const slug = raw.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+    const slug = slugify(names?.[i] ?? "") || defaultName(i);
     const name = prefix ? `${prefix}-${slug}` : slug;
     return { hex, name };
   });
+
+  const seen = new Map<string, number>();
+  const duplicates: string[] = [];
+  items.forEach(({ name }, i) => {
+    if (seen.has(name)) {
+      duplicates.push(`"${name}" (colors ${seen.get(name)! + 1} and ${i + 1})`);
+    } else {
+      seen.set(name, i);
+    }
+  });
+  if (duplicates.length) {
+    throw new ToolInputError(
+      `Duplicate token names after normalization: ${duplicates.join(", ")}. Give each color a distinct name.`,
+    );
+  }
+
+  return items;
+}
+
+/**
+ * Token-safe slug: strips diacritics (Ünïcode → unicode), lowercases, keeps
+ * [a-z0-9-], collapses dashes. Valid as CSS ident, SCSS variable, JS key.
+ */
+function slugify(raw: string): string {
+  return raw
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export const exportPaletteTool = {
+  annotations: READ_ONLY_TOOL,
   description:
-    "Export a list of colors as CSS custom properties, SCSS variables, a Tailwind config snippet, W3C design tokens, or JSON.",
+    "Export a list of colors as CSS custom properties, SCSS variables, a Tailwind config snippet, W3C design tokens, JSON, or a DESIGN.md `colors:` block.",
   execute: async (args: {
     colors: string[];
     format: ExportFormat;
     names?: string[];
     prefix?: string;
   }) => {
-    const { colors, format, names, prefix } = args;
+    const { colors, format, names } = args;
+    const prefix = args.prefix ? slugify(args.prefix) || undefined : undefined;
 
     if (names && names.length !== colors.length) {
-      return `Error: names array length (${names.length}) must match colors length (${colors.length}).`;
+      throw new ToolInputError(
+        `Error: names array length (${names.length}) must match colors length (${colors.length}).`,
+      );
     }
 
     let items: NamedColor[];
     try {
       items = resolveNames(colors, names, prefix);
     } catch (e) {
-      return e instanceof Error ? e.message : String(e);
+      throw new ToolInputError(e instanceof Error ? e.message : String(e));
     }
 
     switch (format) {
       case "css":
         return asCss(items);
+      case "design-md":
+        return asDesignMd(items);
       case "json":
         return asJson(items);
       case "scss":
@@ -154,14 +210,19 @@ export const exportPaletteTool = {
   },
   name: "export_palette",
   parameters: z.object({
-    colors: z.array(z.string()).min(1).describe("Palette colors"),
+    colors: z
+      .array(z.string())
+      .min(1)
+      .max(256)
+      .describe("Palette colors (up to 256)"),
     format: z
       .enum(FORMATS)
       .describe(
-        "Output format: css (custom properties), scss (variables), tailwind (config), tokens (W3C design tokens), json",
+        "Output format: css (custom properties), scss (variables), tailwind (config), tokens (W3C design tokens), json, design-md (DESIGN.md `colors:` YAML for the front matter)",
       ),
     names: z
       .array(z.string())
+      .max(256)
       .optional()
       .describe(
         "Optional names for each color. Length must match colors. Defaults to a 50/100…900 scale.",

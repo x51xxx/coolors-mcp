@@ -31,7 +31,7 @@ describe("gradientGeneratorTool", () => {
     expect(result).toContain("Interpolation: hsl");
     const lines = result.split("\n");
     const colorLines = lines.filter((line) => /^\d+\./.test(line));
-    expect(colorLines).toHaveLength(8); // 7 steps + final color
+    expect(colorLines).toHaveLength(7); // steps = total colors
   });
 
   it("should generate gradient with LAB interpolation", async () => {
@@ -162,31 +162,31 @@ describe("gradientGeneratorTool", () => {
     expect(result).toContain("Input colors: #ff0000 → #00ff00 → #0000ff");
     const lines = result.split("\n");
     const colorLines = lines.filter((line) => /^\d+\./.test(line));
-    expect(colorLines).toHaveLength(10); // 9 steps + final color
+    expect(colorLines).toHaveLength(9); // steps = total colors, all stops kept
   });
 
   it("should error with less than 2 colors", async () => {
-    const result = await gradientGeneratorTool.execute({
-      colors: ["#ff0000"],
-      easing: "linear",
-      format: "array",
-      interpolation: "rgb",
-      steps: 5,
-    });
-
-    expect(result).toContain("Error: At least 2 colors are required");
+    await expect(
+      gradientGeneratorTool.execute({
+        colors: ["#ff0000"],
+        easing: "linear",
+        format: "array",
+        interpolation: "rgb",
+        steps: 5,
+      }),
+    ).rejects.toThrow("Error: At least 2 colors are required");
   });
 
   it("should error on invalid color format", async () => {
-    const result = await gradientGeneratorTool.execute({
-      colors: ["#ff0000", "invalid"],
-      easing: "linear",
-      format: "array",
-      interpolation: "rgb",
-      steps: 5,
-    });
-
-    expect(result).toContain("Invalid color format: invalid");
+    await expect(
+      gradientGeneratorTool.execute({
+        colors: ["#ff0000", "invalid"],
+        easing: "linear",
+        format: "array",
+        interpolation: "rgb",
+        steps: 5,
+      }),
+    ).rejects.toThrow("Invalid color format: invalid");
   });
 
   it("should handle gradients with many steps", async () => {
@@ -201,6 +201,49 @@ describe("gradientGeneratorTool", () => {
     expect(result).toContain("Generated gradient with 50 steps:");
     const lines = result.split("\n");
     const colorLines = lines.filter((line) => /^\d+\./.test(line));
-    expect(colorLines).toHaveLength(51); // 50 steps + final color
+    expect(colorLines).toHaveLength(50); // steps = total colors
+  });
+
+  it("keeps every input color as a stop (regression: stops were dropped)", async () => {
+    const result = await gradientGeneratorTool.execute({
+      colors: ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#00ffff"],
+      easing: "linear",
+      format: "hex",
+      interpolation: "rgb",
+      steps: 5,
+    });
+    expect(result).toBe("#ff0000, #00ff00, #0000ff, #ffff00, #00ffff");
+  });
+
+  it("rejects fewer steps than input colors", async () => {
+    await expect(
+      gradientGeneratorTool.execute({
+        colors: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"],
+        easing: "linear",
+        format: "hex",
+        interpolation: "rgb",
+        steps: 3,
+      }),
+    ).rejects.toThrow(/at least the number of input colors/);
+  });
+
+  it("does not swing through other hues from a grey endpoint (lch)", async () => {
+    const result = await gradientGeneratorTool.execute({
+      colors: ["#808080", "#0000ff"],
+      easing: "linear",
+      format: "hex",
+      interpolation: "lch",
+      steps: 5,
+    });
+    const hexes = result.split(", ");
+    expect(hexes).toHaveLength(5);
+    // Intermediate stops stay bluish (blue channel dominant), never teal/green
+    for (const hex of hexes.slice(1, -1)) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      expect(b).toBeGreaterThan(g);
+      expect(b).toBeGreaterThan(r);
+    }
   });
 });

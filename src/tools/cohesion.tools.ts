@@ -21,6 +21,7 @@ import {
   rgbToHex,
   rgbToHsl,
 } from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
 
 const TONAL_STOPS = [
   50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950,
@@ -40,6 +41,7 @@ function hctToHex(h: number, c: number, t: number): string {
 // --- generate_tonal_scale -----------------------------------------------------
 
 export const generateTonalScaleTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Generate a complete tonal scale (Tailwind-style 50/100/.../900/950) from a seed color. Uses Google's HCT color space so each step is perceptually even — ideal for building shadable design-system colors.",
   execute: async (args: {
@@ -49,7 +51,7 @@ export const generateTonalScaleTool = {
     stops?: number[];
   }) => {
     const hct = hctFromColor(args.seed);
-    if (!hct) return `Invalid color format: ${args.seed}`;
+    if (!hct) throw new ToolInputError(`Invalid color format: ${args.seed}`);
 
     const stops = args.stops?.length ? args.stops : Array.from(TONAL_STOPS);
     const chromaBoost = args.chromaBoost ?? 1;
@@ -95,6 +97,7 @@ export const generateTonalScaleTool = {
     seed: z.string().describe("Seed color (hex, rgb, hsl)"),
     stops: z
       .array(z.number().min(0).max(1000))
+      .max(32)
       .optional()
       .describe(
         "Custom stops. Default: [50,100,200,300,400,500,600,700,800,900,950].",
@@ -105,11 +108,12 @@ export const generateTonalScaleTool = {
 // --- generate_state_colors ---------------------------------------------------
 
 export const generateStateColorsTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Generate consistent interaction-state colors (hover / active / pressed / focus / disabled / selected) from a base color. Steps are computed in HCT space so they keep equal perceptual weight regardless of base hue.",
   execute: async (args: { base: string; isDark?: boolean }) => {
     const hct = hctFromColor(args.base);
-    if (!hct) return `Invalid color format: ${args.base}`;
+    if (!hct) throw new ToolInputError(`Invalid color format: ${args.base}`);
 
     const dark = args.isDark ?? false;
     // In dark mode, "hover" should lighten; in light mode, it should darken.
@@ -187,17 +191,18 @@ export const generateStateColorsTool = {
 // --- analyze_palette_consistency --------------------------------------------
 
 export const analyzePaletteConsistencyTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Score how visually cohesive a palette is. Reports tonal step uniformity, chroma spread, hue distribution, and a single 0-100 cohesion score, plus targeted suggestions for tightening it up.",
   execute: async (args: { colors: string[] }) => {
     if (args.colors.length < 2) {
-      return "Need at least 2 colors to analyze cohesion.";
+      throw new ToolInputError("Need at least 2 colors to analyze cohesion.");
     }
 
     const parsed = args.colors.map((c) => ({ input: c, rgb: parseColor(c) }));
     if (parsed.some((p) => !p.rgb)) {
       const bad = parsed.filter((p) => !p.rgb).map((p) => p.input);
-      return `Invalid color format: ${bad.join(", ")}`;
+      throw new ToolInputError(`Invalid color format: ${bad.join(", ")}`);
     }
 
     const hcts = parsed.map((p) => Hct.fromInt(rgbToArgb(p.rgb!)));
@@ -296,7 +301,11 @@ export const analyzePaletteConsistencyTool = {
   },
   name: "analyze_palette_consistency",
   parameters: z.object({
-    colors: z.array(z.string()).min(2).describe("Palette colors to analyze"),
+    colors: z
+      .array(z.string())
+      .min(2)
+      .max(64)
+      .describe("Palette colors to analyze (2-64)"),
   }),
 };
 
@@ -322,11 +331,12 @@ const SEMANTIC_ANCHORS: Record<string, { chromaMin: number; hue: number }> = {
 };
 
 export const generateSemanticPaletteTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "From a single brand color, generate a complete visually-cohesive semantic palette: primary, secondary, tertiary, plus success/warning/error/info status colors. Tone and chroma are normalized in HCT space so every color feels like part of the same family.",
   execute: async (args: { brand: string; isDark?: boolean }) => {
     const hct = hctFromColor(args.brand);
-    if (!hct) return `Invalid color format: ${args.brand}`;
+    if (!hct) throw new ToolInputError(`Invalid color format: ${args.brand}`);
 
     const dark = args.isDark ?? false;
     const targetTone = dark ? 80 : 40;

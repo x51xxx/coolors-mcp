@@ -6,8 +6,10 @@
 import { z } from "zod";
 
 import { colorDistance, parseColor } from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
 
 export const colorDistanceTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Calculate perceptual distance between two colors using Delta E 2000",
   execute: async (args: {
@@ -19,7 +21,9 @@ export const colorDistanceTool = {
     const rgb2 = parseColor(args.color2);
 
     if (!rgb1 || !rgb2) {
-      return `Invalid color format: ${!rgb1 ? args.color1 : args.color2}`;
+      throw new ToolInputError(
+        `Invalid color format: ${!rgb1 ? args.color1 : args.color2}`,
+      );
     }
 
     const distance = colorDistance(rgb1, rgb2, {

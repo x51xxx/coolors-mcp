@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.x51xxx/coolors-mcp",
+  "title": "Coolors MCP",
+  "description": "Color tools for AI agents: WCAG/APCA contrast, Material 3 HCT themes, palettes, DESIGN.md audits",
+  "repository": {
+    "url": "https://github.com/x51xxx/coolors-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://x51xxx.github.io/coolors-mcp/",
+  "version": "2.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@trishchuk/coolors-mcp",
+      "version": "2.0.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

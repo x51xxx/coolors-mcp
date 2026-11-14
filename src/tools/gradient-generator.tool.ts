@@ -4,21 +4,34 @@ import { Hct } from "../color/hct/index.js";
 import {
   hslToRgb,
   labToRgb,
+  oklabToRgb,
+  oklchToRgb,
   parseColor,
   rgbToHex,
   rgbToHsl,
   rgbToLab,
+  rgbToOklab,
+  rgbToOklch,
 } from "../color/index.js";
 import { RGB } from "../color/types.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
+
+function interpolateHue(startHue: number, endHue: number, t: number): number {
+  let hueDiff = endHue - startHue;
+  if (hueDiff > 180) hueDiff -= 360;
+  if (hueDiff < -180) hueDiff += 360;
+  return (startHue + hueDiff * t + 360) % 360;
+}
 
 export const gradientGeneratorTool = {
+  annotations: READ_ONLY_TOOL,
   description:
-    "Generate a smooth gradient between colors with multiple interpolation methods",
+    "Generate a smooth gradient between colors with multiple interpolation methods (oklch, oklab, lab, lch, hct, hsl, rgb)",
   execute: async (args: {
     colors: string[];
     easing?: "ease-in-out" | "ease-in" | "ease-out" | "linear";
     format?: "array" | "css-linear" | "css-radial" | "hex";
-    interpolation?: "hct" | "hsl" | "lab" | "lch" | "rgb";
+    interpolation?: "hct" | "hsl" | "lab" | "lch" | "oklab" | "oklch" | "rgb";
     steps: number;
   }) => {
     const {
@@ -30,7 +43,9 @@ export const gradientGeneratorTool = {
     } = args;
 
     if (colors.length < 2) {
-      return "Error: At least 2 colors are required for a gradient";
+      throw new ToolInputError(
+        "Error: At least 2 colors are required for a gradient",
+      );
     }
 
     // Parse input colors
@@ -38,7 +53,7 @@ export const gradientGeneratorTool = {
     for (const color of colors) {
       const parsed = parseColor(color);
       if (!parsed) {
-        return `Invalid color format: ${color}`;
+        throw new ToolInputError(`Invalid color format: ${color}`);
       }
       parsedColors.push(parsed);
     }
@@ -59,8 +74,16 @@ export const gradientGeneratorTool = {
 
     // Generate gradient colors
     const gradient: RGB[] = [];
-    const segmentSteps = Math.floor(steps / (colors.length - 1));
-    const extraSteps = steps % (colors.length - 1);
+    // `steps` is the total number of output colors; every input color is a
+    // stop, so there are (steps - 1) intervals spread across the segments.
+    if (steps < colors.length) {
+      throw new ToolInputError(
+        `steps (${steps}) must be at least the number of input colors (${colors.length})`,
+      );
+    }
+    const intervals = steps - 1;
+    const segmentSteps = Math.floor(intervals / (colors.length - 1));
+    const extraSteps = intervals % (colors.length - 1);
 
     for (let segment = 0; segment < colors.length - 1; segment++) {
       const start = parsedColors[segment];
@@ -74,7 +97,6 @@ export const gradientGeneratorTool = {
 
         switch (interpolation) {
           case "hct": {
-            // HCT interpolation (Material Design color space)
             const startHct = Hct.fromInt(
               (255 << 24) | (start.r << 16) | (start.g << 8) | start.b,
             );
@@ -82,13 +104,13 @@ export const gradientGeneratorTool = {
               (255 << 24) | (end.r << 16) | (end.g << 8) | end.b,
             );
 
-            // Interpolate hue (shortest path)
-            let hueDiff = endHct.hue - startHct.hue;
-            if (hueDiff > 180) hueDiff -= 360;
-            if (hueDiff < -180) hueDiff += 360;
-
+            // CAM16 hue is meaningless for near-greys: borrow the other end's
             const interpolatedHct = Hct.from(
-              (startHct.hue + hueDiff * t + 360) % 360,
+              startHct.chroma < 4
+                ? endHct.hue
+                : endHct.chroma < 4
+                  ? startHct.hue
+                  : interpolateHue(startHct.hue, endHct.hue, t),
               startHct.chroma + (endHct.chroma - startHct.chroma) * t,
               startHct.tone + (endHct.tone - startHct.tone) * t,
             );
@@ -103,17 +125,11 @@ export const gradientGeneratorTool = {
           }
 
           case "hsl": {
-            // HSL interpolation
             const startHsl = rgbToHsl(start);
             const endHsl = rgbToHsl(end);
 
-            // Handle hue interpolation (shortest path)
-            let hueDiff = endHsl.h - startHsl.h;
-            if (hueDiff > 180) hueDiff -= 360;
-            if (hueDiff < -180) hueDiff += 360;
-
             interpolatedColor = hslToRgb({
-              h: (startHsl.h + hueDiff * t + 360) % 360,
+              h: interpolateHue(startHsl.h, endHsl.h, t),
               l: startHsl.l + (endHsl.l - startHsl.l) * t,
               s: startHsl.s + (endHsl.s - startHsl.s) * t,
             });
@@ -121,7 +137,6 @@ export const gradientGeneratorTool = {
           }
 
           case "lab": {
-            // LAB interpolation (perceptually uniform)
             const startLab = rgbToLab(start);
             const endLab = rgbToLab(end);
 
@@ -134,11 +149,9 @@ export const gradientGeneratorTool = {
           }
 
           case "lch": {
-            // LCH interpolation (cylindrical LAB)
             const startLab = rgbToLab(start);
             const endLab = rgbToLab(end);
 
-            // Convert LAB to LCH
             const startL = startLab.l;
             const startC = Math.sqrt(
               startLab.a * startLab.a + startLab.b * startLab.b,
@@ -149,26 +162,55 @@ export const gradientGeneratorTool = {
             const endC = Math.sqrt(endLab.a * endLab.a + endLab.b * endLab.b);
             const endH = (Math.atan2(endLab.b, endLab.a) * 180) / Math.PI;
 
-            // Interpolate in LCH
-            let hueDiff = endH - startH;
-            if (hueDiff > 180) hueDiff -= 360;
-            if (hueDiff < -180) hueDiff += 360;
-
             const l = startL + (endL - startL) * t;
             const c = startC + (endC - startC) * t;
-            const h = ((startH + hueDiff * t) * Math.PI) / 180;
+            // Achromatic endpoint: its hue is powerless, use the other one's
+            const hue =
+              startC < 2
+                ? endH
+                : endC < 2
+                  ? startH
+                  : interpolateHue(startH, endH, t);
+            const h = (hue * Math.PI) / 180;
 
-            // Convert back to LAB then RGB
             interpolatedColor = labToRgb({
               a: c * Math.cos(h),
               b: c * Math.sin(h),
-              l: l,
+              l,
+            });
+            break;
+          }
+
+          case "oklab": {
+            const startOk = rgbToOklab(start);
+            const endOk = rgbToOklab(end);
+            interpolatedColor = oklabToRgb({
+              a: startOk.a + (endOk.a - startOk.a) * t,
+              b: startOk.b + (endOk.b - startOk.b) * t,
+              l: startOk.l + (endOk.l - startOk.l) * t,
+            });
+            break;
+          }
+
+          case "oklch": {
+            const startOk = rgbToOklch(start);
+            const endOk = rgbToOklch(end);
+            // If either endpoint is achromatic, keep the chromatic endpoint's hue
+            const h =
+              startOk.c < 0.01
+                ? endOk.h
+                : endOk.c < 0.01
+                  ? startOk.h
+                  : interpolateHue(startOk.h, endOk.h, t);
+            interpolatedColor = oklchToRgb({
+              c: startOk.c + (endOk.c - startOk.c) * t,
+              h,
+              l: startOk.l + (endOk.l - startOk.l) * t,
             });
             break;
           }
 
           case "rgb": {
-            // Simple RGB interpolation
             interpolatedColor = {
               b: Math.round(start.b + (end.b - start.b) * t),
               g: Math.round(start.g + (end.g - start.g) * t),
@@ -178,7 +220,7 @@ export const gradientGeneratorTool = {
           }
 
           default:
-            interpolatedColor = start; // Fallback
+            interpolatedColor = start;
         }
 
         gradient.push(interpolatedColor);
@@ -226,7 +268,8 @@ Input colors: ${colors.join(" → ")}`;
     colors: z
       .array(z.string())
       .min(2)
-      .describe("Colors to create gradient between (minimum 2)"),
+      .max(32)
+      .describe("Colors to create gradient between (2-32)"),
     easing: z
       .enum(["linear", "ease-in", "ease-out", "ease-in-out"])
       .default("linear")
@@ -236,15 +279,17 @@ Input colors: ${colors.join(" → ")}`;
       .default("array")
       .describe("Output format for the gradient"),
     interpolation: z
-      .enum(["rgb", "hsl", "lab", "lch", "hct"])
+      .enum(["rgb", "hsl", "lab", "lch", "hct", "oklab", "oklch"])
       .default("lab")
       .describe(
-        "Color space for interpolation (lab/lch/hct are perceptually smooth)",
+        "Color space for interpolation (oklch/oklab/lab/lch/hct are perceptually smooth)",
       ),
     steps: z
       .number()
       .min(3)
       .max(100)
-      .describe("Number of colors in the gradient"),
+      .describe(
+        "Total number of colors in the gradient, including every input color (must be ≥ number of colors)",
+      ),
   }),
 };

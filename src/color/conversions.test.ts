@@ -337,12 +337,24 @@ describe("Color Conversions", () => {
 
     it("should return null for invalid colors", () => {
       expect(parseColor("invalid")).toBeNull();
-      expect(parseColor("#gggggg")).toEqual({ b: 0, g: 0, r: 0 }); // Returns black for invalid hex
+      expect(parseColor("#gggggg")).toBeNull();
+      expect(parseColor("#ggg")).toBeNull();
+      expect(parseColor("#ff00zz")).toBeNull();
+      expect(parseColor("#12345")).toBeNull();
+      expect(parseColor("#")).toBeNull();
+    });
+
+    it("should clamp out-of-range rgb() channels like CSS", () => {
       expect(parseColor("rgb(256, 256, 256)")).toEqual({
-        b: 256,
-        g: 256,
-        r: 256,
+        b: 255,
+        g: 255,
+        r: 255,
       });
+      expect(parseColor("rgb(300, -5, 0)")).toEqual({ b: 0, g: 0, r: 255 });
+    });
+
+    it("should accept bare 6-digit hex", () => {
+      expect(parseColor("6750a4")).toEqual({ b: 164, g: 80, r: 103 });
     });
   });
 

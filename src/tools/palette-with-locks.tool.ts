@@ -1,34 +1,57 @@
 import { z } from "zod";
 
 import {
+  argbToRgb,
   colorDistance,
+  DislikeAnalyzer,
+  Hct,
   hslToRgb,
   labToRgb,
+  oklchToRgb,
   parseColor,
+  rgbToArgb,
   rgbToHex,
   rgbToHsl,
   rgbToLab,
+  rgbToOklch,
 } from "../color/index.js";
 import { RGB } from "../color/types.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
+
+function avoidDisliked(rgb: RGB): RGB {
+  const hct = Hct.fromInt(rgbToArgb(rgb));
+  if (!DislikeAnalyzer.isDisliked(hct)) return rgb;
+  return argbToRgb(DislikeAnalyzer.fixIfDisliked(hct).toInt());
+}
+
+function interpolateHue(startH: number, endH: number, t: number): number {
+  let hueDiff = endH - startH;
+  if (hueDiff > 180) hueDiff -= 360;
+  if (hueDiff < -180) hueDiff += 360;
+  return (startH + hueDiff * t + 360) % 360;
+}
 
 export const paletteWithLocksTool = {
+  annotations: READ_ONLY_TOOL,
   description:
-    "Generate a color palette while preserving specific locked colors",
+    "Generate a color palette while preserving specific locked colors. Uses deterministic perceptual search in OKLCH/HCT/LAB/HSL and avoids universally disliked colors.",
   execute: async (args: {
-    colorSpace?: "hsl" | "lab";
+    colorSpace?: "hct" | "hsl" | "lab" | "oklch";
     lockedColors: string[];
     mode?: "contrast" | "gradient" | "harmony";
     totalColors: number;
   }) => {
     const {
-      colorSpace = "hsl",
+      colorSpace = "oklch",
       lockedColors,
       mode = "harmony",
       totalColors,
     } = args;
 
     if (lockedColors.length >= totalColors) {
-      return `Error: Number of locked colors (${lockedColors.length}) must be less than total colors (${totalColors})`;
+      throw new ToolInputError(
+        `Error: Number of locked colors (${lockedColors.length}) must be less than total colors (${totalColors})`,
+      );
     }
 
     // Parse and validate locked colors
@@ -36,7 +59,7 @@ export const paletteWithLocksTool = {
     for (const color of lockedColors) {
       const parsed = parseColor(color);
       if (!parsed) {
-        return `Invalid color format: ${color}`;
+        throw new ToolInputError(`Invalid color format: ${color}`);
       }
       parsedLocked.push(parsed);
     }
@@ -49,19 +72,21 @@ export const paletteWithLocksTool = {
 
     switch (mode) {
       case "contrast": {
-        // Generate contrasting colors
+        // Deterministic minimax search across a structured perceptual OKLCH grid
+        const candidates: RGB[] = [];
+        for (let h = 0; h < 360; h += 15) {
+          for (const l of [0.38, 0.56, 0.74, 0.88]) {
+            for (const c of [0.1, 0.17]) {
+              candidates.push(avoidDisliked(oklchToRgb({ c, h, l })));
+            }
+          }
+        }
+
         for (let i = 0; i < remainingSlots; i++) {
-          let bestColor: null | RGB = null;
-          let maxMinDistance = 0;
+          let bestColor: RGB = candidates[0];
+          let maxMinDistance = -1;
 
-          // Try random colors and pick the one with maximum minimum distance
-          for (let attempt = 0; attempt < 100; attempt++) {
-            const candidate: RGB = {
-              b: Math.floor(Math.random() * 256),
-              g: Math.floor(Math.random() * 256),
-              r: Math.floor(Math.random() * 256),
-            };
-
+          for (const candidate of candidates) {
             let minDistance = Infinity;
             for (const locked of parsedLocked) {
               const dist = colorDistance(candidate, locked, {
@@ -69,10 +94,153 @@ export const paletteWithLocksTool = {
               });
               if (dist < minDistance) minDistance = dist;
             }
-
             if (minDistance > maxMinDistance) {
               maxMinDistance = minDistance;
               bestColor = candidate;
+            }
+          }
+
+          palette.push(rgbToHex(bestColor));
+          parsedLocked.push(bestColor);
+        }
+        break;
+      }
+
+      case "gradient": {
+        if (parsedLocked.length < 2) {
+          throw new ToolInputError(
+            "Gradient mode requires at least 2 locked colors",
+          );
+        }
+
+        const segments = parsedLocked.length - 1;
+        const baseSteps = Math.floor(remainingSlots / segments);
+        const extra = remainingSlots % segments;
+
+        // Emit in gradient order: locked[0], in-betweens, locked[1], …
+        palette.length = 0;
+        for (let i = 0; i < segments; i++) {
+          const start = parsedLocked[i];
+          const end = parsedLocked[i + 1];
+          const steps = baseSteps + (i < extra ? 1 : 0);
+          palette.push(lockedColors[i]);
+
+          for (let step = 1; step <= steps; step++) {
+            const t = step / (steps + 1);
+
+            if (colorSpace === "lab") {
+              const startLab = rgbToLab(start);
+              const endLab = rgbToLab(end);
+              palette.push(
+                rgbToHex(
+                  labToRgb({
+                    a: startLab.a + (endLab.a - startLab.a) * t,
+                    b: startLab.b + (endLab.b - startLab.b) * t,
+                    l: startLab.l + (endLab.l - startLab.l) * t,
+                  }),
+                ),
+              );
+            } else if (colorSpace === "hct") {
+              const s = Hct.fromInt(rgbToArgb(start));
+              const e = Hct.fromInt(rgbToArgb(end));
+              const hct = Hct.from(
+                interpolateHue(s.hue, e.hue, t),
+                s.chroma + (e.chroma - s.chroma) * t,
+                s.tone + (e.tone - s.tone) * t,
+              );
+              palette.push(rgbToHex(argbToRgb(hct.toInt())));
+            } else if (colorSpace === "oklch") {
+              const s = rgbToOklch(start);
+              const e = rgbToOklch(end);
+              const h =
+                s.c < 0.01
+                  ? e.h
+                  : e.c < 0.01
+                    ? s.h
+                    : interpolateHue(s.h, e.h, t);
+              palette.push(
+                rgbToHex(
+                  oklchToRgb({
+                    c: s.c + (e.c - s.c) * t,
+                    h,
+                    l: s.l + (e.l - s.l) * t,
+                  }),
+                ),
+              );
+            } else {
+              const startHsl = rgbToHsl(start);
+              const endHsl = rgbToHsl(end);
+              palette.push(
+                rgbToHex(
+                  hslToRgb({
+                    h: interpolateHue(startHsl.h, endHsl.h, t),
+                    l: startHsl.l + (endHsl.l - startHsl.l) * t,
+                    s: startHsl.s + (endHsl.s - startHsl.s) * t,
+                  }),
+                ),
+              );
+            }
+          }
+        }
+        palette.push(lockedColors[lockedColors.length - 1]);
+        break;
+      }
+
+      case "harmony": {
+        // Deterministic harmonic offsets relative to the locked anchor(s)
+        const baseOk = rgbToOklch(parsedLocked[0]);
+        const baseHsl = rgbToHsl(parsedLocked[0]);
+        const baseHct = Hct.fromInt(rgbToArgb(parsedLocked[0]));
+        const harmonicOffsets = [
+          30, -30, 60, -60, 120, 240, 150, 210, 180, 90, 270,
+        ];
+        const lOffsets = [0, 0.12, -0.12, 0.22, -0.22];
+
+        for (let i = 0; i < remainingSlots; i++) {
+          let bestColor: null | RGB = null;
+          let maxMinDistance = -1;
+
+          for (const hOff of harmonicOffsets) {
+            for (const lOff of lOffsets) {
+              let candidate: RGB;
+              if (colorSpace === "hsl") {
+                candidate = hslToRgb({
+                  h: (baseHsl.h + hOff + 360) % 360,
+                  l: Math.max(15, Math.min(88, baseHsl.l + lOff * 100)),
+                  s: Math.max(15, Math.min(92, baseHsl.s)),
+                });
+              } else if (colorSpace === "hct") {
+                const hct = Hct.from(
+                  (baseHct.hue + hOff + 360) % 360,
+                  Math.max(18, baseHct.chroma),
+                  Math.max(16, Math.min(90, baseHct.tone + lOff * 100)),
+                );
+                candidate = avoidDisliked(argbToRgb(hct.toInt()));
+              } else {
+                candidate = avoidDisliked(
+                  oklchToRgb({
+                    c: Math.max(0.05, baseOk.c),
+                    h: (baseOk.h + hOff + 360) % 360,
+                    l: Math.max(0.22, Math.min(0.9, baseOk.l + lOff)),
+                  }),
+                );
+              }
+
+              let minDistance = Infinity;
+              for (const locked of parsedLocked) {
+                const dist = colorDistance(candidate, locked, {
+                  metric: "deltaE2000",
+                });
+                if (dist < minDistance) minDistance = dist;
+              }
+
+              // Prefer distinct colors that sit near the harmonic family;
+              // the most distinct candidate wins even below the ΔE 12 target
+              // so the palette always has exactly totalColors entries.
+              if (minDistance > maxMinDistance) {
+                maxMinDistance = minDistance;
+                bestColor = candidate;
+              }
             }
           }
 
@@ -83,103 +251,8 @@ export const paletteWithLocksTool = {
         }
         break;
       }
-
-      case "gradient": {
-        // Create gradient between locked colors
-        if (parsedLocked.length < 2) {
-          return "Gradient mode requires at least 2 locked colors";
-        }
-
-        const steps = Math.floor(remainingSlots / (parsedLocked.length - 1));
-
-        for (let i = 0; i < parsedLocked.length - 1; i++) {
-          const start = parsedLocked[i];
-          const end = parsedLocked[i + 1];
-
-          for (let step = 1; step <= steps; step++) {
-            const t = step / (steps + 1);
-
-            if (colorSpace === "lab") {
-              // Interpolate in LAB space
-              const startLab = rgbToLab(start);
-              const endLab = rgbToLab(end);
-
-              const interpolated = labToRgb({
-                a: startLab.a + (endLab.a - startLab.a) * t,
-                b: startLab.b + (endLab.b - startLab.b) * t,
-                l: startLab.l + (endLab.l - startLab.l) * t,
-              });
-
-              palette.push(rgbToHex(interpolated));
-            } else {
-              // Interpolate in HSL space
-              const startHsl = rgbToHsl(start);
-              const endHsl = rgbToHsl(end);
-
-              // Handle hue interpolation (shortest path)
-              let hueDiff = endHsl.h - startHsl.h;
-              if (hueDiff > 180) hueDiff -= 360;
-              if (hueDiff < -180) hueDiff += 360;
-
-              const interpolated = hslToRgb({
-                h: (startHsl.h + hueDiff * t + 360) % 360,
-                l: startHsl.l + (endHsl.l - startHsl.l) * t,
-                s: startHsl.s + (endHsl.s - startHsl.s) * t,
-              });
-
-              palette.push(rgbToHex(interpolated));
-            }
-          }
-        }
-        break;
-      }
-
-      case "harmony": {
-        // Generate harmonious colors based on locked colors
-        const baseHsl = rgbToHsl(parsedLocked[0]);
-
-        for (let i = 0; i < remainingSlots; i++) {
-          let attempts = 0;
-          let bestColor: null | RGB = null;
-          let maxMinDistance = 0;
-
-          // Try different hues to find one that's not too close to locked colors
-          while (attempts < 36) {
-            const newHue = (baseHsl.h + attempts * 10) % 360;
-            const candidate = hslToRgb({
-              h: newHue,
-              l: baseHsl.l + (Math.random() - 0.5) * 20,
-              s: baseHsl.s + (Math.random() - 0.5) * 20,
-            });
-
-            // Check minimum distance to all locked colors
-            let minDistance = Infinity;
-            for (const locked of parsedLocked) {
-              const dist = colorDistance(candidate, locked, {
-                metric: "deltaE2000",
-              });
-              if (dist < minDistance) minDistance = dist;
-            }
-
-            // Keep the candidate with the largest minimum distance
-            if (minDistance > maxMinDistance && minDistance > 10) {
-              maxMinDistance = minDistance;
-              bestColor = candidate;
-            }
-
-            attempts++;
-          }
-
-          if (bestColor) {
-            palette.push(rgbToHex(bestColor));
-            parsedLocked.push(bestColor); // Add to locked for next iteration
-          }
-        }
-        break;
-      }
     }
 
-    // Sort palette to have locked colors marked
     const result: string[] = [];
     const lockedSet = new Set(lockedColors.map((c) => c.toLowerCase()));
 
@@ -201,18 +274,21 @@ Total colors: ${totalColors}`;
   name: "generate_palette_with_locks",
   parameters: z.object({
     colorSpace: z
-      .enum(["hsl", "lab"])
-      .default("hsl")
-      .describe("Color space for interpolation (affects gradient smoothness)"),
+      .enum(["hsl", "lab", "hct", "oklch"])
+      .default("oklch")
+      .describe(
+        "Color space for palette generation/interpolation (oklch/hct/lab are perceptually uniform)",
+      ),
     lockedColors: z
       .array(z.string())
       .min(1)
+      .max(19)
       .describe("Colors that must be included in the palette"),
     mode: z
       .enum(["harmony", "contrast", "gradient"])
       .default("harmony")
       .describe(
-        "Generation mode: harmony (similar), contrast (different), or gradient (smooth transition)",
+        "Generation mode: harmony (cohesive), contrast (distinct), or gradient (smooth transition)",
       ),
     totalColors: z
       .number()

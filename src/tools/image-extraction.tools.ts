@@ -10,14 +10,27 @@ import {
   extractThemePalette,
 } from "../color/extract-colors.js";
 import { generateMaterialTheme } from "../color/material-theme.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
+
+// 256×256 RGBA. Larger images should be downscaled before sending: the
+// palette barely changes and the JSON payload grows ~4 numbers per pixel.
+const MAX_PIXELS = 256 * 256;
 
 const imageDataSchema = z
   .object({
-    data: z.array(z.number()).describe("Flat array of RGBA values (0-255)"),
+    data: z
+      .array(z.number().int().min(0).max(255))
+      .max(MAX_PIXELS * 4)
+      .describe("Flat array of RGBA values (0-255), length = width*height*4"),
     height: z.number().int().positive().describe("Image height in pixels"),
     width: z.number().int().positive().describe("Image width in pixels"),
   })
-  .describe("Image data with RGBA values");
+  .refine((img) => img.data.length === img.width * img.height * 4, {
+    message: "data length must equal width * height * 4 (RGBA)",
+  })
+  .describe(
+    `Image data with RGBA values (at most ${MAX_PIXELS} pixels; downscale larger images)`,
+  );
 
 type ImageDataInput = z.infer<typeof imageDataSchema>;
 
@@ -25,6 +38,7 @@ type ImageDataInput = z.infer<typeof imageDataSchema>;
  * Extract dominant colors from image data
  */
 export const extractImageColorsTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Extract dominant colors from an image. Input should be image data as an array of RGBA values.",
   execute: async (args: {
@@ -50,12 +64,23 @@ export const extractImageColorsTool = {
       };
 
       // Extract colors
-      const colors = extractColors(processedImageData, {
+      let colors = extractColors(processedImageData, {
         filter: true,
         maxColors,
         quality,
         scoringEnabled: true,
       });
+
+      // Theme scoring drops greys/near-whites and falls back to Google Blue;
+      // for plain extraction report the image's real dominant colors instead.
+      if (colors.every((c) => c.isFallback)) {
+        colors = extractColors(processedImageData, {
+          filter: false,
+          maxColors,
+          quality,
+          scoringEnabled: false,
+        });
+      }
 
       // Format output based on requested format
       switch (format) {
@@ -70,7 +95,10 @@ export const extractImageColorsTool = {
           return formatAsJSON(colors);
       }
     } catch (error) {
-      return `Error extracting colors: ${error instanceof Error ? error.message : String(error)}`;
+      if (error instanceof ToolInputError) throw error;
+      throw new ToolInputError(
+        `Error extracting colors: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   },
   name: "extract_image_colors",
@@ -101,6 +129,7 @@ export const extractImageColorsTool = {
  * Generate a Material Design theme from an image
  */
 export const generateThemeFromImageTool = {
+  annotations: READ_ONLY_TOOL,
   description: "Generate a complete Material Design 3 theme from an image",
   execute: async (args: {
     imageData: ImageDataInput;
@@ -120,6 +149,12 @@ export const generateThemeFromImageTool = {
 
       // Extract theme palette
       const palette = extractThemePalette(processedImageData);
+
+      if (palette.primary.isFallback) {
+        throw new ToolInputError(
+          "The image has no sufficiently colorful pixels to seed a theme (Material's scorer fell back to #4285F4). Use a more colorful image, or call generate_material_theme with an explicit sourceColor.",
+        );
+      }
 
       // Convert primary color to hex for theme generation
       const sourceColor = palette.primary.hex;
@@ -177,7 +212,10 @@ export const generateThemeFromImageTool = {
 
       return output;
     } catch (error) {
-      return `Error generating theme: ${error instanceof Error ? error.message : String(error)}`;
+      if (error instanceof ToolInputError) throw error;
+      throw new ToolInputError(
+        `Error generating theme: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   },
   name: "generate_theme_from_image",

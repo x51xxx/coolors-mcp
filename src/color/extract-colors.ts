@@ -16,6 +16,11 @@ import * as utils from "./utils/color_utils.js";
 export interface ExtractedColor {
   hct: { c: number; h: number; t: number };
   hex: string;
+  /**
+   * True when the color did not come from the image: Material's Score falls
+   * back to Google Blue (#4285F4) if no pixel is colorful enough.
+   */
+  isFallback?: boolean;
   percentage: number;
   population: number;
   rgb: { b: number; g: number; r: number };
@@ -97,6 +102,7 @@ export function extractColors(
 
   // Convert to output format
   return selectedColors.map((argb) => {
+    const isFallback = !quantized.has(argb);
     let hct = Hct.fromInt(argb);
 
     // Fix disliked colors if requested
@@ -113,7 +119,9 @@ export function extractColors(
     return {
       hct: { c: hct.chroma, h: hct.hue, t: hct.tone },
       hex: rgbToHex(r, g, b),
-      percentage: (population / totalPopulation) * 100,
+      ...(isFallback && { isFallback: true }),
+      percentage:
+        totalPopulation > 0 ? (population / totalPopulation) * 100 : 0,
       population,
       rgb: { b, g, r },
     };

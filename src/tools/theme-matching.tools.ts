@@ -14,11 +14,38 @@ import {
   parseThemeVariables,
   refactorCss,
 } from "../theme/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
+
+/**
+ * Parse theme CSS and fail loudly when it holds no color custom properties
+ * (e.g. YAML or a file path was passed instead of CSS).
+ */
+function parseThemeOrThrow(themeCSS: string) {
+  const themeVariables = parseThemeVariables(themeCSS);
+  const count = Object.values(themeVariables).reduce<number>(
+    (n, group) =>
+      n +
+      (Array.isArray(group)
+        ? group.length
+        : Object.values(group ?? {}).reduce<number>(
+            (m, g) => m + (g as unknown[]).length,
+            0,
+          )),
+    0,
+  );
+  if (count === 0) {
+    throw new ToolInputError(
+      "themeCSS contains no CSS custom properties with color values (expected e.g. `:root { --color-primary: #6750a4; }`).",
+    );
+  }
+  return themeVariables;
+}
 
 /**
  * Match Theme Color Tool
  */
 export const matchThemeColorTool = {
+  annotations: READ_ONLY_TOOL,
   description: "Find the closest matching theme variable for a given color",
   execute: async (args: {
     color: string;
@@ -26,8 +53,10 @@ export const matchThemeColorTool = {
     minConfidence?: number;
     themeCSS: string;
   }) => {
-    // Parse theme variables from CSS
-    const themeVariables = parseThemeVariables(args.themeCSS);
+    if (!parseColor(args.color)) {
+      throw new ToolInputError(`Invalid color format: ${args.color}`);
+    }
+    const themeVariables = parseThemeOrThrow(args.themeCSS);
 
     // Find closest match
     const match = findClosestThemeColor(args.color, themeVariables, {
@@ -89,7 +118,10 @@ Meets AAA: ${match.accessibilityInfo.meetsAAA ? "Yes" : "No"}`;
       .optional()
       .default(70)
       .describe("Minimum confidence threshold (0-100)"),
-    themeCSS: z.string().describe("CSS containing theme variables"),
+    themeCSS: z
+      .string()
+      .max(200_000)
+      .describe("CSS containing theme variables"),
   }),
 };
 
@@ -97,6 +129,7 @@ Meets AAA: ${match.accessibilityInfo.meetsAAA ? "Yes" : "No"}`;
  * Refactor CSS with Theme Tool
  */
 export const refactorCssWithThemeTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Refactor CSS to use theme variables instead of hardcoded colors",
   execute: async (args: {
@@ -106,8 +139,7 @@ export const refactorCssWithThemeTool = {
     preserveOriginal?: boolean;
     themeCSS: string;
   }) => {
-    // Parse theme variables
-    const themeVariables = parseThemeVariables(args.themeCSS);
+    const themeVariables = parseThemeOrThrow(args.themeCSS);
 
     // Refactor CSS
     const result = refactorCss(args.css, themeVariables, {
@@ -150,7 +182,7 @@ ${result.refactored}
   },
   name: "refactor_css_with_theme",
   parameters: z.object({
-    css: z.string().describe("CSS content to refactor"),
+    css: z.string().max(500_000).describe("CSS content to refactor"),
     generateReport: z
       .boolean()
       .optional()
@@ -168,7 +200,10 @@ ${result.refactored}
       .optional()
       .default(true)
       .describe("Keep original values as comments"),
-    themeCSS: z.string().describe("CSS containing theme variables"),
+    themeCSS: z
+      .string()
+      .max(200_000)
+      .describe("CSS containing theme variables"),
   }),
 };
 
@@ -176,14 +211,14 @@ ${result.refactored}
  * Match Theme Colors Batch Tool
  */
 export const matchThemeColorsBatchTool = {
+  annotations: READ_ONLY_TOOL,
   description: "Find theme matches for multiple colors at once",
   execute: async (args: {
     colors: string[];
     context?: ColorContext;
     themeCSS: string;
   }) => {
-    // Parse theme variables
-    const themeVariables = parseThemeVariables(args.themeCSS);
+    const themeVariables = parseThemeOrThrow(args.themeCSS);
 
     // Find matches for all colors
     const matches = findBatchMatches(args.colors, themeVariables, {
@@ -199,6 +234,8 @@ export const matchThemeColorsBatchTool = {
         matchCount++;
         totalConfidence += match.confidence;
         result += `\n${color} → ${match.variable} (${match.confidence}%)`;
+      } else if (!parseColor(color)) {
+        result += `\n${color} → ✗ invalid color format`;
       } else {
         result += `\n${color} → No match found`;
       }
@@ -221,7 +258,10 @@ export const matchThemeColorsBatchTool = {
       .enum(["text", "background", "border", "shadow", "accent", "decorative"])
       .optional()
       .describe("Usage context for all colors"),
-    themeCSS: z.string().describe("CSS containing theme variables"),
+    themeCSS: z
+      .string()
+      .max(200_000)
+      .describe("CSS containing theme variables"),
   }),
 };
 
@@ -229,6 +269,7 @@ export const matchThemeColorsBatchTool = {
  * Generate Theme CSS Tool
  */
 export const generateThemeCssTool = {
+  annotations: READ_ONLY_TOOL,
   description:
     "Generate CSS custom properties for a complete theme from a source color",
   execute: async (args: {
@@ -238,13 +279,21 @@ export const generateThemeCssTool = {
   }) => {
     const source = parseColor(args.sourceColor);
     if (!source) {
-      return `Invalid color format: ${args.sourceColor}`;
+      throw new ToolInputError(`Invalid color format: ${args.sourceColor}`);
     }
 
     const corePalette = corePaletteFromRgb(source);
-    const tones = args.includeTones || [
-      0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100,
-    ];
+    // The semantic block below references tones 10/40/90/99/100, so they are
+    // always emitted (custom includeTones are merged in, not replacing them).
+    const SEMANTIC_TONES = [10, 40, 90, 99, 100];
+    const tones = Array.from(
+      new Set([
+        ...(args.includeTones ?? [
+          0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 99, 100,
+        ]),
+        ...SEMANTIC_TONES,
+      ]),
+    ).sort((a, b) => a - b);
     const prefix = args.prefix || "color";
 
     let css = `:root {\n`;
@@ -317,7 +366,8 @@ export const generateThemeCssTool = {
   name: "generate_theme_css",
   parameters: z.object({
     includeTones: z
-      .array(z.number())
+      .array(z.number().min(0).max(100))
+      .max(32)
       .optional()
       .describe(
         "Tone values to include (default: 0,10,20,30,40,50,60,70,80,90,95,99,100)",

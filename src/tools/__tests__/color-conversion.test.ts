@@ -29,10 +29,11 @@ describe("colorConversionTool", () => {
   });
 
   it("rejects invalid colors", async () => {
-    const result = await colorConversionTool.execute({
-      color: "not-a-color",
-      to: "rgb",
-    });
-    expect(result).toMatch(/Invalid color format/);
+    await expect(
+      colorConversionTool.execute({
+        color: "not-a-color",
+        to: "rgb",
+      }),
+    ).rejects.toThrow(/Invalid color format/);
   });
 });

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { RGB } from "./types";
 
+import { hexToRgb } from "./conversions";
 import {
   clampHsl,
   clampHsv,
@@ -399,5 +400,23 @@ describe("Color Utils", () => {
         expect(isLight(gray, 0.25)).toBe(false);
       });
     });
+  });
+});
+
+describe("precise HSL adjustments (audit c6b9091)", () => {
+  it("amount 0 is a no-op for any color", () => {
+    for (const hex of ["#db12eb", "#336699", "#0b6e4f", "#fafafa"]) {
+      const rgb = hexToRgb(hex);
+      expect(lighten(rgb, 0)).toEqual(rgb);
+      expect(darken(rgb, 0)).toEqual(rgb);
+      expect(saturate(rgb, 0)).toEqual(rgb);
+      expect(desaturate(rgb, 0)).toEqual(rgb);
+    }
+  });
+
+  it("fractional amounts are applied", () => {
+    const rgb = hexToRgb("#336699");
+    expect(lighten(rgb, 2.5)).not.toEqual(rgb);
+    expect(darken(rgb, 2.5)).not.toEqual(rgb);
   });
 });

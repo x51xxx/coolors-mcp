@@ -51,7 +51,7 @@ describe("Reference Color Values", () => {
 
       // Convert to HCT
       const hct = rgbToHct(rgb);
-      expect(hct.h).toBeCloseTo(272, -1); // Blue hue in HCT (different from HSL)
+      expect(hct.h).toBeCloseTo(253.7, 0); // CAM16 hue per Material Color Utilities (different from HSL)
       expect(hct.c).toBeGreaterThan(50); // High chroma for vibrant blue
       expect(hct.t).toBeCloseTo(58, -1); // Medium tone
     });
@@ -256,7 +256,7 @@ describe("Reference Color Values", () => {
 
       // To HCT
       const hct = rgbToHct(rgb);
-      expect(hct.h).toBeCloseTo(295, -1); // Blue-purple in HCT
+      expect(hct.h).toBeCloseTo(278.7, 0); // CAM16 hue per Material Color Utilities
       expect(hct.c).toBeGreaterThan(30); // Moderate chroma
       expect(hct.t).toBeCloseTo(40, -1); // Medium-dark tone
 

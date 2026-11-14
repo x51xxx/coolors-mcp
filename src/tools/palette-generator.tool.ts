@@ -1,135 +1,110 @@
 /**
  * Palette Generator Tool
- * Generate color palettes from a base color
+ * Generate color-theory harmonies from a base color in perceptual (HCT/OKLCH)
+ * or artistic (RYB/HSL) spaces, enriched with perceptual labels for agents.
  */
 
 import { z } from "zod";
 
-import { parseColor, rgbToHex, rgbToHsl } from "../color/index.js";
+import {
+  generateHarmonyPalette,
+  type HarmonyScheme,
+  type HarmonySpace,
+  parseColor,
+  profileColor,
+  rgbToHex,
+} from "../color/index.js";
+import { READ_ONLY_TOOL, ToolInputError } from "./errors.js";
+
+const TYPES = [
+  "monochromatic",
+  "analogous",
+  "complementary",
+  "split-complementary",
+  "triadic",
+  "tetradic",
+  "square",
+  "compound",
+  "shades-and-tints",
+] as const satisfies readonly HarmonyScheme[];
+
+const SPACES = [
+  "hct",
+  "oklch",
+  "ryb",
+  "hsl",
+] as const satisfies readonly HarmonySpace[];
 
 export const paletteGeneratorTool = {
-  description: "Generate a color palette from a base color",
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Generate a color palette using color theory harmonies (monochromatic, analogous, complementary, split-complementary, triadic, tetradic, square, compound, shades-and-tints). Defaults to perceptual HCT space, avoids universally disliked colors, and describes each swatch so agents can see what was generated.",
   execute: async (args: {
+    allowDisliked?: boolean;
     baseColor: string;
     count?: number;
-    type?:
-      | "analogous"
-      | "complementary"
-      | "monochromatic"
-      | "tetradic"
-      | "triadic";
+    includeDetails?: boolean;
+    space?: HarmonySpace;
+    type?: HarmonyScheme;
   }) => {
     const base = parseColor(args.baseColor);
     if (!base) {
-      return `Invalid color format: ${args.baseColor}`;
+      throw new ToolInputError(`Invalid color format: ${args.baseColor}`);
     }
 
-    const type = args.type || "monochromatic";
-    const count = args.count || 5;
-    const hsl = rgbToHsl(base);
-    const palette: string[] = [];
+    const type = args.type ?? "analogous";
+    const count = args.count ?? 5;
+    const space = args.space ?? "hct";
+    const includeDetails = args.includeDetails ?? true;
 
-    switch (type) {
-      case "analogous": {
-        // Colors adjacent on the color wheel
-        const step = 30;
-        for (let i = 0; i < count; i++) {
-          const h = (hsl.h + (i - Math.floor(count / 2)) * step + 360) % 360;
-          const color = parseColor(`hsl(${h}, ${hsl.s}%, ${hsl.l}%)`);
-          if (color) palette.push(rgbToHex(color));
-        }
-        break;
-      }
-      case "complementary": {
-        // Base color and its complement
-        palette.push(rgbToHex(base));
-        const complement = parseColor(
-          `hsl(${(hsl.h + 180) % 360}, ${hsl.s}%, ${hsl.l}%)`,
-        );
-        if (complement) palette.push(rgbToHex(complement));
+    const { colors, notes } = generateHarmonyPalette(base, {
+      allowDisliked: args.allowDisliked ?? false,
+      count,
+      scheme: type,
+      space,
+    });
 
-        // Add variations
-        for (let i = 2; i < count; i++) {
-          const l = hsl.l + (i % 2 === 0 ? 20 : -20);
-          const h = i < count / 2 ? hsl.h : (hsl.h + 180) % 360;
-          const color = parseColor(
-            `hsl(${h}, ${hsl.s}%, ${Math.max(10, Math.min(90, l))}%)`,
-          );
-          if (color) palette.push(rgbToHex(color));
-        }
-        break;
-      }
-      case "monochromatic": {
-        // Generate different lightness values
-        const step = 80 / (count - 1);
-        for (let i = 0; i < count; i++) {
-          const l = 10 + i * step;
-          const color = parseColor(`hsl(${hsl.h}, ${hsl.s}%, ${l}%)`);
-          if (color) palette.push(rgbToHex(color));
-        }
-        break;
-      }
-      case "tetradic": {
-        // Four colors in rectangle on color wheel
-        for (let i = 0; i < Math.min(4, count); i++) {
-          const h = (hsl.h + i * 90) % 360;
-          const color = parseColor(`hsl(${h}, ${hsl.s}%, ${hsl.l}%)`);
-          if (color) palette.push(rgbToHex(color));
-        }
-        // Add variations for remaining colors
-        for (let i = 4; i < count; i++) {
-          const baseIdx = i % 4;
-          const h = (hsl.h + baseIdx * 90) % 360;
-          const l = hsl.l + (i < 8 ? 15 : -15);
-          const color = parseColor(
-            `hsl(${h}, ${hsl.s}%, ${Math.max(10, Math.min(90, l))}%)`,
-          );
-          if (color) palette.push(rgbToHex(color));
-        }
-        break;
-      }
-      case "triadic": {
-        // Three colors evenly spaced on color wheel
-        for (let i = 0; i < Math.min(3, count); i++) {
-          const h = (hsl.h + i * 120) % 360;
-          const color = parseColor(`hsl(${h}, ${hsl.s}%, ${hsl.l}%)`);
-          if (color) palette.push(rgbToHex(color));
-        }
-        // Add variations for remaining colors
-        for (let i = 3; i < count; i++) {
-          const baseIdx = i % 3;
-          const h = (hsl.h + baseIdx * 120) % 360;
-          const l = hsl.l + (i < 6 ? 20 : -20);
-          const color = parseColor(
-            `hsl(${h}, ${hsl.s}%, ${Math.max(10, Math.min(90, l))}%)`,
-          );
-          if (color) palette.push(rgbToHex(color));
-        }
-        break;
-      }
+    const lines = colors.map((rgb, i) => {
+      const hex = rgbToHex(rgb);
+      if (!includeDetails) return `${i + 1}. ${hex}`;
+      const p = profileColor(rgb);
+      return `${i + 1}. ${hex} — ${p.name} (${p.temperature}, tone ${p.hct.t.toFixed(0)}, best text: ${p.bestText.recommendedHex})`;
+    });
+
+    let out = `Generated ${type} palette (${space.toUpperCase()}):\n${lines.join("\n")}`;
+    if (notes.length > 0) {
+      out += `\n\nNotes:\n${notes.map((n) => `- ${n}`).join("\n")}`;
     }
-
-    return `Generated ${type} palette:
-${palette.map((color, i) => `${i + 1}. ${color}`).join("\n")}`;
+    return out;
   },
   name: "generate_palette",
   parameters: z.object({
+    allowDisliked: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Allow dark yellow-green 'bile zone' colors (default false)"),
     baseColor: z.string().describe("Base color for palette generation"),
     count: z
       .number()
       .min(3)
-      .max(10)
+      .max(12)
       .default(5)
       .describe("Number of colors to generate"),
-    type: z
-      .enum([
-        "monochromatic",
-        "analogous",
-        "complementary",
-        "triadic",
-        "tetradic",
-      ])
-      .default("monochromatic")
-      .describe("Type of color palette"),
+    includeDetails: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe(
+        "Include perceptual name, temperature, tone, and best text ink for each swatch",
+      ),
+    space: z
+      .enum(SPACES)
+      .optional()
+      .default("hct")
+      .describe(
+        "Wheel space: 'hct' (perceptual default), 'oklch' (CSS perceptual), 'ryb' (painter's red-yellow-blue wheel), or 'hsl'",
+      ),
+    type: z.enum(TYPES).default("analogous").describe("Type of color harmony"),
   }),
 };

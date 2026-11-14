@@ -4,7 +4,13 @@
 
 import type { HSL, HSV, RGB } from "./types.js";
 
-import { parseColor, rgbToHex, rgbToHsl, rgbToHsv } from "./conversions.js";
+import {
+  hslToRgb,
+  parseColor,
+  rgbToHex,
+  rgbToHsl,
+  rgbToHsv,
+} from "./conversions.js";
 
 /**
  * Clamp HSL values to valid range
@@ -45,9 +51,7 @@ export function clampRgb(rgb: RGB): RGB {
  * @param amount Amount to darken (0-100)
  */
 export function darken(rgb: RGB, amount: number): RGB {
-  const hsl = rgbToHsl(rgb);
-  hsl.l = clamp(hsl.l - amount, 0, 100);
-  return parseColor(formatHsl(hsl)) || rgb;
+  return adjustHsl(rgb, "l", -amount);
 }
 
 /**
@@ -56,9 +60,7 @@ export function darken(rgb: RGB, amount: number): RGB {
  * @param amount Amount to desaturate (0-100)
  */
 export function desaturate(rgb: RGB, amount: number): RGB {
-  const hsl = rgbToHsl(rgb);
-  hsl.s = clamp(hsl.s - amount, 0, 100);
-  return parseColor(formatHsl(hsl)) || rgb;
+  return adjustHsl(rgb, "s", -amount);
 }
 
 /**
@@ -229,9 +231,7 @@ export function isValidRgb(rgb: RGB): boolean {
  * @param amount Amount to lighten (0-100)
  */
 export function lighten(rgb: RGB, amount: number): RGB {
-  const hsl = rgbToHsl(rgb);
-  hsl.l = clamp(hsl.l + amount, 0, 100);
-  return parseColor(formatHsl(hsl)) || rgb;
+  return adjustHsl(rgb, "l", amount);
 }
 
 /**
@@ -294,9 +294,7 @@ export function randomColor(): RGB {
  * @param amount Amount to saturate (0-100)
  */
 export function saturate(rgb: RGB, amount: number): RGB {
-  const hsl = rgbToHsl(rgb);
-  hsl.s = clamp(hsl.s + amount, 0, 100);
-  return parseColor(formatHsl(hsl)) || rgb;
+  return adjustHsl(rgb, "s", amount);
 }
 
 /**
@@ -305,6 +303,32 @@ export function saturate(rgb: RGB, amount: number): RGB {
 export function toGrayscale(rgb: RGB): RGB {
   const gray = Math.round(0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b);
   return { b: gray, g: gray, r: gray };
+}
+
+/**
+ * Shift HSL lightness or saturation by `amount` percentage points using
+ * unrounded HSL, so fractional amounts apply and an amount of 0 is a no-op.
+ */
+function adjustHsl(rgb: RGB, channel: "l" | "s", amount: number): RGB {
+  if (amount === 0) return { ...rgb };
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const diff = max - min;
+  let h = 0;
+  let sat = 0;
+  const light = (max + min) / 2;
+  if (diff !== 0) {
+    sat = light > 0.5 ? diff / (2 - max - min) : diff / (max + min);
+    if (max === r) h = ((g - b) / diff + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / diff + 2) / 6;
+    else h = ((r - g) / diff + 4) / 6;
+  }
+  const hsl = { h: h * 360, l: light * 100, s: sat * 100 };
+  hsl[channel] = clamp(hsl[channel] + amount, 0, 100);
+  return hslToRgb(hsl);
 }
 
 /**

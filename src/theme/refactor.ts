@@ -12,6 +12,7 @@ import type {
   ThemeVariables,
 } from "./types.js";
 
+import { getColorAlpha, parseColor } from "../color/conversions.js";
 import { findClosestThemeColor } from "./matcher.js";
 
 /**
@@ -171,95 +172,104 @@ export function refactorCss(
   let totalConfidence = 0;
   let accessibilityIssues = 0;
 
-  // Process CSS line by line for better tracking
-  const lines = css.split("\n");
-  const refactoredLines: string[] = [];
+  // Locate colors only inside real declaration values — never in selectors,
+  // comments, strings, url(...) or custom-property definitions.
+  const lineStarts = [0];
+  for (let i = 0; i < css.length; i++) {
+    if (css[i] === "\n") lineStarts.push(i + 1);
+  }
+  const locate = (index: number) => {
+    let lo = 0;
+    let hi = lineStarts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineStarts[mid] <= index) lo = mid;
+      else hi = mid - 1;
+    }
+    return { column: index - lineStarts[lo], line: lo + 1 };
+  };
 
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-    const line = lines[lineIndex];
-    let refactoredLine = line;
+  const edits: Array<{ end: number; start: number; text: string }> = [];
 
-    // Detect CSS property
-    const propertyMatch = line.match(/^\s*([a-z-]+):\s*/i);
-    const property = propertyMatch ? propertyMatch[1].toLowerCase() : null;
-    const context = property ? PROPERTY_CONTEXT_MAP[property] : undefined;
+  for (const found of findColorsInCss(css)) {
+    totalColors++;
+    const { color, end, property, start } = found;
+    const context = PROPERTY_CONTEXT_MAP[property];
+    const { column, line } = locate(start);
 
-    // Find all color values in the line
-    const colorMatches = findColorsInLine(line);
-
-    for (const colorMatch of colorMatches) {
-      totalColors++;
-      const { color, end, start } = colorMatch;
-
-      // Find matching theme variable
-      const matchOptions: MatchingOptions = {
-        contextType: context,
-        weights: {
-          accessibility:
-            context === "text" || context === "background" ? 0.3 : 0.1,
-          perceptual: 0.6,
-          semantic: context ? 0.3 : 0.2,
-        },
-      };
-
-      const match = findClosestThemeColor(color, themeVariables, matchOptions);
-
-      if (match && match.confidence >= minConfidence) {
-        replacedColors++;
-        totalConfidence += match.confidence;
-
-        // Create replacement
-        const replacement: ColorReplacement = {
-          column: start,
-          confidence: match.confidence,
-          context,
-          cssVariable: match.variable,
-          line: lineIndex + 1,
-          originalColor: color,
-          property: property || undefined,
-        };
-        replacements.push(replacement);
-
-        // Check accessibility
-        if (match.accessibilityInfo && !match.accessibilityInfo.meetsAA) {
-          accessibilityIssues++;
-          warnings.push({
-            location: { column: start, line: lineIndex + 1 },
-            message: `Color ${color} replaced with ${match.variable} may have accessibility issues`,
-            type: "accessibility",
-          });
-        }
-
-        // Apply replacement to line
-        let replacementText = `var(${match.variable})`;
-
-        if (preserveOriginal && addComments) {
-          replacementText = `/* ${color} */ ${replacementText}`;
-        }
-
-        // Replace in line
-        refactoredLine =
-          refactoredLine.substring(0, start) +
-          replacementText +
-          refactoredLine.substring(end);
-      } else if (match && match.confidence < minConfidence) {
-        warnings.push({
-          location: { column: start, line: lineIndex + 1 },
-          message: `Low confidence match for ${color}: ${match.variable} (${match.confidence}%)`,
-          suggestion: `Consider using ${match.variable} or defining a new theme variable`,
-          type: "low-confidence",
-        });
-      } else {
-        warnings.push({
-          location: { column: start, line: lineIndex + 1 },
-          message: `No suitable theme variable found for ${color}`,
-          suggestion: "Consider adding this color to your theme",
-          type: "no-match",
-        });
-      }
+    const alpha = getColorAlpha(color);
+    if (alpha !== undefined && alpha < 1) {
+      warnings.push({
+        location: { column, line },
+        message: `Translucent color ${color} (alpha ${Math.round(alpha * 100) / 100}) left unchanged — theme variables are opaque`,
+        suggestion:
+          "Define a dedicated translucent token (e.g. a scrim/overlay variable) if this value repeats",
+        type: "no-match",
+      });
+      continue;
     }
 
-    refactoredLines.push(refactoredLine);
+    const matchOptions: MatchingOptions = {
+      contextType: context,
+      weights: {
+        accessibility:
+          context === "text" || context === "background" ? 0.3 : 0.1,
+        perceptual: 0.6,
+        semantic: context ? 0.3 : 0.2,
+      },
+    };
+
+    const match = findClosestThemeColor(color, themeVariables, matchOptions);
+
+    if (match && match.confidence >= minConfidence) {
+      replacedColors++;
+      totalConfidence += match.confidence;
+
+      replacements.push({
+        column,
+        confidence: match.confidence,
+        context,
+        cssVariable: match.variable,
+        line,
+        originalColor: color,
+        property,
+      });
+
+      if (match.accessibilityInfo && !match.accessibilityInfo.meetsAA) {
+        accessibilityIssues++;
+        warnings.push({
+          location: { column, line },
+          message: `Color ${color} replaced with ${match.variable} may have accessibility issues`,
+          type: "accessibility",
+        });
+      }
+
+      let replacementText = `var(${match.variable})`;
+      if (preserveOriginal && addComments) {
+        replacementText = `/* ${color} */ ${replacementText}`;
+      }
+      edits.push({ end, start, text: replacementText });
+    } else if (match) {
+      warnings.push({
+        location: { column, line },
+        message: `Low confidence match for ${color}: ${match.variable} (${match.confidence}%)`,
+        suggestion: `Consider using ${match.variable} or defining a new theme variable`,
+        type: "low-confidence",
+      });
+    } else {
+      warnings.push({
+        location: { column, line },
+        message: `No suitable theme variable found for ${color}`,
+        suggestion: "Consider adding this color to your theme",
+        type: "no-match",
+      });
+    }
+  }
+
+  // Apply edits right-to-left so earlier offsets stay valid
+  let body = css;
+  for (const edit of [...edits].sort((x, y) => y.start - x.start)) {
+    body = body.slice(0, edit.start) + edit.text + body.slice(edit.end);
   }
 
   // Add summary comment at the top if requested
@@ -270,9 +280,9 @@ export function refactorCss(
  * Average confidence: ${Math.round(totalConfidence / replacedColors)}%
  * Warnings: ${warnings.length}
  */\n\n`;
-    refactoredCss = summaryComment + refactoredLines.join("\n");
+    refactoredCss = summaryComment + body;
   } else {
-    refactoredCss = refactoredLines.join("\n");
+    refactoredCss = body;
   }
 
   return {
@@ -291,59 +301,103 @@ export function refactorCss(
 }
 
 /**
- * Find all color values in a line
+ * Find color literals inside CSS declaration values.
+ *
+ * Single pass over the stylesheet that skips comments and quoted strings,
+ * ignores url(...) arguments, and only reports colors that sit in a
+ * `property: value` declaration terminated by `;` or `}` (so `a:hover {` and
+ * `#cafe {` selectors are never touched). Custom properties (`--x: ...`) are
+ * skipped to avoid rewriting theme definitions into self-references.
  */
-function findColorsInLine(
-  line: string,
-): Array<{ color: string; end: number; start: number }> {
-  const colors: Array<{ color: string; end: number; start: number }> = [];
+function findColorsInCss(
+  css: string,
+): Array<{ color: string; end: number; property: string; start: number }> {
+  const masked = new Uint8Array(css.length); // 1 = comment / string / url()
+  const values: Array<{ end: number; property: string; start: number }> = [];
 
-  // Check for hex colors
-  let match;
-  const hexRegex = /#[0-9a-fA-F]{3,8}/g;
-  while ((match = hexRegex.exec(line)) !== null) {
-    colors.push({
-      color: match[0],
-      end: match.index + match[0].length,
-      start: match.index,
-    });
+  let segmentStart = 0; // start of the current "property: value" segment
+  let colon = -1;
+  let i = 0;
+  const closeSegment = (terminator: string, at: number) => {
+    if (colon >= 0 && terminator !== "{") {
+      const property = css.slice(segmentStart, colon).trim().toLowerCase();
+      if (/^-?-?[a-z_][\w-]*$/.test(property)) {
+        values.push({ end: at, property, start: colon + 1 });
+      }
+    }
+    segmentStart = at + 1;
+    colon = -1;
+  };
+
+  while (i < css.length) {
+    const ch = css[i];
+    if (ch === "/" && css[i + 1] === "*") {
+      const close = css.indexOf("*/", i + 2);
+      const stop = close === -1 ? css.length : close + 2;
+      masked.fill(1, i, stop);
+      // A comment before "prop:" is not part of the property name
+      if (colon < 0) segmentStart = stop;
+      i = stop;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < css.length && css[j] !== ch) j += css[j] === "\\" ? 2 : 1;
+      const stop = Math.min(css.length, j + 1);
+      masked.fill(1, i, stop);
+      i = stop;
+      continue;
+    }
+    if (
+      (ch === "u" || ch === "U") &&
+      /^url\(/i.test(css.slice(i, i + 4)) &&
+      !/[\w-]/.test(css[i - 1] ?? "")
+    ) {
+      let j = i + 4;
+      let quote: null | string = null;
+      while (j < css.length) {
+        const c = css[j];
+        if (quote) {
+          if (c === quote) quote = null;
+        } else if (c === '"' || c === "'") quote = c;
+        else if (c === ")") break;
+        j++;
+      }
+      const stop = Math.min(css.length, j + 1);
+      masked.fill(1, i, stop);
+      i = stop;
+      continue;
+    }
+    if (ch === ":" && colon < 0) colon = i;
+    else if (ch === ";" || ch === "{" || ch === "}") closeSegment(ch, i);
+    i++;
   }
+  closeSegment(";", css.length);
 
-  // Check for rgb/rgba - be more precise with the regex
-  const rgbRegex = /rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/g;
-  while ((match = rgbRegex.exec(line)) !== null) {
-    colors.push({
-      color: match[0],
-      end: match.index + match[0].length,
-      start: match.index,
-    });
-  }
+  const colorRegex =
+    /#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})(?![\w-])|\b(?:rgba?|hsla?|oklch|oklab)\([^()]*\)/gi;
+  const results: Array<{
+    color: string;
+    end: number;
+    property: string;
+    start: number;
+  }> = [];
 
-  // Check for hsl/hsla
-  const hslRegex = /hsla?\([^)]+\)/g;
-  while ((match = hslRegex.exec(line)) !== null) {
-    colors.push({
-      color: match[0],
-      end: match.index + match[0].length,
-      start: match.index,
-    });
-  }
-
-  // Sort by position to handle overlaps
-  colors.sort((a, b) => a.start - b.start);
-
-  // Remove duplicates and overlaps
-  const uniqueColors: typeof colors = [];
-  let lastEnd = -1;
-
-  for (const color of colors) {
-    if (color.start >= lastEnd) {
-      uniqueColors.push(color);
-      lastEnd = color.end;
+  for (const value of values) {
+    if (value.property.startsWith("--")) continue;
+    colorRegex.lastIndex = value.start;
+    let match: null | RegExpExecArray;
+    while ((match = colorRegex.exec(css)) !== null) {
+      const start = match.index;
+      if (start >= value.end) break;
+      const end = start + match[0].length;
+      if (end > value.end || masked[start]) continue;
+      if (!parseColor(match[0])) continue;
+      results.push({ color: match[0], end, property: value.property, start });
     }
   }
 
-  return uniqueColors;
+  return results;
 }
 
 /**
