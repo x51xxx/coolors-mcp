@@ -111,6 +111,10 @@ handling and input limits changed — see **Changed**.
   a disliked color, and ignored `includeCustomColors`.
 - `generate_tonal_scale` used `name` verbatim, so `"Brand Blue"` produced the
   invalid custom property `--brand blue-500`; names are now slugified.
+- `harmonize_colors` (harmonize) mishandled hues on either side of 0°/360°
+  (full 15° rotation in the wrong direction); it now matches Material's
+  `Blend.harmonize` exactly.
+- Theme match confidence could exceed 100%.
 - `match_theme_color` reported invalid colors as "no match", and theme CSS
   without color variables is now an error.
 - `package.json` `main` pointed to a missing file, and the `jsr.json` export

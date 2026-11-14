@@ -187,7 +187,11 @@ function calculateConfidence(distance: number, score: number): number {
   // Combine distance and score for confidence
   const distanceConfidence = Math.max(0, 100 - distance * 2);
   const scoreConfidence = score * 100;
-  return Math.round((distanceConfidence + scoreConfidence) / 2);
+  // Context weights can sum to more than 1, so keep the result a percentage.
+  return Math.min(
+    100,
+    Math.max(0, Math.round((distanceConfidence + scoreConfidence) / 2)),
+  );
 }
 
 /**

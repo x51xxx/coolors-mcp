@@ -178,3 +178,26 @@ describe("Theme Color Matcher", () => {
     });
   });
 });
+
+describe("match confidence bounds", () => {
+  it("never reports confidence above 100%", async () => {
+    const { parseThemeVariables } = await import("../parser.js");
+    const { findClosestThemeColor } = await import("../matcher.js");
+    const theme = parseThemeVariables(
+      ":root{--color-text:#1c1b1f;--color-surface:#fffbfe;--color-primary:#6750a4;}",
+    );
+    for (const color of ["#1d1c20", "#201f23", "#fffcff", "#6a52a8"]) {
+      for (const contextType of ["text", "background", undefined] as const) {
+        const m = findClosestThemeColor(color, theme, {
+          contextType,
+          weights: { accessibility: 0.3, perceptual: 0.6, semantic: 0.3 },
+        });
+        if (m) {
+          expect(m.confidence).toBeLessThanOrEqual(100);
+          for (const alt of m.alternatives)
+            expect(alt.confidence).toBeLessThanOrEqual(100);
+        }
+      }
+    }
+  });
+});

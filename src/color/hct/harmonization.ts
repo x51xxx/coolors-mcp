@@ -189,14 +189,14 @@ function circularInterpolate(from: number, to: number, amount: number): number {
   return sanitizeDegreesDouble(from + (to - from) * amount);
 }
 
+// Same as Material Color Utilities' math_utils (JS `%` keeps the sign of the
+// dividend, so naive modulo breaks for hues on either side of 0°/360°).
 function differenceDegrees(a: number, b: number): number {
-  return Math.abs(((a - b + 180) % 360) - 180);
+  return 180 - Math.abs(Math.abs(a - b) - 180);
 }
 
 function rotationDirection(from: number, to: number): number {
-  const difference = to - from;
-  const normalized = ((difference + 180) % 360) - 180;
-  return normalized >= 0 ? 1 : -1;
+  return sanitizeDegreesDouble(to - from) <= 180 ? 1 : -1;
 }
 
 function sanitizeDegreesDouble(degrees: number): number {
