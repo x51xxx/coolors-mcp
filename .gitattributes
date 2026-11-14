@@ -1,0 +1,3 @@
+# Check out text files with LF on every platform (Windows runners default
+# to CRLF, which makes `prettier --check` flag every file).
+* text=auto eol=lf
